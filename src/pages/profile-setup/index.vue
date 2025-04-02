@@ -142,7 +142,32 @@ main.p-8.max-w-2xl.mx-auto
       // Error message
       .text-red-500.text-sm(v-if="error") {{ error }}
 
-      // Submit button
+      // QR Code Section
+      .mt-8.pt-8.border-t.border-gray-100
+        .text-center.mb-6
+          h2.text-xl.font-semibold.text-gray-900 Your Info QR Code
+          p.text-gray-600.mt-2 Share your Info easily by scanning this QR code
+        
+        .flex.flex-col.items-center.gap-4
+          .bg-white.p-4.rounded-xl.border.border-gray-100
+            QrcodeVue(
+              :value="profileUrl"
+              :size="200"
+              level="H"
+              render-as="svg"
+              class="mx-auto"
+            )
+          .flex.items-center.gap-2.text-sm.text-gray-600
+            VaIcon(name="qr_code" size="18px")
+            span {{ profileUrl }}
+          button(
+            type="button"
+            class="text-emerald-600 hover:text-emerald-700 flex items-center gap-2 text-sm font-medium"
+            @click="copyProfileUrl"
+          )
+            VaIcon(name="content_copy" size="18px")
+            span Copy Profile Link
+
       button(
         type="submit"
         class="w-full bg-emerald-500 text-white rounded-lg px-6 py-3 hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -153,11 +178,12 @@ main.p-8.max-w-2xl.mx-auto
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { authService } from '../../services/authService';
 import { storage } from '../../config/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import QrcodeVue from 'qrcode.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -281,6 +307,22 @@ async function saveProfile() {
     error.value = 'Error saving profile. Please try again.';
   } finally {
     saving.value = false;
+  }
+}
+
+// Compute profile URL
+const profileUrl = computed(() => {
+  if (!user.value?.uid) return '';
+  return `${window.location.origin}/profile/${user.value.uid}`;
+});
+
+// Copy profile URL to clipboard
+async function copyProfileUrl() {
+  try {
+    await navigator.clipboard.writeText(profileUrl.value);
+    // You could add a toast notification here
+  } catch (err) {
+    console.error('Error copying URL:', err);
   }
 }
 </script> 

@@ -14,6 +14,11 @@ const routes = [
     meta: {
       requiresAuth: true
     }
+  },
+  {
+    path: '/profile/:username',
+    name: 'profile',
+    component: () => import('../pages/profile/[username].vue')
   }
 ];
 

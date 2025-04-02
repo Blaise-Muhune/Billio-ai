@@ -82,17 +82,43 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               h2.text-lg.font-semibold.text-gray-900 {{ user?.displayName }}
               p.text-sm.text-gray-500 {{ user?.email }}
           .flex.items-center.gap-4
-            button(
-              class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 px-4 py-2 rounded-xl flex items-center gap-2"
-              @click="editProfile"
-            )
-              VaIcon(name="edit" size="18px")
-              span.text-sm.font-medium Edit Profile
-            button(
-              class="text-gray-600 hover:text-gray-800 transition-all duration-200 p-2 rounded-xl hover:bg-gray-100"
-              @click="signOut"
-            )
-              VaIcon(name="logout" size="20px")
+            //- User Menu
+            .relative
+              button(
+                class="flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-xl transition-all duration-200"
+                @click="toggleUserMenu"
+              )
+                img(
+                  :src="user.photoURL"
+                  class="w-8 h-8 rounded-full"
+                  alt="Profile picture"
+                )
+                span.font-medium {{ user.displayName }}
+                VaIcon(name="expand_more" size="18px" class="text-gray-400")
+              .absolute.right-0.mt-2.w-64.bg-white.rounded-xl.shadow-lg.border.border-gray-100.overflow-hidden(
+                v-if="showUserMenu"
+              )
+                .p-2
+                  a(
+                    class="flex items-center gap-2 text-gray-700 hover:text-emerald-600 transition-colors"
+                    :href="`/profile/${user.uid}`"
+                  )
+                    VaIcon(name="person" size="18px")
+                    span(class="font-medium") View Public Profile
+                  button(
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    @click="router.push('/profile-setup')"
+                  )
+                    .flex.items-center.gap-2
+                      VaIcon(name="settings" size="18px")
+                      span Profile Settings
+                  button(
+                    class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    @click="signOut"
+                  )
+                    .flex.items-center.gap-2
+                      VaIcon(name="logout" size="18px")
+                      span Sign Out
 
     //- Main Content Area (With top padding for fixed header)
     .flex-1.w-full(class="pt-16")
@@ -165,23 +191,10 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             .mt-4(v-if="error")
               p.text-red-600.font-medium {{ error }}
 
-        // Stats Grid
-        .grid.mb-8(class="grid-cols-1 md:grid-cols-3 gap-6")
-          .stat-card.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6(
-            v-for="stat in stats"
-            :key="stat.label"
-          )
-            .flex.items-center.gap-4
-              .bg-emerald-100.p-3.rounded-xl
-                VaIcon(:name="stat.icon" size="24px" class="text-emerald-600")
-              .space-y-1
-                p.text-2xl.font-bold.text-gray-900 {{ stat.value }}
-                p.text-sm.text-gray-600 {{ stat.label }}
-
         // Main Content Area
-        .grid(class="grid-cols-1 lg:grid-cols-3 gap-8")
+        .grid(class="grid-cols-1")
           // Business Cards Section
-          div(class="lg:col-span-2")
+          div
             .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6
               .flex.items-center.justify-between.mb-6
                 h3.text-xl.font-semibold.text-gray-900 Business Cards
@@ -358,33 +371,18 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                         VaIcon(name="person_add" size="18px")
                         span.text-sm.font-medium Save Contact
 
-          // Recent Activity & Quick Actions
-          div(class="lg:col-span-1")
-            // Recent Activity
-            .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6.mb-6
-              h3.text-xl.font-semibold.text-gray-900.mb-6 Recent Activity
-              .space-y-4
-                .activity-item(v-for="activity in recentActivities" :key="activity.id")
-                  .flex.items-start.gap-3
-                    .bg-emerald-100.p-2.rounded-lg
-                      VaIcon(:name="activity.icon" size="16px" class="text-emerald-600")
-                    .flex-1
-                      p.text-sm.text-gray-900 {{ activity.text }}
-                      p.text-xs.text-gray-500 {{ activity.time }}
-
-            // Quick Actions
-            .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6
-              h3.text-xl.font-semibold.text-gray-900.mb-6 Quick Actions
-              .grid.grid-cols-2.gap-4
-                button(
-                  v-for="action in quickActions"
-                  :key="action.label"
-                  class="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                  @click="action.onClick"
-                )
-                  .bg-emerald-100.p-3.rounded-lg
-                    VaIcon(:name="action.icon" size="20px" class="text-emerald-600")
-                  span.text-sm.text-gray-600 {{ action.label }}
+        // Stats Grid (Moved to bottom)
+        .grid.mt-8(class="grid-cols-1 md:grid-cols-3 gap-6")
+          .stat-card.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6(
+            v-for="stat in stats"
+            :key="stat.label"
+          )
+            .flex.items-center.gap-4
+              .bg-emerald-100.p-3.rounded-xl
+                VaIcon(:name="stat.icon" size="24px" class="text-emerald-600")
+              .space-y-1
+                p.text-2xl.font-bold.text-gray-900 {{ stat.value }}
+                p.text-sm.text-gray-600 {{ stat.label }}
 
     // Modals section
     template(v-if="user")
@@ -604,6 +602,41 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               .loading-spinner.w-4.h-4.border-2(v-if="deletingCard")
               VaIcon(v-else name="delete" size="16px")
               span(class="font-medium") {{ deletingCard ? 'Deleting...' : 'Delete Card' }}
+
+      // QR Code Section
+      .mt-12.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8
+        .text-center.mb-8
+          h2.text-2xl.font-bold.text-gray-900 Share Your Info
+          p.text-gray-600.mt-2 Let others easily connect with you by scanning your QR code
+        
+        .flex.flex-col.items-center.gap-6
+          .bg-white.p-4.rounded-xl.border.border-gray-100
+            QrcodeVue(
+              :value="profileUrl"
+              :size="200"
+              level="H"
+              render-as="svg"
+              class="mx-auto"
+            )
+          .flex.items-center.gap-2.text-sm.text-gray-600
+            VaIcon(name="qr_code" size="18px")
+            span {{ profileUrl }}
+          .flex.items-center.gap-4
+            button(
+              type="button"
+              class="text-emerald-600 hover:text-emerald-700 flex items-center gap-2 text-sm font-medium transition-all duration-300"
+              :class="{ 'text-green-600': copiedLink }"
+              @click="copyProfileUrl"
+            )
+              VaIcon(name="content_copy" size="18px" :class="{ 'transform scale-110': copiedLink }")
+              span {{ copiedLink ? 'Copied!' : 'Copy Profile Link' }}
+            button(
+              type="button"
+              class="text-emerald-600 hover:text-emerald-700 flex items-center gap-2 text-sm font-medium"
+              @click="downloadQRCode"
+            )
+              VaIcon(name="download" size="18px")
+              span Download QR Code
 </template>
 
 <script setup>
@@ -611,6 +644,9 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { businessCardService } from '../../services/businessCardService';
 import { authService } from '../../services/authService';
 import { useRouter } from 'vue-router';
+import { storage } from '../../config/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import QrcodeVue from 'qrcode.vue';
 
 const user = ref(null);
 const businessCards = ref([]);
@@ -646,6 +682,8 @@ const showDeleteModal = ref(false);
 const selectedCardForDelete = ref(null);
 const deletingCard = ref(false);
 const expandedContact = ref({ type: null, cardId: null });
+const showUserMenu = ref(false);
+const copiedLink = ref(false);
 
 const STORAGE_KEY = 'selectedEvent';
 
@@ -1016,62 +1054,6 @@ const stats = computed(() => [
   }
 ]);
 
-// Quick actions
-const quickActions = [
-  {
-    icon: 'upload',
-    label: 'Upload Card',
-    onClick: () => fileInput.value?.click()
-  },
-  {
-    icon: 'event',
-    label: 'New Event',
-    onClick: () => showCreateEventModal.value = true
-  },
-  {
-    icon: 'search',
-    label: 'Search Cards',
-    onClick: () => loadCards()
-  },
-  {
-    icon: 'edit',
-    label: 'Edit Profile',
-    onClick: () => editProfile()
-  }
-];
-
-// Recent activities
-const recentActivities = computed(() => {
-  const activities = [];
-  
-  // Add card uploads
-  businessCards.value.slice(0, 3).forEach(card => {
-    activities.push({
-      id: `card-${card.id}`,
-      icon: 'qr_code',
-      text: `Added ${card.name} from ${card.company}`,
-      time: card.createdAt?.toDate ? card.createdAt.toDate().toLocaleString() : new Date().toLocaleString()
-    });
-  });
-
-  // Add Message drafts
-  Object.entries(cardDrafts.value).slice(0, 3).forEach(([cardId, drafts]) => {
-    drafts.forEach(draft => {
-      activities.push({
-        id: `draft-${draft.id}`,
-        icon: 'email',
-        text: `Generated message draft for ${businessCards.value.find(c => c.id === cardId)?.name}`,
-        time: draft.createdAt?.toDate ? draft.createdAt.toDate().toLocaleString() : new Date().toLocaleString()
-      });
-    });
-  });
-
-  // Sort by date and limit to 5
-  return activities
-    .sort((a, b) => new Date(b.time) - new Date(a.time))
-    .slice(0, 5);
-});
-
 // Add watcher for selectedEventFilter
 watch(selectedEventFilter, (newValue) => {
   loadCards();
@@ -1173,6 +1155,57 @@ const sortedBusinessCards = computed(() => {
     return dateB - dateA;
   });
 });
+
+function toggleUserMenu() {
+  showUserMenu.value = !showUserMenu.value;
+}
+
+// Compute profile URL
+const profileUrl = computed(() => {
+  if (!user.value?.uid) return '';
+  return `${window.location.origin}/profile/${user.value.uid}`;
+});
+
+// Copy profile URL to clipboard
+async function copyProfileUrl() {
+  try {
+    await navigator.clipboard.writeText(profileUrl.value);
+    copiedLink.value = true;
+    setTimeout(() => {
+      copiedLink.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Error copying URL:', err);
+  }
+}
+
+// Download QR Code as PNG
+function downloadQRCode() {
+  // Get the SVG element directly from the QrcodeVue component
+  const svgElement = document.querySelector('.bg-white.p-4.rounded-xl.border.border-gray-100 svg');
+  if (!svgElement) return;
+
+  // Convert SVG to data URL
+  const svgData = new XMLSerializer().serializeToString(svgElement);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  
+  img.onload = () => {
+    // Set canvas size to match the QR code size
+    canvas.width = 200;
+    canvas.height = 200;
+    ctx.drawImage(img, 0, 0);
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.download = 'profile-qr-code.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+  
+  img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+}
 </script>
 
 <style scoped>

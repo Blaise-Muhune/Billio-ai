@@ -5,7 +5,7 @@ import {
   updateProfile as firebaseUpdateProfile,
   onAuthStateChanged as firebaseOnAuthStateChanged
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 export const authService = {
@@ -21,7 +21,8 @@ export const authService = {
         createdAt: new Date(),
         displayName: result.user.displayName,
         email: result.user.email,
-        photoURL: result.user.photoURL
+        photoURL: result.user.photoURL,
+        profileCompleted: true
       });
     }
     
@@ -52,13 +53,37 @@ export const authService = {
   },
 
   async saveUserProfile(profileData) {
-    const user = this.getCurrentUser();
-    if (!user) throw new Error('No user logged in');
+    try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        throw new Error('User must be logged in to save profile');
+      }
 
-    await setDoc(doc(db, 'users', user.uid), {
-      ...profileData,
-      updatedAt: new Date()
-    }, { merge: true });
+      // Create or update user profile in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
+      const profileDataWithUid = {
+        ...profileData,
+        uid: user.uid,
+        updatedAt: new Date()
+      };
+
+      if (userDoc.exists()) {
+        await updateDoc(userRef, profileDataWithUid);
+      } else {
+        await setDoc(userRef, {
+          ...profileDataWithUid,
+          createdAt: new Date(),
+          profileCompleted: true
+        });
+      }
+
+      return { uid: user.uid, ...profileDataWithUid };
+    } catch (error) {
+      console.error('Error saving user profile:', error);
+      throw error;
+    }
   },
 
   async getUserProfile() {

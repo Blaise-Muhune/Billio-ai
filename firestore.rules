@@ -14,18 +14,22 @@ service cloud.firestore {
 
     // User profiles collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      // Allow public read access to user profiles
+      allow read: if true;
+      // Only allow users to modify their own profile
       allow create, update: if isOwner(userId);
       allow delete: if false; // Prevent profile deletion
     }
 
     // Business cards collection
     match /business-cards/{cardId} {
-      allow read: if isAuthenticated();
+      // Allow public read access to business cards
+      allow read: if true;
+      // Only allow users to create/modify their own cards
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
 
-      // Message drafts subcollection
+      // Message drafts subcollection - keep private
       match /drafts/{draftId} {
         allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
         allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
@@ -33,7 +37,7 @@ service cloud.firestore {
       }
     }
 
-    // Events collection
+    // Events collection - keep private
     match /events/{eventId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
