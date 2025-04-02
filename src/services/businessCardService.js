@@ -1,5 +1,5 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { storage, db } from '../config/firebase';
 import OpenAI from 'openai';
 import { authService } from './authService';
@@ -38,27 +38,37 @@ export const businessCardService = {
               {
                 type: "text",
                 text: `Analyze this business card and provide two things:
-1. Extract the following information: name, company, email, phone, title, website, address, and any other relevant information.
-2. Analyze the visual style including: primary colors (in hex), secondary colors, font style (modern/traditional/elegant), layout style (minimal/complex/traditional), and any notable design elements.
+1. Extract the following information: name, company, emails (as array), phones (as array), title, websites (as array), address, and any other relevant information.
+
+2. Analyze the visual style and ensure high contrast readability:
+   - Determine the dominant background color of the card
+   - Choose text colors that provide excellent contrast against the background:
+     * primaryColor: for main text (name, contact info) - MUST have contrast ratio at least 4.5:1
+     * secondaryColor: for secondary text (titles, additional info) - MUST have contrast ratio at least 3:1
+   - If the background is very light, use darker text colors
+   - If the background is dark or vibrant, use light text colors
+   - For white/very light backgrounds, use dark grays or navy instead of pure black
+   - For dark backgrounds, use off-white or light gray instead of pure white
 
 Return a JSON object with two main sections:
-- 'info': containing the extracted information
-- 'style': containing the visual analysis
-
-Example format:
 {
   "info": {
     "name": "...",
     "company": "...",
-    etc
+    "emails": ["email1@example.com"],
+    "phones": ["+1234567890"],
+    "title": "...",
+    "websites": ["website1.com"],
+    "address": "..."
   },
   "style": {
-    "primaryColor": "#HEXCODE",
-    "secondaryColor": "#HEXCODE",
-    "backgroundColor": "#HEXCODE",
+    "cardBackgroundColor": "#HEXCODE",
+    "mainTextColor": "#HEXCODE",
+    "secondaryTextColor": "#HEXCODE",
     "fontStyle": "modern/traditional/elegant",
     "layoutStyle": "minimal/complex/traditional",
-    "designNotes": "Any notable design elements"
+    "contrastInfo": "Primary text contrast ratio: X:1, Secondary text contrast ratio: Y:1",
+    "designNotes": "Description of notable design elements and style choices"
   }
 }`
               },
@@ -83,10 +93,21 @@ Example format:
       try {
         const parsedData = JSON.parse(content);
         
+        // Rename style properties to match our expected format
+        const style = {
+          ...parsedData.style,
+          backgroundColor: parsedData.style.cardBackgroundColor,
+          primaryColor: parsedData.style.mainTextColor,
+          secondaryColor: parsedData.style.secondaryTextColor
+        };
+        delete style.cardBackgroundColor;
+        delete style.mainTextColor;
+        delete style.secondaryTextColor;
+        
         // Save to Firestore with user ID and style information
         const cardData = {
           ...parsedData.info,
-          style: parsedData.style,
+          style,
           imageUrl,
           eventId,
           userId: user.uid,
@@ -153,15 +174,15 @@ Example format:
 
       // Generate the draft content
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "You are an expert at writing concise, personalized email messages. Create only the body of the email - no subject line, no greeting, no signature. Focus on creating a clear, friendly message that demonstrates knowledge of both parties' professional context."
+            content: "You are an expert at writing concise, personalized messages. Create only the body of the message - no subject line, no signature. Focus on creating a clear, friendly message that demonstrates knowledge of both parties' professional context."
           },
           {
             role: "user",
-            content: `Write a concise email body (2-3 short paragraphs) using these details:
+              content: `Write a concise message using these details:
 
 Sender: ${user.displayName}
 Recipient: ${card.name}
@@ -177,8 +198,6 @@ Guidelines:
 - Do not add any signature`
           }
         ],
-        max_tokens: 300,
-        temperature: 0.7
       });
 
       const draftContent = response.choices[0].message.content;
@@ -246,52 +265,6 @@ Guidelines:
         throw new Error('You do not have permission to view drafts. Please make sure you are logged in.');
       }
       return [];
-    }
-  },
-
-  // Create a business card from user profile
-  async createFromProfile(userData) {
-    try {
-      if (!db) {
-        throw new Error('Firebase not initialized');
-      }
-
-      const user = authService.getCurrentUser();
-      if (!user) {
-        throw new Error('User must be logged in to create a card');
-      }
-
-      // Create card data from user profile
-      const cardData = {
-        name: userData.displayName || '',
-        company: userData.company || '',
-        title: userData.title || '',
-        email: userData.email || '',
-        phone: userData.phone || '',
-        website: userData.website || '',
-        address: userData.address || '',
-        imageUrl: userData.photoURL || '',
-        userId: user.uid,
-        createdAt: new Date(),
-        style: {
-          primaryColor: '#059669', // Default emerald color
-          secondaryColor: '#4B5563', // Default gray color
-          backgroundColor: '#FFFFFF',
-          fontStyle: 'modern',
-          layoutStyle: 'minimal',
-          designNotes: 'Profile-based card'
-        }
-      };
-
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'business-cards'), cardData);
-      return { id: docRef.id, ...cardData };
-    } catch (error) {
-      console.error('Error creating business card from profile:', error);
-      if (error.code === 'permission-denied') {
-        throw new Error('You do not have permission to create a card. Please make sure you are logged in.');
-      }
-      throw error;
     }
   },
 
@@ -397,6 +370,54 @@ Guidelines:
       console.error('Error updating card event:', error);
       if (error.code === 'permission-denied') {
         throw new Error('You do not have permission to update this card. Please make sure you are logged in.');
+      }
+      throw error;
+    }
+  },
+
+  async deleteCard(cardId) {
+    try {
+      if (!db) {
+        throw new Error('Firebase not initialized');
+      }
+
+      const user = authService.getCurrentUser();
+      if (!user) {
+        throw new Error('User must be logged in to delete cards');
+      }
+
+      // Get the card to verify ownership
+      const cardRef = doc(db, 'business-cards', cardId);
+      const cardDoc = await getDoc(cardRef);
+      
+      if (!cardDoc.exists()) {
+        throw new Error('Card not found');
+      }
+
+      if (cardDoc.data().userId !== user.uid) {
+        throw new Error('You do not have permission to delete this card');
+      }
+
+      // Delete the card
+      await deleteDoc(cardRef);
+
+      // If there's an image URL, delete it from storage
+      const imageUrl = cardDoc.data().imageUrl;
+      if (imageUrl) {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (storageError) {
+          console.error('Error deleting image from storage:', storageError);
+          // Continue even if storage deletion fails
+        }
+      }
+
+      return { id: cardId };
+    } catch (error) {
+      console.error('Error deleting business card:', error);
+      if (error.code === 'permission-denied') {
+        throw new Error('You do not have permission to delete this card. Please make sure you are logged in.');
       }
       throw error;
     }

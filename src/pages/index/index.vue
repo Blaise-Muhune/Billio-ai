@@ -4,30 +4,84 @@ meta:
 </route>
 
 <template lang="pug">
-main.p-8.max-w-7xl.mx-auto(class="bg-gradient-to-b from-gray-50 to-white min-h-screen")
-  .flex.flex-col.gap-8
-    // Header section
-    header.text-center.mb-12
-      h1.text-6xl.font-bold(class="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent") BilloAI
-      p.text-gray-600.mt-4.text-xl(class="font-light") Transform your business connections into meaningful relationships
-    
-    // Auth section
-    .bg-white.rounded-2xl.shadow-xl.p-8.text-center(v-if="!user" class="border border-gray-100")
-      p.text-gray-600.mb-8.text-xl(class="font-light") Join BilloAI to revolutionize your networking experience
-      button(
-        class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl px-10 py-4 hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-        @click="signIn"
-      )
-        VaIcon(name="google" size="24px")
-        span(class="font-medium") Sign in with Google
-    
-    // Main content (only shown when logged in)
-    template(v-else)
-      // User's Business Card
-      .bg-white.rounded-2xl.shadow-xl.p-8(class="border border-gray-100")
-        .flex.items-center.justify-between.mb-6
-          h3.text-xl.font-semibold Your Profile
-          .flex.items-center.gap-3
+main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50 flex flex-col")
+  //- Pre-login Hero Section
+  .flex-1.w-full(v-if="!user")
+    .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8")
+      //- Navigation
+      nav.py-6.flex.items-center.justify-between
+        .flex.items-center.gap-2
+          h1.text-2xl.font-bold(class="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent") BilloAI
+        .flex.items-center.gap-4
+          select(
+            v-model="selectedEventFilter"
+            class="bg-white text-gray-900 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+          )
+            option(value="null") All Events
+            option(
+              v-for="event in events"
+              :key="event.id"
+              :value="event.id"
+            ) {{ event.name }}
+          button.flex.items-center.gap-2(
+            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl px-6 py-2.5 hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+            @click="signIn"
+          )
+            VaIcon(name="login" size="20px")
+            span(class="font-medium") Sign In
+
+      //- Hero Content
+      .mt-24.mb-32.text-center
+        h1.text-7xl.font-bold.mb-6
+          span(class="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent") Transform
+          span.text-gray-900  Your Network
+        p.text-xl.text-gray-600.max-w-2xl.mx-auto.mb-12 Turn business cards into meaningful relationships with AI-powered networking tools and smart contact management.
+        
+        // CTA Button
+        button(
+          class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-lg rounded-2xl px-12 py-6 hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+          @click="signIn"
+        )
+          VaIcon(name="rocket_launch" size="24px")
+          span(class="font-medium") Get Started with Google
+
+        // Trust Indicators
+        .mt-16.grid.grid-cols-3.gap-8.max-w-3xl.mx-auto
+          .text-center
+            .text-4xl.font-bold.bg-gradient-to-r.from-emerald-600.to-teal-500.bg-clip-text.text-transparent 10x
+            p.text-gray-600.mt-2 Faster Networking
+          .text-center
+            .text-4xl.font-bold.bg-gradient-to-r.from-emerald-600.to-teal-500.bg-clip-text.text-transparent 100%
+            p.text-gray-600.mt-2 Secure & Private
+          .text-center
+            .text-4xl.font-bold.bg-gradient-to-r.from-emerald-600.to-teal-500.bg-clip-text.text-transparent 24/7
+            p.text-gray-600.mt-2 AI Assistance
+
+      // Features Grid
+      .grid.mt-24(class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8")
+        // Feature Cards
+        .feature-card.bg-white.rounded-2xl.p-8.shadow-lg.border.border-gray-100.transform.transition-all.duration-300(
+          v-for="feature in features"
+          :key="feature.title"
+          class="hover:-translate-y-1 hover:shadow-xl"
+        )
+          .bg-emerald-100.w-12.h-12.rounded-xl.flex.items-center.justify-center.mb-6
+            VaIcon(:name="feature.icon" size="24px" class="text-emerald-600")
+          h3.text-xl.font-bold.text-gray-900.mb-3 {{ feature.title }}
+          p.text-gray-600 {{ feature.description }}
+
+  // Post-login Dashboard
+  .flex-1.w-full.flex.flex-col(v-else)
+    //- Top Navigation Bar (Fixed)
+    .w-full.bg-white.border-b.border-gray-100.fixed.top-0.z-50
+      .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8")
+        .flex.items-center.justify-between.h-16
+          .flex.items-center.gap-4
+            img(:src="user?.photoURL" class="w-10 h-10 rounded-xl object-cover ring-2 ring-emerald-100")
+            .flex.flex-col
+              h2.text-lg.font-semibold.text-gray-900 {{ user?.displayName }}
+              p.text-sm.text-gray-500 {{ user?.email }}
+          .flex.items-center.gap-4
             button(
               class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 px-4 py-2 rounded-xl flex items-center gap-2"
               @click="editProfile"
@@ -39,91 +93,43 @@ main.p-8.max-w-7xl.mx-auto(class="bg-gradient-to-b from-gray-50 to-white min-h-s
               @click="signOut"
             )
               VaIcon(name="logout" size="20px")
-        .flex.items-start.gap-8
-          .flex-shrink-0
-            img(:src="user?.photoURL" class="w-32 h-32 rounded-2xl object-cover ring-4 ring-emerald-100")
-          .flex-1
-            h4.text-3xl.font-bold(
-              :style=`{
-                color: '#111827',
-                fontFamily: getFontFamily('modern')
-              }`
-            ) {{ user?.displayName }}
-            p.text-xl(
-              :style=`{
-                color: '#4B5563',
-                fontFamily: getFontFamily('modern')
-              }`
-            ) {{ user?.company || 'Company Name' }}
-            p.text-lg.mt-1(
-              :style=`{
-                color: '#6B7280',
-                fontFamily: getFontFamily('modern')
-              }`
-            ) {{ user?.title || 'Your Title' }}
-            .mt-6.grid.gap-4(class="grid-cols-1 md:grid-cols-2")
-              a.flex.items-center.gap-3.text-base(class="text-emerald-600 hover:text-emerald-700 transition-colors duration-200")(
-                v-if="user?.email"
-                :href="'mailto:' + user.email"
-              )
-                VaIcon(name="email" size="18px")
-                | {{ user.email }}
-              a.flex.items-center.gap-3.text-base(class="text-emerald-600 hover:text-emerald-700 transition-colors duration-200")(
-                v-if="user?.phone"
-                :href="'tel:' + user.phone"
-              )
-                VaIcon(name="phone" size="18px")
-                | {{ user?.phone }}
-              a.flex.items-center.gap-3.text-base(class="text-emerald-600 hover:text-emerald-700 transition-colors duration-200")(
-                v-if="user?.website"
-                :href="user.website.startsWith('http') ? user.website : 'https://' + user.website"
-                target="_blank"
-                rel="noopener noreferrer"
-              )
-                VaIcon(name="language" size="18px")
-                | {{ user.website }}
-              p.flex.items-center.gap-3.text-base(class="text-gray-600")(
-                v-if="user?.address"
-              )
-                VaIcon(name="location_on" size="18px")
-                | {{ user.address }}
-    
-    // Upload section (moved outside template block)
-    .bg-white.rounded-2xl.shadow-xl.p-8(class="border border-gray-100" v-if="user")
-      // Event Selection (Optional)
-      .mb-8
-        h3.text-2xl.font-bold.mb-4 Select Event (Optional)
-        .flex.flex-col.gap-4
-          .flex.items-center.gap-4
-            select(
-              v-model="selectedEvent"
-              class="flex-1 border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-              @change="handleEventChange"
-            )
-              option(value="") No Event
-              option(v-for="event in events" :key="event.id" :value="event.id") {{ event.name }}
-            button(
-              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl px-8 py-3 hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              @click="showCreateEventModal = true"
-            )
-              VaIcon(name="add" size="18px")
-              span(class="font-medium") Create New Event
-          
-          // Event Selection Notice
-          .bg-emerald-50.rounded-xl.p-4.flex.items-center.gap-3(v-if="selectedEvent")
-            VaIcon(name="info" size="20px" class="text-emerald-600")
-            .flex-1
-              p.text-emerald-800.font-medium Next upload will be saved to:
-              p.text-emerald-600 {{ getEventName(selectedEvent) }}
 
-      div(
-        class="border-2 border-dashed border-gray-200 rounded-2xl p-12 hover:border-emerald-500 transition-all duration-300"
-        @dragover.prevent
-        @drop.prevent="handleDrop"
-      )
-        VaIcon(name="image" size="72px").text-emerald-400.mx-auto.mb-6
-        h3.text-3xl.font-bold.mb-4 Upload Business Cards
-        p.text-gray-600.mb-8.text-lg(class="font-light") Drag and drop your business cards or click to upload
+    //- Main Content Area (With top padding for fixed header)
+    .flex-1.w-full(class="pt-16")
+      .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-8")
+        //- Quick Actions Bar
+        .bg-gradient-to-r.from-emerald-500.to-teal-500.rounded-2xl.shadow-lg.p-6.mb-8
+          .flex.flex-col.gap-4(class="sm:flex-row sm:items-center sm:justify-between")
+            h3.text-xl.font-semibold.text-white Your Networking Hub
+            .flex.flex-col.gap-4(class="sm:flex-row sm:items-center")
+              // Event Selector
+              .relative.flex.items-center.w-full(class="sm:w-auto")
+                select(
+                  v-model="selectedEventFilter"
+                  class="w-full bg-white text-gray-900 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm appearance-none pr-8"
+                )
+                  option(value="null") All Events
+                  option(
+                    v-for="event in events"
+                    :key="event.id"
+                    :value="event.id"
+                  ) {{ event.name }}
+                VaIcon(name="expand_more" size="16px" class="text-gray-500 absolute right-3 pointer-events-none")
+              .flex.items-center.gap-2.w-full(class="sm:w-auto")
+                button(
+                  class="flex-1 bg-white text-emerald-600 hover:bg-gray-50 transition-all duration-200 px-4 py-2 rounded-xl flex items-center justify-center gap-2 sm:flex-initial"
+                  @click="showCreateEventModal = true"
+                )
+                  VaIcon(name="add" size="18px")
+                  span.text-sm.font-medium New Event
+                button(
+                  class="flex-1 bg-white text-emerald-600 hover:bg-gray-50 transition-all duration-200 px-4 py-2 rounded-xl flex items-center justify-center gap-2 sm:flex-initial"
+                  @click="$refs.fileInput.click()"
+                )
+                  VaIcon(name="upload" size="18px")
+                  span.text-sm.font-medium Upload Card
+
+        //- Hidden File Input
         input(
           type="file"
           ref="fileInput"
@@ -131,197 +137,258 @@ main.p-8.max-w-7xl.mx-auto(class="bg-gradient-to-b from-gray-50 to-white min-h-s
           accept="image/*"
           @change="handleFileSelect"
         )
-        button(
-          class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl px-10 py-4 hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          @click="$refs.fileInput.click()"
-          :disabled="uploading"
-        )
-          VaIcon(name="upload" size="20px")
-          span(class="font-medium") {{ uploading ? 'Processing...' : 'Select Files' }}
-        .mt-8(v-if="uploading").flex.flex-col.items-center.gap-4
-          .loading-spinner
-          p.text-base.text-gray-600.font-medium {{ processingStatus }}
 
-        .mt-6(v-if="error").text-red-500.bg-red-50.p-4.rounded-xl.text-base {{ error }}
-
-      // Create Event Modal
-      VaModal(
-        v-model="showCreateEventModal"
-        :hide-default-actions="true"
-        class="rounded-2xl"
-      )
-        .p-8
-          h3.text-2xl.font-bold.mb-6 Create New Event
-          .space-y-4
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Event Name
-              input(
-                type="text"
-                v-model="newEventName"
-                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-                placeholder="Enter event name"
-              )
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Event Date
-              input(
-                type="date"
-                v-model="newEventDate"
-                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-              )
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Event Location
-              input(
-                type="text"
-                v-model="newEventLocation"
-                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-                placeholder="Enter event location"
-              )
-          .flex.justify-end.gap-4.mt-8
-            button(
-              class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
-              @click="showCreateEventModal = false"
-            ) Cancel
-            button(
-              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-              @click="createEvent"
-              :disabled="!newEventName || !newEventDate"
-            )
-              VaIcon(name="add" size="16px")
-              span(class="font-medium") Create Event
-
-    // Event filter
-    .bg-white.rounded-2xl.shadow-xl.p-6(class="border border-gray-100" v-if="user")
-      .flex.items-center.gap-4
-        select(
-          v-model="selectedEventFilter"
-          class="flex-1 border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-        )
-          option(value="null") All Events
-          option(v-for="event in events" :key="event.id" :value="event.id") {{ event.name }}
-        button(
-          class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl px-8 py-3 hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-          @click="loadCards"
-        )
-          VaIcon(name="search" size="18px")
-          span(class="font-medium") Apply Filter
-
-    // Cards list section
-    .grid.gap-8(class="md:grid-cols-2 lg:grid-cols-3" v-if="user")
-      .card-item(
-        v-for="card in businessCards"
-        :key="card.id"
-        :class=`[
-          'rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1',
-          card.style?.layoutStyle === 'minimal' ? 'space-y-4' : 'space-y-3'
-        ]`
-        :style=`{
-          backgroundColor: card.style?.backgroundColor || 'white',
-          borderColor: card.style?.secondaryColor,
-          borderWidth: '1px',
-          borderStyle: 'solid'
-        }`
-      )
-        // Action Buttons at the top
-        .flex.items-center.justify-end.gap-2.mb-4
-          button(
-            class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 p-2 rounded-xl flex items-center tooltip-container shrink-0"
-            @click.stop="confirmGenerateEmail(card)"
-            :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
+        //- Upload Area
+        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-if="!uploading")
+          .border-2.border-dashed.border-gray-200.rounded-xl.p-8.transition-all.duration-300(
+            class="hover:border-emerald-500"
+            @dragover.prevent
+            @drop.prevent="handleDrop"
           )
-            VaIcon(name="smart_toy" size="20px")
-            .tooltip.bg-gray-800.text-white.text-xs.px-2.py-1.rounded-lg.absolute.-top-8.-left-4.whitespace-nowrap
-              | Generate AI Email
-          button(
-            class="flex items-center gap-2 px-3 py-1 rounded-lg"
-            :style=`{
-              backgroundColor: card.style?.backgroundColor === 'white' ? '#FEF3C7' : 
-                            card.style?.backgroundColor === '#FEF3C7' ? '#FDE68A' :
-                            card.style?.backgroundColor === '#FDE68A' ? '#FCD34D' :
-                            card.style?.backgroundColor === '#FCD34D' ? '#FBBF24' :
-                            card.style?.backgroundColor === '#FBBF24' ? '#F59E0B' :
-                            card.style?.backgroundColor === '#F59E0B' ? '#D97706' :
-                            card.style?.backgroundColor === '#D97706' ? '#B45309' :
-                            card.style?.backgroundColor === '#B45309' ? '#92400E' :
-                            card.style?.backgroundColor === '#92400E' ? '#78350F' :
-                            card.style?.backgroundColor === '#78350F' ? '#451A03' :
-                            '#FEF3C7',
-              color: card.style?.primaryColor || '#059669'
-            }`
-            @click="openMoveToEventModal(card)"
-          )
-            VaIcon(name="event" size="16px")
-            span.text-sm {{ card.eventId ? 'Change Event' : 'Add to Event' }}
-
-        // Card Content
-        .flex-1
-          h3.text-2xl.font-bold(
-            :style=`{
-              color: card.style?.primaryColor || '#111827',
-              fontFamily: getFontFamily(card.style?.fontStyle)
-            }`
-          ) {{ card.name }}
-          p.text-lg(
-            :style=`{
-              color: card.style?.secondaryColor || '#4B5563',
-              fontFamily: getFontFamily(card.style?.fontStyle)
-            }`
-          ) {{ card.company }}
-          p.text-base.mt-1(
-            v-if="card.title"
-            :style=`{
-              color: card.style?.secondaryColor || '#6B7280',
-              fontFamily: getFontFamily(card.style?.fontStyle)
-            }`
-          ) {{ card.title }}
-          
-          // Contact Information
-          .mt-6(class="space-y-3")
-            template(v-for="(item, index) in contactItems(card)" :key="index")
-              a.flex.items-center.gap-2.text-base(class="hover:opacity-80 transition-opacity duration-200")(
-                v-if="item.link"
-                :href="item.link"
-                :target="item.external ? '_blank' : undefined"
-                :rel="item.external ? 'noopener noreferrer' : undefined"
-                :style=`{
-                  color: card.style?.primaryColor || '#059669',
-                  fontFamily: getFontFamily(card.style?.fontStyle)
-                }`
+            .flex.flex-col.items-center.justify-center.text-center
+              VaIcon(name="upload" size="48px" class="text-emerald-400 mb-4")
+              h3.text-2xl.font-bold.text-gray-900.mb-2 Upload Business Cards
+              p.text-gray-600.mb-6 Drag and drop your business cards or click to browse
+              button(
+                class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
+                @click="$refs.fileInput.click()"
               )
-                VaIcon(:name="item.icon" size="16px")
-                | {{ item.text }}
-              
-              p.flex.items-center.gap-2.text-base(
-                v-else
-                :style=`{
-                  color: card.style?.secondaryColor || '#6B7280',
-                  fontFamily: getFontFamily(card.style?.fontStyle)
-                }`
-              )
-                VaIcon(:name="item.icon" size="16px")
-                | {{ item.text }}
+                VaIcon(name="file_upload" size="20px")
+                span.font-medium Browse Files
 
-          // Event Information
-          .mt-4(v-if="card.eventId")
-            p.text-emerald-600.text-base.flex.items-center.gap-2
-              VaIcon(name="calendar" size="16px")
-              | {{ getEventName(card.eventId) }}
+        //- Upload Progress
+        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-else)
+          .flex.flex-col.items-center.justify-center
+            .loading-spinner.mb-4
+            p.text-lg.font-medium.text-gray-900.mb-2 Processing...
+            p.text-gray-600 {{ processingStatus }}
+            .mt-4(v-if="error")
+              p.text-red-600.font-medium {{ error }}
 
-        // Email Drafts Button at the bottom
-        .mt-6.border-t.border-gray-100.pt-4
-          button(
-            class="w-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 px-6 py-3 rounded-xl flex items-center justify-between"
-            @click="openDraftsListModal(card)"
+        // Stats Grid
+        .grid.mb-8(class="grid-cols-1 md:grid-cols-3 gap-6")
+          .stat-card.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6(
+            v-for="stat in stats"
+            :key="stat.label"
           )
-            .flex.items-center.gap-3
-              VaIcon(name="description" size="20px" class="text-emerald-600")
-              h4.font-medium.text-gray-800 Email Drafts
-            .flex.items-center.gap-2
-              span.text-sm.text-gray-500.bg-white.px-2.py-1.rounded-lg {{ cardDrafts[card.id]?.length || 0 }}
-              VaIcon(name="chevron_right" size="20px" class="text-gray-400")
+            .flex.items-center.gap-4
+              .bg-emerald-100.p-3.rounded-xl
+                VaIcon(:name="stat.icon" size="24px" class="text-emerald-600")
+              .space-y-1
+                p.text-2xl.font-bold.text-gray-900 {{ stat.value }}
+                p.text-sm.text-gray-600 {{ stat.label }}
+
+        // Main Content Area
+        .grid(class="grid-cols-1 lg:grid-cols-3 gap-8")
+          // Business Cards Section
+          div(class="lg:col-span-2")
+            .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6
+              .flex.items-center.justify-between.mb-6
+                h3.text-xl.font-semibold.text-gray-900 Business Cards
+                .flex.items-center.gap-4
+                  select(
+                    v-model="selectedEventFilter"
+                    class="border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                  )
+                    option(value="null") All Events
+                    option(v-for="event in events" :key="event.id" :value="event.id") {{ event.name }}
+                  button(
+                    class="bg-emerald-500 text-white rounded-xl px-4 py-2 hover:bg-emerald-600 transition-all duration-200 flex items-center gap-2"
+                    @click="loadCards"
+                  )
+                    VaIcon(name="refresh" size="18px")
+                    span.text-sm.font-medium apply filters
+
+              // Cards Grid
+              .grid(
+                class="grid-cols-1 gap-8 mt-6"
+                class="md:grid-cols-2 md:gap-6"
+              )
+                .card-container(
+                  v-for="card in sortedBusinessCards"
+                  :key="card.id"
+                  class="rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl"
+                  :style=`{
+                    backgroundColor: card.style?.backgroundColor || '#ffffff',
+                    color: getContrastColor(card.style?.backgroundColor || '#ffffff'),
+                    fontFamily: getFontFamily(card.style?.fontStyle),
+                    borderColor: card.style?.secondaryColor || '#e5e7eb',
+                    borderWidth: '1px',
+                    borderStyle: 'solid'
+                  }`
+                )
+                  // Top Action Bar
+                  .bg-gray-50.px-6.py-4.flex.flex-col.gap-3.border-b.border-gray-100(class="sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-3")
+                    button(
+                      class="w-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                      @click.stop="confirmGenerateEmail(card)"
+                      :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
+                      class="sm:w-auto"
+                    )
+                      VaIcon(name="smart_toy" size="16px")
+                      span.font-medium Generate AI Email
+                    .flex.items-center.gap-2.w-full.justify-end(class="sm:w-auto")
+                      button(
+                        class="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                        @click="openMoveToEventModal(card)"
+                        class="sm:flex-initial"
+                      )
+                        VaIcon(name="event" size="14px")
+                        span.font-medium {{ card.eventId ? 'Change Event' : 'Add to Event' }}
+                      button(
+                        class="flex-1 bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                        @click.stop="confirmDeleteCard(card)"
+                        class="sm:flex-initial"
+                      )
+                        VaIcon(name="delete" size="16px")
+                        span.font-medium Delete
+
+                  // Card Content
+                  .flex-1.flex.flex-col.gap-6.p-8
+                    // Name and Title
+                    .space-y-2
+                      h3.text-2xl.font-bold(:style="{ color: card.style?.primaryColor || '#1f2937' }") {{ card.name }}
+                      p.text-gray-600.text-lg {{ card.title }}
+
+                    // Contact Info
+                    .space-y-3
+                      // Emails
+                      .relative.flex.items-center.gap-3(v-if="card.emails?.length > 0")
+                        VaIcon(name="email" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                        .flex.flex-col.w-full
+                          .flex.items-center.justify-between.w-full
+                            a.text-base(:style="{ color: card.style?.secondaryColor || '#4B5563' }" :href="'mailto:' + card.emails[0]") {{ card.emails[0] }}
+                            button.p-1.rounded-lg.transition-colors(
+                              v-if="card.emails.length > 1"
+                              @click="toggleContactDropdown('email', card.id)"
+                              class="hover:bg-gray-100"
+                            )
+                              VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                          .mt-1.w-full.bg-white.rounded-lg.shadow-lg.border.border-gray-200.overflow-hidden(
+                            v-if="card.emails.length > 1 && expandedContact.type === 'email' && expandedContact.cardId === card.id"
+                          )
+                            a.block.px-4.py-2.text-sm.transition-colors(
+                              v-for="email in card.emails.slice(1)"
+                              :key="email"
+                              :href="'mailto:' + email"
+                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                              class="hover:bg-gray-50"
+                            ) {{ email }}
+
+                      // Phone Numbers
+                      .relative.flex.items-center.gap-3(v-if="card.phones?.length > 0")
+                        VaIcon(name="phone" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                        .flex.flex-col.w-full
+                          .flex.items-center.justify-between.w-full
+                            a.text-base(:style="{ color: card.style?.secondaryColor || '#4B5563' }" :href="'tel:' + card.phones[0]") {{ card.phones[0] }}
+                            button.p-1.rounded-lg.transition-colors(
+                              v-if="card.phones.length > 1"
+                              @click="toggleContactDropdown('phone', card.id)"
+                              class="hover:bg-gray-100"
+                            )
+                              VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                          .mt-1.w-full.bg-white.rounded-lg.shadow-lg.border.border-gray-200.overflow-hidden(
+                            v-if="card.phones.length > 1 && expandedContact.type === 'phone' && expandedContact.cardId === card.id"
+                          )
+                            a.block.px-4.py-2.text-sm.transition-colors(
+                              v-for="phone in card.phones.slice(1)"
+                              :key="phone"
+                              :href="'tel:' + phone"
+                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                              class="hover:bg-gray-50"
+                            ) {{ phone }}
+
+                      // Websites
+                      .relative.flex.items-center.gap-3(v-if="card.websites?.length > 0")
+                        VaIcon(name="language" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                        .flex.flex-col.w-full
+                          .flex.items-center.justify-between.w-full
+                            a.text-base(
+                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                              :href="formatWebsiteUrl(card.websites[0])"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            ) {{ card.websites[0] }}
+                            button.p-1.rounded-lg.transition-colors(
+                              v-if="card.websites.length > 1"
+                              @click="toggleContactDropdown('website', card.id)"
+                              class="hover:bg-gray-100"
+                            )
+                              VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                          .mt-1.w-full.bg-white.rounded-lg.shadow-lg.border.border-gray-200.overflow-hidden(
+                            v-if="card.websites.length > 1 && expandedContact.type === 'website' && expandedContact.cardId === card.id"
+                          )
+                            a.block.px-4.py-2.text-sm.transition-colors(
+                              v-for="website in card.websites.slice(1)"
+                              :key="website"
+                              :href="formatWebsiteUrl(website)"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                              class="hover:bg-gray-50"
+                            ) {{ website }}
+
+                      // Company (unchanged)
+                      .flex.items-center.gap-3(v-if="card.company")
+                        VaIcon(name="business" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                        span.text-base(:style="{ color: card.style?.secondaryColor || '#4B5563' }") {{ card.company }}
+
+                    // Event Tag
+                    .mt-auto.pt-6
+                      .inline-flex.items-center.gap-2.px-4.py-2.rounded-full.text-base(
+                        :class=`card.eventId ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800'`
+                      )
+                        VaIcon(name="event" size="16px" :class="card.eventId ? 'text-emerald-600' : 'text-gray-600'")
+                        span {{ getEventName(card.eventId) || 'No Event' }}
+
+                  // Bottom Action Bar
+                  .bg-gray-50.px-6.py-4.flex.items-center.justify-between.border-t.border-gray-100
+                    .flex.items-center.gap-4
+                      button(
+                        class="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                        @click="openDraftsListModal(card)"
+                      )
+                        VaIcon(name="description" size="18px")
+                        span.text-base.font-medium Message Drafts
+                        span(class="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-lg ml-1") {{ cardDrafts[card.id]?.length || 0 }}
+                      button(
+                        class="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors duration-200 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg"
+                        @click="saveContact(card)"
+                      )
+                        VaIcon(name="person_add" size="18px")
+                        span.text-sm.font-medium Save Contact
+
+          // Recent Activity & Quick Actions
+          div(class="lg:col-span-1")
+            // Recent Activity
+            .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6.mb-6
+              h3.text-xl.font-semibold.text-gray-900.mb-6 Recent Activity
+              .space-y-4
+                .activity-item(v-for="activity in recentActivities" :key="activity.id")
+                  .flex.items-start.gap-3
+                    .bg-emerald-100.p-2.rounded-lg
+                      VaIcon(:name="activity.icon" size="16px" class="text-emerald-600")
+                    .flex-1
+                      p.text-sm.text-gray-900 {{ activity.text }}
+                      p.text-xs.text-gray-500 {{ activity.time }}
+
+            // Quick Actions
+            .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6
+              h3.text-xl.font-semibold.text-gray-900.mb-6 Quick Actions
+              .grid.grid-cols-2.gap-4
+                button(
+                  v-for="action in quickActions"
+                  :key="action.label"
+                  class="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                  @click="action.onClick"
+                )
+                  .bg-emerald-100.p-3.rounded-lg
+                    VaIcon(:name="action.icon" size="20px" class="text-emerald-600")
+                  span.text-sm.text-gray-600 {{ action.label }}
 
     // Modals section
     template(v-if="user")
-      // Email Drafts List Modal
+      // Message Drafts List Modal
       VaModal(
         v-model="showDraftsListModal"
         :hide-default-actions="true"
@@ -330,7 +397,7 @@ main.p-8.max-w-7xl.mx-auto(class="bg-gradient-to-b from-gray-50 to-white min-h-s
         .p-8
           .flex.items-center.justify-between.mb-8
             .flex.items-center.gap-3
-              h3.text-2xl.font-bold Email Drafts
+              h3.text-2xl.font-bold Message Drafts
               span.text-sm.text-gray-500.px-2.py-1.bg-gray-100.rounded-lg {{ cardDrafts[selectedCardForDrafts?.id]?.length || 0 }} drafts
             button(
               class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -469,10 +536,78 @@ main.p-8.max-w-7xl.mx-auto(class="bg-gradient-to-b from-gray-50 to-white min-h-s
             )
               VaIcon(name="event" size="16px")
               span(class="font-medium") {{ selectedCardForMove?.eventId ? 'Change Event' : 'Add to Event' }}
+
+      // Create Event Modal
+      VaModal(
+        v-model="showCreateEventModal"
+        :hide-default-actions="true"
+        class="rounded-2xl"
+      )
+        .p-8
+          h3.text-2xl.font-bold.mb-6 Create New Event
+          .space-y-4
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Event Name
+              input(
+                v-model="newEventName"
+                type="text"
+                placeholder="Enter event name"
+                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Event Date
+              input(
+                v-model="newEventDate"
+                type="date"
+                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Location
+              input(
+                v-model="newEventLocation"
+                type="text"
+                placeholder="Enter event location"
+                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+          .flex.justify-end.gap-4.mt-8
+            button(
+              class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+              @click="showCreateEventModal = false"
+            ) Cancel
+            button(
+              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+              @click="createEvent"
+              :disabled="!newEventName"
+            )
+              VaIcon(name="event" size="16px")
+              span(class="font-medium") Create Event
+
+      // Delete Card Confirmation Modal
+      VaModal(
+        v-model="showDeleteModal"
+        :hide-default-actions="true"
+        class="rounded-2xl"
+      )
+        .p-8
+          h3.text-2xl.font-bold.mb-4 Delete Business Card
+          p.text-gray-600.mb-6.text-lg(class="font-light") Are you sure you want to delete this business card? This action cannot be undone.
+          .flex.justify-end.gap-4
+            button(
+              class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+              @click="showDeleteModal = false"
+            ) Cancel
+            button(
+              class="bg-red-500 text-white px-6 py-3 rounded-xl hover:bg-red-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+              @click="deleteCard"
+              :disabled="deletingCard"
+            )
+              .loading-spinner.w-4.h-4.border-2(v-if="deletingCard")
+              VaIcon(v-else name="delete" size="16px")
+              span(class="font-medium") {{ deletingCard ? 'Deleting...' : 'Delete Card' }}
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { businessCardService } from '../../services/businessCardService';
 import { authService } from '../../services/authService';
 import { useRouter } from 'vue-router';
@@ -507,6 +642,10 @@ const selectedEventForMove = ref('');
 const showDraftsListModal = ref(false);
 const selectedCardForDrafts = ref(null);
 const selectedDraft = ref(null);
+const showDeleteModal = ref(false);
+const selectedCardForDelete = ref(null);
+const deletingCard = ref(false);
+const expandedContact = ref({ type: null, cardId: null });
 
 const STORAGE_KEY = 'selectedEvent';
 
@@ -731,17 +870,24 @@ async function loadEvents() {
 async function createEvent() {
   try {
     error.value = '';
+    if (!newEventName.value.trim()) {
+      error.value = 'Event name is required';
+      return;
+    }
+
     const event = await businessCardService.createEvent({
-      name: newEventName.value,
-      date: newEventDate.value,
-      location: newEventLocation.value
+      name: newEventName.value.trim(),
+      date: newEventDate.value || null,
+      location: newEventLocation.value?.trim() || null
     });
     
     // Add the new event to the list
     events.value.unshift(event);
     
+    // Set the new event as selected
+    selectedEventFilter.value = event.id;
+    
     // Reset form and close modal
-    selectedEvent.value = event.id;
     showCreateEventModal.value = false;
     newEventName.value = '';
     newEventDate.value = '';
@@ -816,9 +962,260 @@ function handleEventChange() {
     localStorage.removeItem(STORAGE_KEY);
   }
 }
+
+// Features data for landing page
+const features = [
+  {
+    icon: 'smart_toy',
+    title: 'AI-Powered Organization',
+    description: 'Automatically categorize and organize your business cards with intelligent event tagging.'
+  },
+  {
+    icon: 'email',
+    title: 'Smart Message Drafts',
+    description: 'Generate personalized follow-up messages with AI assistance in seconds.'
+  },
+  {
+    icon: 'event',
+    title: 'Event Management',
+    description: 'Organize contacts by events and conferences for better networking.'
+  },
+  {
+    icon: 'qr_code',
+    title: 'Smart Card Scanning',
+    description: 'Instantly digitize business cards with advanced OCR technology.'
+  },
+  {
+    icon: 'security',
+    title: 'Enterprise Security',
+    description: 'Bank-level encryption and security for your business data.'
+  },
+  {
+    icon: 'analytics',
+    title: 'Network Analytics',
+    description: 'Get insights into your professional network and connections.'
+  }
+];
+
+// Stats data
+const stats = computed(() => [
+  {
+    icon: 'qr_code',
+    value: businessCards.value.length,
+    label: 'Business Cards'
+  },
+  {
+    icon: 'event',
+    value: events.value.length,
+    label: 'Events'
+  },
+  {
+    icon: 'email',
+    value: Object.keys(cardDrafts.value).length,
+    label: 'Message Drafts'
+  }
+]);
+
+// Quick actions
+const quickActions = [
+  {
+    icon: 'upload',
+    label: 'Upload Card',
+    onClick: () => fileInput.value?.click()
+  },
+  {
+    icon: 'event',
+    label: 'New Event',
+    onClick: () => showCreateEventModal.value = true
+  },
+  {
+    icon: 'search',
+    label: 'Search Cards',
+    onClick: () => loadCards()
+  },
+  {
+    icon: 'edit',
+    label: 'Edit Profile',
+    onClick: () => editProfile()
+  }
+];
+
+// Recent activities
+const recentActivities = computed(() => {
+  const activities = [];
+  
+  // Add card uploads
+  businessCards.value.slice(0, 3).forEach(card => {
+    activities.push({
+      id: `card-${card.id}`,
+      icon: 'qr_code',
+      text: `Added ${card.name} from ${card.company}`,
+      time: card.createdAt?.toDate ? card.createdAt.toDate().toLocaleString() : new Date().toLocaleString()
+    });
+  });
+
+  // Add Message drafts
+  Object.entries(cardDrafts.value).slice(0, 3).forEach(([cardId, drafts]) => {
+    drafts.forEach(draft => {
+      activities.push({
+        id: `draft-${draft.id}`,
+        icon: 'email',
+        text: `Generated message draft for ${businessCards.value.find(c => c.id === cardId)?.name}`,
+        time: draft.createdAt?.toDate ? draft.createdAt.toDate().toLocaleString() : new Date().toLocaleString()
+      });
+    });
+  });
+
+  // Sort by date and limit to 5
+  return activities
+    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .slice(0, 5);
+});
+
+// Add watcher for selectedEventFilter
+watch(selectedEventFilter, (newValue) => {
+  loadCards();
+});
+
+function getContrastColor(hexcolor) {
+  // Remove the hash if present
+  hexcolor = hexcolor.replace('#', '');
+  
+  // Convert hex to RGB
+  const r = parseInt(hexcolor.substr(0, 2), 16);
+  const g = parseInt(hexcolor.substr(2, 2), 16);
+  const b = parseInt(hexcolor.substr(4, 2), 16);
+  
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return black or white based on luminance
+  return luminance > 0.5 ? '#1f2937' : '#ffffff';
+}
+
+function confirmDeleteCard(card) {
+  selectedCardForDelete.value = card;
+  showDeleteModal.value = true;
+}
+
+async function deleteCard() {
+  if (!selectedCardForDelete.value) return;
+  
+  try {
+    deletingCard.value = true;
+    error.value = '';
+    
+    await businessCardService.deleteCard(selectedCardForDelete.value.id);
+    
+    // Remove the card from the local state
+    const index = businessCards.value.findIndex(c => c.id === selectedCardForDelete.value.id);
+    if (index !== -1) {
+      businessCards.value.splice(index, 1);
+    }
+    
+    // Close the modal
+    showDeleteModal.value = false;
+    selectedCardForDelete.value = null;
+  } catch (err) {
+    error.value = 'Error deleting business card';
+    console.error(err);
+  } finally {
+    deletingCard.value = false;
+  }
+}
+
+function toggleContactDropdown(type, cardId) {
+  if (expandedContact.value.type === type && expandedContact.value.cardId === cardId) {
+    expandedContact.value = { type: null, cardId: null };
+  } else {
+    expandedContact.value = { type, cardId };
+  }
+}
+
+function formatWebsiteUrl(url) {
+  if (!url) return '#';
+  return url.startsWith('http') ? url : `https://${url}`;
+}
+
+function saveContact(card) {
+  // Create vCard content
+  const vCard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${card.name}`,
+    `N:${card.name.split(' ').reverse().join(';')}`,
+    card.title ? `TITLE:${card.title}` : '',
+    card.company ? `ORG:${card.company}` : '',
+    ...(card.emails || []).map(email => `EMAIL;type=INTERNET:${email}`),
+    ...(card.phones || []).map(phone => `TEL;type=WORK:${phone}`),
+    ...(card.websites || []).map(website => `URL:${formatWebsiteUrl(website)}`),
+    card.address ? `ADR;type=WORK:;;${card.address}` : '',
+    'END:VCARD'
+  ].filter(Boolean).join('\n');
+
+  // Create blob and download link
+  const blob = new Blob([vCard], { type: 'text/vcard' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${card.name.replace(/\s+/g, '_')}.vcf`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+// Add this computed property after the other computed properties
+const sortedBusinessCards = computed(() => {
+  return [...businessCards.value].sort((a, b) => {
+    const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+    const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+    return dateB - dateA;
+  });
+});
 </script>
 
 <style scoped>
+/* Full screen setup */
+main {
+  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Fixed header styles */
+.fixed-header {
+  backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Content area scrolling */
+.content-area {
+  height: calc(100vh - 4rem); /* Subtract header height */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+.content-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-area::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 4px;
+}
+
+.content-area::-webkit-scrollbar-thumb:hover {
+  background: #D1D5DB;
+}
+
+/* Loading spinner animation */
 .loading-spinner {
   width: 32px;
   height: 32px;
@@ -839,6 +1236,7 @@ function handleEventChange() {
   100% { transform: rotate(360deg); }
 }
 
+/* Card and draft item styles */
 .draft-item {
   border: 1px solid #e5e7eb;
   transition: all 0.2s;
@@ -859,6 +1257,7 @@ function handleEventChange() {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* Hover effects */
 .group:hover .group-hover\:opacity-100 {
   opacity: 1;
 }
@@ -866,6 +1265,7 @@ function handleEventChange() {
   opacity: 0;
 }
 
+/* Tooltip styles */
 .tooltip-container {
   position: relative;
 }
@@ -879,10 +1279,60 @@ function handleEventChange() {
   z-index: 10;
 }
 
+/* Text truncation */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Card animations */
+.feature-card {
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card {
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Gradient animation */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-gradient-animate {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
 }
 </style>

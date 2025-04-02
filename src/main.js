@@ -1,4 +1,4 @@
-const DEFAULT_PAGE_TITLE = 'Default App Title'
+const DEFAULT_PAGE_TITLE = 'BilloAI'
 // Base Vue config
 import { createApp } from 'vue'
 import App from './App.vue'
