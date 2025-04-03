@@ -1,6 +1,8 @@
+import { Analytics } from '@vercel/analytics/vue';
 <template lang="pug">
 .min-h-screen.bg-gray-50
   RouterView
+  Analytics
 </template>
 
 <script setup>
