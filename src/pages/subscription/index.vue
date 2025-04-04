@@ -1,6 +1,15 @@
 <template lang="pug">
 main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50")
   .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-12")
+    //- Home Button
+    .flex.justify-end.mb-8
+      button(
+        @click="router.push('/home')"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-all duration-200 border border-gray-200 shadow-sm hover:shadow"
+      )
+        VaIcon(name="home" size="20px")
+        span.font-medium Return Home
+
     .text-center.mb-12
       h1.text-4xl.font-bold.text-gray-900.mb-4 Choose Your Plan
       p.text-xl.text-gray-600 Select the plan that best fits your networking needs
@@ -204,6 +213,36 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           )
             .loading-spinner.w-4.h-4.border-2(v-if="canceling")
             span(v-else) Yes, Cancel Subscription
+
+    //- Success Modal
+    VaModal(
+      v-model="showSuccessModal"
+      :hide-default-actions="true"
+      class="rounded-2xl"
+    )
+      .p-8.text-center
+        //- Success Animation
+        .success-animation.mb-6
+          .checkmark-circle
+            .checkmark.draw
+
+        //- Welcome Message
+        h2.text-3xl.font-bold.text-gray-900.mb-4 Welcome to {{ selectedPlan }}!
+        p.text-xl.text-gray-600.mb-8 Thank you for subscribing to BilloAI. Your journey to better networking starts now.
+
+        //- Plan Features Summary
+        .bg-emerald-50.rounded-xl.p-6.mb-8
+          h3.text-lg.font-semibold.text-emerald-700.mb-4 What's included in your plan:
+          .grid.grid-cols-2.gap-4
+            .flex.items-center.gap-2(v-for="feature in getPlanFeatures(selectedPlan)" :key="feature")
+              VaIcon(name="check_circle" size="20px" class="text-emerald-500")
+              span.text-gray-700.text-sm {{ feature }}
+
+        //- Action Button
+        button(
+          class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 font-medium text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          @click="goToHome"
+        ) Start Exploring
 </template>
 
 <script setup>
@@ -219,7 +258,9 @@ const route = useRoute();
 const loading = ref(false);
 const canceling = ref(false);
 const showCancelModal = ref(false);
+const showSuccessModal = ref(false);
 const currentPlan = ref('FREE');
+const selectedPlan = ref('');
 const subscriptionStatus = ref(null);
 const usageStats = ref({
   cards: 0,
@@ -235,6 +276,35 @@ const subscriptionEndDate = ref(null);
 const planLimits = computed(() => {
   return checkPlanLimits(currentPlan.value, usageStats.value);
 });
+
+// Get features for the selected plan
+function getPlanFeatures(plan) {
+  const features = {
+    BASIC: [
+      'Up to 20 business cards',
+      'Advanced card scanning',
+      '10 email drafts per card',
+      'Up to 5 events',
+      'Enhanced digital profile',
+      'Custom QR code design'
+    ],
+    PRO: [
+      'Unlimited business cards',
+      'Premium card scanning',
+      'Unlimited email drafts',
+      'Unlimited events',
+      'Premium digital profile',
+      'Custom QR code branding'
+    ]
+  };
+  return features[plan] || [];
+}
+
+// Navigate to home
+function goToHome() {
+  showSuccessModal.value = false;
+  router.push('/home');
+}
 
 // Load subscription status and usage stats
 async function loadSubscriptionData() {
@@ -263,7 +333,8 @@ async function loadSubscriptionData() {
 
     // Handle success/canceled states from Stripe Checkout
     if (route.query.success) {
-      alert('Thank you for your subscription!');
+      selectedPlan.value = subscription.plan;
+      showSuccessModal.value = true;
     } else if (route.query.canceled) {
       alert('Subscription canceled. Feel free to try again when you\'re ready.');
     }
@@ -274,7 +345,6 @@ async function loadSubscriptionData() {
     }
   } catch (error) {
     console.error('Error loading subscription data:', error);
-    // If user is not logged in, redirect to login
     if (error.message === 'User must be logged in') {
       router.push('/login');
     }
@@ -343,5 +413,66 @@ onMounted(() => {
 
 .loading-spinner {
   @apply animate-spin rounded-full border-t-2 border-b-2 border-white h-4 w-4 mx-auto;
+}
+
+/* Success Animation Styles */
+.success-animation {
+  @apply relative w-24 h-24 mx-auto;
+}
+
+.checkmark-circle {
+  @apply w-24 h-24 relative bg-emerald-100 rounded-full;
+  animation: scale 0.3s ease-in-out 0.9s both;
+}
+
+.checkmark {
+  @apply w-12 h-24 relative rotate-45 absolute left-[30%] top-[40%];
+}
+
+.checkmark.draw:after {
+  @apply absolute h-3 w-3 bg-emerald-500 rounded-full top-[70%] left-[30%];
+  content: '';
+  animation: checkmark-dot 0.2s ease-in-out forwards;
+}
+
+.checkmark.draw:before {
+  @apply absolute h-3 w-[2px] bg-emerald-500 bottom-0;
+  content: '';
+  animation: checkmark-check 0.3s ease-in-out forwards;
+}
+
+@keyframes checkmark-check {
+  0% {
+    height: 0;
+    width: 0;
+    opacity: 1;
+  }
+  100% {
+    height: 60px;
+    width: 3px;
+    opacity: 1;
+  }
+}
+
+@keyframes checkmark-dot {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 1;
+  }
+  100% {
+    width: 12px;
+    height: 12px;
+    opacity: 1;
+  }
+}
+
+@keyframes scale {
+  0%, 100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
 }
 </style> 
