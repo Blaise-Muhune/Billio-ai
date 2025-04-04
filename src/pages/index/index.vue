@@ -114,35 +114,35 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
 // Features Section Data
 const features = [
   {
-    icon: 'qr_code_2',
-    title: 'Smart QR Business Cards',
-    description: 'Share your contact info instantly with a scannable QR code that never runs out or becomes outdated.'
+    icon: 'document_scanner',
+    title: 'One-Click Card Scanning',
+    description: 'Instantly scan business cards and save them to your contacts with a single click - no manual data entry required.'
   },
-  {
-    icon: 'person',
-    title: 'Professional Digital Profile',
-    description: 'Create a stunning digital presence that showcases your brand, contact info, and social links in one place.'
-  },
-  {
-    icon: 'style',
-    title: 'Organized Contacts',
-    description: 'Keep all your business connections organized digitally - no more lost cards or outdated information.'
-  },
+  // {
+  //   icon: 'sync',
+  //   title: 'Auto Contact Sync',
+  //   description: "Automatically sync scanned cards with your phone's contacts and favorite CRM systems in seconds."
+  // },
   {
     icon: 'smart_toy',
-    title: 'AI Email Generation',
-    description: 'Create personalized follow-up emails in seconds with our advanced AI technology.'
+    title: 'AI Email Assistant',
+    description: 'Generate personalized follow-up emails instantly with AI that understands context and business etiquette.'
   },
   {
-    icon: 'share',
-    title: 'Social Integration',
-    description: 'Connect all your social profiles in one unified hub for seamless networking.'
+    icon: 'qr_code_2',
+    title: 'Dynamic Digital Cards',
+    description: 'Create digital business cards that update in real-time - when you change jobs or details, all shared cards update automatically.'
   },
   {
-    icon: 'analytics',
-    title: 'Network Analytics',
-    description: 'Gain insights into your professional network with detailed analytics and reports.'
-  }
+    icon: 'event_available',
+    title: 'Event Networking Mode',
+    description: 'Special mode for conferences and events - scan multiple cards rapidly and organize them by event automatically.'
+  },
+  // {
+  //   icon: 'badge',
+  //   title: 'Smart Tags & Categories',
+  //   description: 'AI automatically categorizes contacts by industry, role, and potential opportunities for smarter networking.'
+  // }
 ];
 
 // How It Works Steps
