@@ -7,6 +7,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   sendPasswordResetEmail as firebaseSendPasswordReset,
+  sendEmailVerification as firebaseSendEmailVerification,
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
@@ -141,8 +142,19 @@ export const authService = {
   async signInWithEmailAndPassword(email, password) {
     try {
       const userCredential = await firebaseSignInWithEmailAndPassword(auth, email, password);
-      await this.initializeUserData(userCredential.user);
-      return userCredential.user;
+      const user = userCredential.user;
+
+      // If email is verified and user doesn't exist in Firestore yet, create it
+      if (user.emailVerified) {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+          await this.initializeUserData(user);
+        }
+      }
+
+      return user;
     } catch (error) {
       console.error('Sign in error:', error);
       throw this.handleAuthError(error);
@@ -153,7 +165,8 @@ export const authService = {
   async createUserWithEmailAndPassword(email, password) {
     try {
       const userCredential = await firebaseCreateUser(auth, email, password);
-      await this.initializeUserData(userCredential.user);
+      // Only send verification email, don't initialize user data yet
+      await this.sendEmailVerification(userCredential.user);
       return userCredential.user;
     } catch (error) {
       console.error('Sign up error:', error);
@@ -165,6 +178,7 @@ export const authService = {
   async signInWithGoogle() {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
+      // Google sign-in automatically verifies email, so we can create the user data
       await this.initializeUserData(userCredential.user);
       return userCredential.user;
     } catch (error) {
@@ -193,6 +207,30 @@ export const authService = {
     }
   },
 
+  // Send email verification
+  async sendEmailVerification(user = null) {
+    try {
+      const currentUser = user || this.getCurrentUser();
+      if (!currentUser) throw new Error('User must be logged in');
+      
+      await firebaseSendEmailVerification(currentUser, {
+        url: window.location.origin + '/auth?verified=true',
+        handleCodeInApp: true
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Email verification error:', error);
+      throw this.handleAuthError(error);
+    }
+  },
+
+  // Check if email is verified
+  isEmailVerified() {
+    const user = this.getCurrentUser();
+    return user?.emailVerified || false;
+  },
+
   // Initialize user data in Firestore
   async initializeUserData(user) {
     try {
@@ -205,6 +243,7 @@ export const authService = {
           email: user.email,
           displayName: user.displayName || '',
           photoURL: user.photoURL || '',
+          emailVerified: user.emailVerified,
           createdAt: new Date(),
           updatedAt: new Date(),
           plan: 'FREE',

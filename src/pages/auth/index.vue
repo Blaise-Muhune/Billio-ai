@@ -10,6 +10,32 @@
     
     // Main Card
     .bg-white.rounded-2xl.shadow-xl.p-8.space-y-6
+      // Success Alert for Email Verification
+      transition(
+        enter-active-class="transition ease-out duration-300"
+        enter-from-class="transform opacity-0 scale-95"
+        enter-to-class="transform opacity-100 scale-100"
+        leave-active-class="transition ease-in duration-200"
+        leave-from-class="transform opacity-100 scale-100"
+        leave-to-class="transform opacity-0 scale-95"
+      )
+        .bg-emerald-50.border-l-4.border-emerald-400.p-4.rounded-md(
+          v-if="successMessage"
+          role="alert"
+        )
+          .flex
+            .flex-shrink-0
+              VaIcon(name="check_circle" size="20px" class="text-emerald-500")
+            .ml-3
+              p.text-sm.text-emerald-700 {{ successMessage }}
+            .pl-3.ml-auto
+              .flex
+                button.inline-flex.text-emerald-400.hover_text-emerald-500.focus_outline-none(
+                  @click="successMessage = ''"
+                )
+                  span.sr-only Close
+                  VaIcon(name="close" size="20px")
+
       // Error Alert
       transition(
         enter-active-class="transition ease-out duration-300"
@@ -51,6 +77,22 @@
                       d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                       clip-rule="evenodd"
                     )
+
+      // Verification Notice
+      .bg-blue-50.border-l-4.border-blue-400.p-4.rounded-md(
+        v-if="showVerificationNotice"
+        role="alert"
+      )
+        .flex.items-start
+          .flex-shrink-0
+            VaIcon(name="info" size="20px" class="text-blue-500 mt-0.5")
+          .ml-3
+            p.text-sm.text-blue-700.font-medium Please verify your email
+            p.text-sm.text-blue-600.mt-1 We've sent a verification link to your email address. Please check your inbox and verify your email to continue.
+            button.mt-2.text-sm.font-medium.text-blue-700.hover_text-blue-800.underline(
+              @click="resendVerification"
+              :disabled="loading"
+            ) Resend verification email
 
       // Auth Form
       form.space-y-6(@submit.prevent="isSignUp ? handleSignUp() : handleSignIn()")
@@ -147,12 +189,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { authService } from '../../services/authService'
 import Logo from '../../components/Logo.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 // Form state
 const email = ref('')
@@ -161,34 +204,49 @@ const rememberMe = ref(false)
 const isSignUp = ref(false)
 const loading = ref(false)
 const error = ref('')
+const successMessage = ref('')
+const showVerificationNotice = ref(false)
 
 // Handle email/password sign in
 const handleSignIn = async () => {
   try {
-    loading.value = true
-    error.value = ''
-    await authService.signInWithEmailAndPassword(email.value, password.value)
-    router.push('/home')
+    loading.value = true;
+    error.value = '';
+    const user = await authService.signInWithEmailAndPassword(email.value, password.value);
+    
+    if (!user.emailVerified) {
+      showVerificationNotice.value = true;
+      return;
+    }
+    
+    // If email is verified, redirect to profile setup if needed
+    const userProfile = await authService.getUserProfile();
+    if (!userProfile) {
+      router.push('/profile-setup');
+    } else {
+      router.push('/home');
+    }
   } catch (err) {
-    error.value = err.message
+    error.value = err.message;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Handle email/password sign up
 const handleSignUp = async () => {
   try {
-    loading.value = true
-    error.value = ''
-    await authService.createUserWithEmailAndPassword(email.value, password.value)
-    router.push('/profile-setup')
+    loading.value = true;
+    error.value = '';
+    await authService.createUserWithEmailAndPassword(email.value, password.value);
+    showVerificationNotice.value = true;
+    successMessage.value = 'Account created successfully! Please check your email to verify your address. After verification, you can sign in to complete your profile.';
   } catch (err) {
-    error.value = err.message
+    error.value = err.message;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Handle Google sign in
 const handleGoogleSignIn = async () => {
@@ -222,6 +280,28 @@ const handleResetPassword = async () => {
     loading.value = false
   }
 }
+
+// Resend verification email
+const resendVerification = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    await authService.sendEmailVerification()
+    successMessage.value = 'Verification email sent! Please check your inbox.'
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// Check for email verification success
+onMounted(() => {
+  if (route.query.verified === 'true') {
+    successMessage.value = 'Email verified successfully! Please sign in to complete your profile.';
+    isSignUp.value = false; // Switch to sign in mode
+  }
+})
 </script>
 
 <style scoped>

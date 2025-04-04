@@ -53,10 +53,8 @@ main.p-8.max-w-2xl.mx-auto
         input(
           type="email"
           v-model="formData.email"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-gray-50 cursor-not-allowed"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           required
-          readonly
-          disabled
         )
 
       // Company
@@ -503,11 +501,10 @@ onMounted(async () => {
       state: '',
       zipCode: '',
       bio: '',
-      // Generate social media handles based on the suggested name
-      linkedin: suggestedName ? `linkedin.com/in/${suggestedName.toLowerCase().replace(/\s+/g, '-')}` : '',
-      twitter: suggestedName ? `twitter.com/${suggestedName.toLowerCase().replace(/\s+/g, '')}` : '',
-      instagram: suggestedName ? `instagram.com/${suggestedName.toLowerCase().replace(/\s+/g, '')}` : '',
-      facebook: suggestedName ? `facebook.com/${suggestedName.toLowerCase().replace(/\s+/g, '')}` : '',
+      linkedin: '',
+      twitter: '',
+      instagram: '',
+      facebook: '',
       spotify: '',
       soundcloud: '',
       youtubeMusic: '',

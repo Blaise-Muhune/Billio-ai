@@ -70,16 +70,45 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             
             //- User Profile Picture (if logged in)
             .relative(v-if="user")
-              img(
-                :src="user.photoURL || '/default-avatar.png'"
-                class="w-10 h-10 rounded-full object-cover border-2 border-emerald-100 shadow-sm hover:border-emerald-200 transition-colors duration-200"
-                alt="Profile picture"
+              .relative.cursor-pointer.profile-pic(@click.stop="toggleUserMenu")
+                template(v-if="user.photoURL")
+                  img(
+                    :src="user.photoURL"
+                    class="w-10 h-10 rounded-full object-cover border-2 border-emerald-100 shadow-sm hover:border-emerald-200 transition-colors duration-200"
+                    alt="Profile picture"
+                  )
+                template(v-else)
+                  div(
+                    class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-emerald-100 shadow-sm hover:border-emerald-200 transition-colors duration-200"
+                  )
+                    span.text-emerald-600.font-semibold {{ user.displayName ? user.displayName.charAt(0).toUpperCase() : '?' }}
+                //- Premium Badge (if premium)
+                .absolute.-bottom-1.-right-1.bg-amber-500.text-white.p-1.rounded-full.shadow-md(
+                  v-if="user.isPremium"
+                )
+                  VaIcon(name="diamond" size="12px")
+              
+              //- User Menu Dropdown
+              .absolute.right-0.mt-2.w-48.bg-white.rounded-xl.shadow-lg.border.border-gray-100.overflow-hidden.transform.transition-all.duration-200.ease-in-out.user-menu(
+                v-if="showUserMenu"
+                class="origin-top-right z-50"
+                @click.stop
               )
-              //- Premium Badge (if premium)
-              .absolute.-bottom-1.-right-1.bg-amber-500.text-white.p-1.rounded-full.shadow-md(
-                v-if="user.isPremium"
-              )
-                VaIcon(name="diamond" size="12px")
+                .py-1
+                  router-link(
+                    to="/profile-setup"
+                    class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                    @click="showUserMenu = false"
+                  )
+                    VaIcon(name="settings" size="18px")
+                    span.font-medium Edit Profile
+                  
+                  button(
+                    class="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 w-full transition-colors duration-200"
+                    @click="signOut"
+                  )
+                    VaIcon(name="logout" size="18px")
+                    span.font-medium Sign Out
             
             //- Mobile Menu Button
             button(
@@ -189,15 +218,34 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 button(
                   class="flex-1 bg-white text-emerald-600 hover:bg-gray-50 transition-all duration-200 px-4 py-2 rounded-xl flex items-center justify-center gap-2 sm:flex-initial"
                   @click="handleCreateEvent"
+                  :disabled="!user || !user.emailVerified"
+                  :title="!user?.emailVerified ? 'Please verify your email to create events' : ''"
                 )
                   VaIcon(name="add" size="18px")
                   span.text-sm.font-medium New Event
                 button(
                   class="flex-1 bg-white text-emerald-600 hover:bg-gray-50 transition-all duration-200 px-4 py-2 rounded-xl flex items-center justify-center gap-2 sm:flex-initial"
                   @click="handleUploadCard"
+                  :disabled="!user || !user.emailVerified"
+                  :title="!user?.emailVerified ? 'Please verify your email to upload cards' : ''"
                 )
                   VaIcon(name="upload" size="18px")
                   span.text-sm.font-medium Upload Card
+
+        // Email Verification Notice
+        .bg-amber-50.border-l-4.border-amber-400.p-4.rounded-xl.mb-8(
+          v-if="user && !user.emailVerified"
+        )
+          .flex
+            .flex-shrink-0
+              VaIcon(name="info" size="20px" class="text-amber-500")
+            .ml-3
+              p.text-sm.text-amber-700.font-medium Please verify your email
+              p.text-sm.text-amber-600.mt-1 To start uploading business cards and creating events, please verify your email address. Check your inbox for the verification link.
+              button.mt-2.text-sm.font-medium.text-amber-700.hover_text-amber-800.underline(
+                @click="resendVerification"
+                :disabled="loading"
+              ) Resend verification email
 
         //- Hidden File Input
         input(
@@ -1550,20 +1598,30 @@ function hidePlanLimitModal() {
 // Add new methods for handling actions when not logged in
 function handleCreateEvent() {
   if (!user.value) {
-    loginPromptMessage.value = 'Sign in to create and manage events';
-    showLoginPrompt.value = true;
-  } else {
-    showCreateEventModal.value = true;
+    router.push('/auth');
+    return;
   }
+
+  if (!user.value.emailVerified) {
+    alert('Please verify your email address before creating events.');
+    return;
+  }
+
+  showCreateEventModal.value = true;
 }
 
-function handleUploadCard() {
+async function handleUploadCard() {
   if (!user.value) {
-    loginPromptMessage.value = 'Sign in to upload and manage business cards';
-    showLoginPrompt.value = true;
-  } else {
-    fileInput.value.click();
+    router.push('/auth');
+    return;
   }
+
+  if (!user.value.emailVerified) {
+    alert('Please verify your email address before uploading cards.');
+    return;
+  }
+
+  fileInput.value.click();
 }
 
 function handleRevealQR() {
@@ -1586,6 +1644,45 @@ async function checkPremiumStatus() {
   } catch (err) {
     console.error('Error checking premium status:', err);
     isPremium.value = false;
+  }
+}
+
+// Add click outside handler
+onMounted(() => {
+  // Add click outside handler for user menu
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  // Remove click outside handler
+  document.removeEventListener('click', handleClickOutside);
+});
+
+// Add this function to handle clicks outside the user menu
+function handleClickOutside(event) {
+  const userMenu = document.querySelector('.user-menu');
+  const profilePic = document.querySelector('.profile-pic');
+  
+  if (showUserMenu.value && 
+      !event.target.closest('.user-menu') && 
+      !event.target.closest('.profile-pic')) {
+    showUserMenu.value = false;
+  }
+}
+
+// Resend verification email
+async function resendVerification() {
+  try {
+    loading.value = true;
+    error.value = '';
+    await authService.sendEmailVerification();
+    // Show success message
+    alert('Verification email sent! Please check your inbox.');
+  } catch (err) {
+    error.value = err.message;
+    alert('Error sending verification email: ' + err.message);
+  } finally {
+    loading.value = false;
   }
 }
 </script>
