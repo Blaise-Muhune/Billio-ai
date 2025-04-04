@@ -12,36 +12,88 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // User profiles collection
-    match /users/{userId} {
-      // Allow public read access to user profiles
-      allow read: if true;
-      // Only allow users to modify their own profile
-      allow create, update: if isOwner(userId);
-      allow delete: if false; // Prevent profile deletion
+    function isPremiumUser() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+
+    function isValidUsageUpdate() {
+      let diff = request.resource.data.diff(resource.data);
+      let allowedFields = ['cards', 'events', 'draftsPerCard', 'updatedAt'];
+      let affectedKeys = diff.affectedKeys();
+      
+      return affectedKeys.hasOnly(allowedFields) &&
+        (
+          // Allow incrementing cards by 1
+          !diff.changedKeys().hasAny(['cards']) ||
+          (resource.data.cards == null && request.resource.data.cards == 1) ||
+          request.resource.data.cards == resource.data.cards + 1
+        ) &&
+        (
+          // Allow updating draftsPerCard map
+          !diff.changedKeys().hasAny(['draftsPerCard']) ||
+          (
+            // Ensure only one card's drafts are updated at a time
+            diff.changedKeys().hasOnly(['draftsPerCard', 'updatedAt']) &&
+            // Ensure drafts can only increment by 1
+            diff.changedKeys().hasOnly(['draftsPerCard', 'updatedAt'])
+          )
+        );
     }
 
     // Business cards collection
     match /business-cards/{cardId} {
-      // Allow public read access to business cards
-      allow read: if true;
-      // Only allow users to create/modify their own cards
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
-
-      // Message drafts subcollection - keep private
-      match /drafts/{draftId} {
-        allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      }
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
     }
 
-    // Events collection - keep private
+    // Users collection - Modified to allow public read access
+    match /users/{userId} {
+      allow read: if true;  // Anyone can read user profiles
+      allow create: if isAuthenticated() && userId == request.auth.uid;
+      allow update: if isOwner(userId);
+    }
+
+    // Usage stats collection
+    match /usage_stats/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isAuthenticated() && userId == request.auth.uid;
+      allow update: if isOwner(userId) && isValidUsageUpdate();
+    }
+
+    // Email drafts collection
+    match /email-drafts/{draftId} {
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Events collection
     match /events/{eventId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Stripe customers collection
+    match /stripe_customers/{userId} {
+      allow read: if isOwner(userId);
+    }
+
+    // Analytics access - Allow all authenticated users
+    match /{collection=**} {
+      allow read: if isAuthenticated();
     }
   }
 } 

@@ -1,96 +1,269 @@
 import { 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+  getAuth, 
+  signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword,
+  createUserWithEmailAndPassword as firebaseCreateUser,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
-  updateProfile as firebaseUpdateProfile,
-  onAuthStateChanged as firebaseOnAuthStateChanged
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+  sendPasswordResetEmail as firebaseSendPasswordReset,
+  updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { SUBSCRIPTION_PLANS } from '../config/stripe';
+
+const auth = getAuth();
+const googleProvider = new GoogleAuthProvider();
+
+// Keep track of auth state observers
+let unsubscribeAuthObserver = null;
+
+// Get user roles
+async function getUserRoles(uid) {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      return userDoc.data().roles || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error getting user roles:', error);
+    return [];
+  }
+}
+
+// Check if user has analytics access
+async function hasAnalyticsAccess(uid) {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      return userData.isAdmin || (userData.roles || []).includes('analytics');
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking analytics access:', error);
+    return false;
+  }
+}
+
+// Subscribe to auth state changes with enhanced user data
+function onAuthStateChanged(callback) {
+  if (unsubscribeAuthObserver) {
+    unsubscribeAuthObserver();
+  }
+  
+  unsubscribeAuthObserver = firebaseOnAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const roles = await getUserRoles(user.uid);
+      const hasAnalytics = await hasAnalyticsAccess(user.uid);
+      callback({
+        ...user,
+        roles,
+        isAdmin: hasAnalytics
+      });
+    } else {
+      callback(null);
+    }
+  });
+  
+  return unsubscribeAuthObserver;
+}
 
 export const authService = {
-  async signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    
-    // Check if this is a new user
-    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-    if (!userDoc.exists()) {
-      // Create initial user document
-      await setDoc(doc(db, 'users', result.user.uid), {
-        createdAt: new Date(),
-        displayName: result.user.displayName,
-        email: result.user.email,
-        photoURL: result.user.photoURL,
-        profileCompleted: true
-      });
-    }
-    
-    return result.user;
-  },
-
-  async signOut() {
-    await firebaseSignOut(auth);
-  },
-
+  // Get current user
   getCurrentUser() {
     return auth.currentUser;
   },
 
-  onAuthStateChange(callback) {
-    return firebaseOnAuthStateChanged(auth, callback);
+  // Get user profile from Firestore
+  async getUserProfile() {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) return null;
+
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        return null;
+      }
+
+      return userDoc.data();
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      throw error;
+    }
   },
 
-  async updateProfile(profileData) {
-    const user = this.getCurrentUser();
-    if (!user) throw new Error('No user logged in');
-
-    await firebaseUpdateProfile(user, {
-      displayName: profileData.displayName,
-      photoURL: profileData.photoURL,
-      email: profileData.email
-    });
-  },
-
+  // Update user profile in Firestore
   async saveUserProfile(profileData) {
     try {
       const user = this.getCurrentUser();
-      if (!user) {
-        throw new Error('User must be logged in to save profile');
-      }
+      if (!user) throw new Error('User must be logged in');
 
-      // Create or update user profile in Firestore
       const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-
-      const profileDataWithUid = {
+      await updateDoc(userRef, {
         ...profileData,
-        uid: user.uid,
         updatedAt: new Date()
-      };
+      });
 
-      if (userDoc.exists()) {
-        await updateDoc(userRef, profileDataWithUid);
-      } else {
-        await setDoc(userRef, {
-          ...profileDataWithUid,
-          createdAt: new Date(),
-          profileCompleted: true
-        });
-      }
-
-      return { uid: user.uid, ...profileDataWithUid };
+      // Redirect to home page
+      window.location.href = '/home';
+      
+      return true;
     } catch (error) {
       console.error('Error saving user profile:', error);
       throw error;
     }
   },
 
-  async getUserProfile() {
-    const user = this.getCurrentUser();
-    if (!user) throw new Error('No user logged in');
+  // Update user profile in Firebase Auth
+  async updateProfile({ displayName, photoURL }) {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) throw new Error('User must be logged in');
 
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    return userDoc.exists() ? userDoc.data() : null;
-  }
+      await updateProfile(user, {
+        displayName,
+        photoURL
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  },
+
+  // Sign in with email and password
+  async signInWithEmailAndPassword(email, password) {
+    try {
+      const userCredential = await firebaseSignInWithEmailAndPassword(auth, email, password);
+      await this.initializeUserData(userCredential.user);
+      return userCredential.user;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw this.handleAuthError(error);
+    }
+  },
+
+  // Create new user with email and password
+  async createUserWithEmailAndPassword(email, password) {
+    try {
+      const userCredential = await firebaseCreateUser(auth, email, password);
+      await this.initializeUserData(userCredential.user);
+      return userCredential.user;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw this.handleAuthError(error);
+    }
+  },
+
+  // Sign in with Google
+  async signInWithGoogle() {
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      await this.initializeUserData(userCredential.user);
+      return userCredential.user;
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      throw this.handleAuthError(error);
+    }
+  },
+
+  // Sign out
+  async signOut() {
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      throw this.handleAuthError(error);
+    }
+  },
+
+  // Send password reset email
+  async sendPasswordResetEmail(email) {
+    try {
+      await firebaseSendPasswordReset(auth, email);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw this.handleAuthError(error);
+    }
+  },
+
+  // Initialize user data in Firestore
+  async initializeUserData(user) {
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        // Create new user document with default data
+        await setDoc(userRef, {
+          email: user.email,
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          plan: 'FREE',
+          limits: SUBSCRIPTION_PLANS.FREE.limits
+        });
+
+        // Create usage stats document
+        const usageRef = doc(db, 'usage_stats', user.uid);
+        await setDoc(usageRef, {
+          cards: 0,
+          events: 0,
+          draftsPerCard: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing user data:', error);
+      throw error;
+    }
+  },
+
+  // Handle authentication errors
+  handleAuthError(error) {
+    let message = 'An error occurred during authentication';
+
+    switch (error.code) {
+      case 'auth/user-not-found':
+        message = 'No account found with this email address';
+        break;
+      case 'auth/wrong-password':
+        message = 'Invalid password';
+        break;
+      case 'auth/invalid-email':
+        message = 'Invalid email address';
+        break;
+      case 'auth/email-already-in-use':
+        message = 'An account already exists with this email address';
+        break;
+      case 'auth/weak-password':
+        message = 'Password should be at least 6 characters';
+        break;
+      case 'auth/popup-closed-by-user':
+        message = 'Sign in was cancelled';
+        break;
+      case 'auth/network-request-failed':
+        message = 'Network error. Please check your internet connection';
+        break;
+      case 'auth/too-many-requests':
+        message = 'Too many attempts. Please try again later';
+        break;
+      default:
+        message = error.message || message;
+    }
+
+    return new Error(message);
+  },
+
+  getUserRoles,
+  hasAnalyticsAccess,
+  onAuthStateChanged
 }; 

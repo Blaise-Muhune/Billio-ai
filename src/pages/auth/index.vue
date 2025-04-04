@@ -1,248 +1,237 @@
 <template lang="pug">
-.flex-1.flex.items-center.justify-center.p-8
-  .max-w-4xl.w-full
-    div(class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center")
-      //- Left Column - App Info
-      .space-y-8
-        .space-y-4
-          h1.text-4xl.font-bold.text-gray-900 Billo AI
-          p.text-xl.text-gray-600 Transform your business card management with AI-powered organization and communication.
+.min-h-screen.flex.items-center.justify-center.bg-gradient-to-br.from-emerald-50.to-teal-50.py-12.px-4(class="sm:px-6 lg:px-8")
+  .max-w-md.w-full
+    // Header
+    .text-center.mb-10
+      .mx-auto.w-32.h-12.mb-4
+        Logo
+      h2.text-4xl.font-bold.tracking-tight.text-gray-900.mb-2 Welcome Back
+      p.text-base.text-gray-600 {{ isSignUp ? 'Create your account to get started' : 'Sign in to manage your business cards' }}
+    
+    // Main Card
+    .bg-white.rounded-2xl.shadow-xl.p-8.space-y-6
+      // Error Alert
+      transition(
+        enter-active-class="transition ease-out duration-300"
+        enter-from-class="transform opacity-0 scale-95"
+        enter-to-class="transform opacity-100 scale-100"
+        leave-active-class="transition ease-in duration-200"
+        leave-from-class="transform opacity-100 scale-100"
+        leave-to-class="transform opacity-0 scale-95"
+      )
+        .bg-red-50.border-l-4.border-red-400.p-4.rounded-md(
+          v-if="error"
+          role="alert"
+        )
+          .flex
+            .flex-shrink-0
+              svg.h-5.w-5.text-red-400(
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              )
+                path(
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                )
+            .ml-3
+              p.text-sm.text-red-700 {{ error }}
+            .pl-3.ml-auto
+              .flex
+                button.inline-flex.text-red-400.hover_text-red-500.focus_outline-none(
+                  @click="error = ''"
+                )
+                  span.sr-only Close
+                  svg.h-5.w-5(
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  )
+                    path(
+                      fill-rule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clip-rule="evenodd"
+                    )
+
+      // Auth Form
+      form.space-y-6(@submit.prevent="isSignUp ? handleSignUp() : handleSignIn()")
+        // Email Input
+        .space-y-2
+          label.block.text-sm.font-medium.text-gray-700(for="email") Email address
+          .relative.rounded-md.shadow-sm
+            input#email.appearance-none.block.w-full.px-4.py-3.border.border-gray-300.rounded-lg.placeholder-gray-400.focus_outline-none.focus_ring-2.focus_ring-emerald-500.focus_border-emerald-500(
+              v-model="email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': error }"
+            )
         
-        //- Features Grid
-        .grid.grid-cols-1.gap-6
-          .flex.items-start.gap-4
-            .bg-emerald-100.p-3.rounded-xl
-              VaIcon(name="qr_code" size="24px" class="text-emerald-600")
-            .space-y-2
-              h3.text-lg.font-semibold.text-gray-900 Smart Card Scanning
-              p.text-gray-600 Instantly digitize business cards with advanced OCR technology
-          
-          .flex.items-start.gap-4
-            .bg-emerald-100.p-3.rounded-xl
-              VaIcon(name="smart_toy" size="24px" class="text-emerald-600")
-            .space-y-2
-              h3.text-lg.font-semibold.text-gray-900 AI-Powered Organization
-              p.text-gray-600 Automatically categorize and organize your contacts by event
-          
-          .flex.items-start.gap-4
-            .bg-emerald-100.p-3.rounded-xl
-              VaIcon(name="email" size="24px" class="text-emerald-600")
-            .space-y-2
-              h3.text-lg.font-semibold.text-gray-900 Smart Message Drafts
-              p.text-gray-600 Generate personalized follow-up messages with AI assistance
-          
-          .flex.items-start.gap-4
-            .bg-emerald-100.p-3.rounded-xl
-              VaIcon(name="group" size="24px" class="text-emerald-600")
-            .space-y-2
-              h3.text-lg.font-semibold.text-gray-900 Event Management
-              p.text-gray-600 Organize contacts by events and conferences for better networking
-
-        //- Trust Indicators
-        .pt-4
-          .flex.items-center.gap-6
-            .text-center
-              .text-3xl.font-bold.text-emerald-600 100%
-              .text-sm.text-gray-600 Secure
-            .text-center
-              .text-3xl.font-bold.text-emerald-600 24/7
-              .text-sm.text-gray-600 Available
-            .text-center
-              .text-3xl.font-bold.text-emerald-600 1000+
-              .text-sm.text-gray-600 Users
-
-      //- Right Column - Auth Forms
-      .bg-white.rounded-2xl.shadow-xl.p-8.space-y-8
-        //- Tabs
-        .flex.space-x-4.border-b.border-gray-200
-          button(
-            class="px-4 py-2 text-sm font-medium transition-colors duration-200"
-            :class="activeTab === 'login' ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-gray-500 hover:text-gray-700'"
-            @click="activeTab = 'login'"
-          ) Sign In
-          button(
-            class="px-4 py-2 text-sm font-medium transition-colors duration-200"
-            :class="activeTab === 'signup' ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-gray-500 hover:text-gray-700'"
-            @click="activeTab = 'signup'"
-          ) Create Account
-
-        //- Login Form
-        form(v-if="activeTab === 'login'" @submit.prevent="handleLogin" class="space-y-6")
-          .space-y-4
-            label.block.text-sm.font-medium.text-gray-700 Email
-            input(
-              type="email"
-              v-model="loginForm.email"
-              class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Enter your email"
-              required
-            )
-          .space-y-4
-            label.block.text-sm.font-medium.text-gray-700 Password
-            input(
+        // Password Input
+        .space-y-2
+          label.block.text-sm.font-medium.text-gray-700(for="password") Password
+          .relative.rounded-md.shadow-sm
+            input#password.appearance-none.block.w-full.px-4.py-3.border.border-gray-300.rounded-lg.placeholder-gray-400.focus_outline-none.focus_ring-2.focus_ring-emerald-500.focus_border-emerald-500(
+              v-model="password"
+              name="password"
               type="password"
-              v-model="loginForm.password"
-              class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Enter your password"
               required
+              placeholder="••••••••"
+              :minlength="isSignUp ? 6 : undefined"
+              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': error }"
             )
-          button(
-            type="submit"
-            class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-2"
-            :disabled="loading"
-          )
-            .loading-spinner.w-5.h-5.border-2(v-if="loading")
-            span(v-else) Sign In
 
-        //- Signup Form
-        form(v-else @submit.prevent="handleSignup" class="space-y-6")
-          .space-y-4
-            label.block.text-sm.font-medium.text-gray-700 Full Name
-            input(
-              type="text"
-              v-model="signupForm.name"
-              class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Enter your full name"
-              required
+        // Auth Actions
+        .flex.items-center.justify-between
+          .flex.items-center
+            input#remember-me.h-4.w-4.text-emerald-600.focus_ring-emerald-500.border-gray-300.rounded(
+              type="checkbox"
+              v-model="rememberMe"
             )
-          .space-y-4
-            label.block.text-sm.font-medium.text-gray-700 Email
-            input(
-              type="email"
-              v-model="signupForm.email"
-              class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Enter your email"
-              required
-            )
-          .space-y-4
-            label.block.text-sm.font-medium.text-gray-700 Password
-            input(
-              type="password"
-              v-model="signupForm.password"
-              class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Create a password"
-              required
-            )
-          button(
-            type="submit"
-            class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-2"
-            :disabled="loading"
-          )
-            .loading-spinner.w-5.h-5.border-2(v-if="loading")
-            span(v-else) Create Account
+            label.ml-2.block.text-sm.text-gray-700(for="remember-me") Remember me
+          
+          .text-sm(v-if="!isSignUp")
+            a.font-medium.text-emerald-600.hover_text-emerald-700.transition-colors(
+              href="#"
+              @click.prevent="handleResetPassword"
+            ) Forgot password?
 
-        //- Social Login
-        .relative
+        // Submit Button
+        button.relative.w-full.flex.justify-center.py-3.px-4.border.border-transparent.text-sm.font-medium.rounded-lg.text-white.bg-gradient-to-r.from-emerald-500.to-teal-600.hover_from-emerald-600.hover_to-teal-700.focus_outline-none.focus_ring-2.focus_ring-offset-2.focus_ring-emerald-500.transition-all.duration-150.ease-in-out(
+          type="submit"
+          :disabled="loading"
+        )
+          span.absolute.left-0.inset-y-0.flex.items-center.pl-3(v-if="!loading")
+            svg.h-5.w-5.text-emerald-100.group-hover_text-emerald-200(
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            )
+              path(
+                fill-rule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clip-rule="evenodd"
+              )
+          span.flex.items-center.justify-center
+            span.loader.w-5.h-5.border-2.border-white.border-t-transparent.rounded-full.animate-spin.mr-2(
+              v-if="loading"
+            )
+            span {{ loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In') }}
+
+        // Divider
+        .relative.my-6
           .absolute.inset-0.flex.items-center
             .w-full.border-t.border-gray-200
           .relative.flex.justify-center.text-sm
             span.px-2.bg-white.text-gray-500 Or continue with
-        .grid.grid-cols-2.gap-4
-          button(
-            class="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors duration-200"
-            @click="handleGoogleLogin"
+
+        // Google Sign In Button
+        button.w-full.flex.items-center.justify-center.px-4.py-3.border.border-gray-300.rounded-lg.shadow-sm.bg-white.text-sm.font-medium.text-gray-700.hover_bg-gray-50.focus_outline-none.focus_ring-2.focus_ring-offset-2.focus_ring-emerald-500.transition-colors(
+          type="button"
+          @click="handleGoogleSignIn"
+          :disabled="loading"
+        )
+          img.w-5.h-5.mr-2(
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+            alt="Google"
           )
-            VaIcon(name="google" size="18px" class="text-gray-700")
-            span.text-sm.font-medium.text-gray-700 Google
-          button(
-            class="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors duration-200"
-            @click="handleGithubLogin"
-          )
-            VaIcon(name="code" size="18px" class="text-gray-700")
-            span.text-sm.font-medium.text-gray-700 GitHub
+          span Sign {{ isSignUp ? 'up' : 'in' }} with Google
+
+        // Toggle Sign In/Up
+        .text-sm.text-center.mt-6
+          span.text-gray-600 {{ isSignUp ? 'Already have an account?' : 'Need an account?' }}
+          a.font-medium.text-emerald-600.hover_text-emerald-700.transition-colors.ml-1(
+            href="#"
+            @click.prevent="isSignUp = !isSignUp"
+          ) {{ isSignUp ? 'Sign in' : 'Sign up' }}
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '../../services/authService'
+import Logo from '../../components/Logo.vue'
 
 const router = useRouter()
-const activeTab = ref('login')
+
+// Form state
+const email = ref('')
+const password = ref('')
+const rememberMe = ref(false)
+const isSignUp = ref(false)
 const loading = ref(false)
+const error = ref('')
 
-const loginForm = ref({
-  email: '',
-  password: ''
-})
-
-const signupForm = ref({
-  name: '',
-  email: '',
-  password: ''
-})
-
-async function handleLogin() {
-  loading.value = true
+// Handle email/password sign in
+const handleSignIn = async () => {
   try {
-    await authService.signInWithEmailAndPassword(loginForm.value.email, loginForm.value.password)
-    router.push('/')
-  } catch (error) {
-    console.error('Login error:', error)
-    // TODO: Show error message to user
+    loading.value = true
+    error.value = ''
+    await authService.signInWithEmailAndPassword(email.value, password.value)
+    router.push('/home')
+  } catch (err) {
+    error.value = err.message
   } finally {
     loading.value = false
   }
 }
 
-async function handleSignup() {
-  loading.value = true
+// Handle email/password sign up
+const handleSignUp = async () => {
   try {
-    await authService.createUserWithEmailAndPassword(
-      signupForm.value.email,
-      signupForm.value.password,
-      signupForm.value.name
-    )
-    router.push('/')
-  } catch (error) {
-    console.error('Signup error:', error)
-    // TODO: Show error message to user
+    loading.value = true
+    error.value = ''
+    await authService.createUserWithEmailAndPassword(email.value, password.value)
+    router.push('/profile-setup')
+  } catch (err) {
+    error.value = err.message
   } finally {
     loading.value = false
   }
 }
 
-async function handleGoogleLogin() {
-  loading.value = true
+// Handle Google sign in
+const handleGoogleSignIn = async () => {
   try {
+    loading.value = true
+    error.value = ''
     await authService.signInWithGoogle()
-    router.push('/')
-  } catch (error) {
-    console.error('Google login error:', error)
-    // TODO: Show error message to user
+    router.push('/home')
+  } catch (err) {
+    error.value = err.message
   } finally {
     loading.value = false
   }
 }
 
-async function handleGithubLogin() {
-  loading.value = true
+// Handle password reset
+const handleResetPassword = async () => {
+  if (!email.value) {
+    error.value = 'Please enter your email address'
+    return
+  }
+
   try {
-    await authService.signInWithGithub()
-    router.push('/')
-  } catch (error) {
-    console.error('GitHub login error:', error)
-    // TODO: Show error message to user
+    loading.value = true
+    error.value = ''
+    await authService.sendPasswordResetEmail(email.value)
+    error.value = 'Password reset email sent. Please check your inbox.'
+  } catch (err) {
+    error.value = err.message
   } finally {
     loading.value = false
   }
 }
 </script>
 
-<style>
-.loading-spinner {
-  border-color: white;
-  border-right-color: transparent;
-  border-radius: 50%;
+<style scoped>
+.loader {
+  border-top-color: transparent;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style> 

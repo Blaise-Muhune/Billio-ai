@@ -8,6 +8,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Logo: typeof import('./src/components/Logo.vue')['default']
+    PaymentForm: typeof import('./src/components/PaymentForm.vue')['default']
+    PlanLimitModal: typeof import('./src/components/PlanLimitModal.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SidebarContents: typeof import('./src/components/SidebarContents.vue')['default']

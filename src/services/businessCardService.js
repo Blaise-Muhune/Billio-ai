@@ -1,6 +1,7 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc, increment, setDoc, runTransaction } from 'firebase/firestore';
 import { storage, db } from '../config/firebase';
+import { SUBSCRIPTION_PLANS } from '../config/plans';
 import OpenAI from 'openai';
 import { authService } from './authService';
 
@@ -19,6 +20,46 @@ export const businessCardService = {
       const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User must be logged in to upload cards');
+      }
+
+      // Check usage limits before proceeding
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // Create user document if it doesn't exist
+        await setDoc(userRef, {
+          email: user.email,
+          displayName: user.displayName,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          plan: 'FREE',
+          limits: SUBSCRIPTION_PLANS.FREE.limits
+        });
+      }
+
+      const userData = userDoc.exists() ? userDoc.data() : { limits: SUBSCRIPTION_PLANS.FREE.limits };
+      const userLimits = userData.limits || SUBSCRIPTION_PLANS.FREE.limits;
+
+      // Get or create usage stats
+      const usageRef = doc(db, 'usage_stats', user.uid);
+      const usageDoc = await getDoc(usageRef);
+      
+      if (!usageDoc.exists()) {
+        // Create usage stats document if it doesn't exist
+        await setDoc(usageRef, {
+          cards: 0,
+          events: 0,
+          draftsPerCard: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+
+      const currentUsage = usageDoc.exists() ? usageDoc.data() : { cards: 0 };
+
+      if (currentUsage.cards >= userLimits.maxCards) {
+        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} business cards. Please upgrade your plan to add more cards.`);
       }
 
       // Upload image to Firebase Storage
@@ -81,17 +122,14 @@ Return a JSON object with two main sections:
             ]
           }
         ],
-        max_tokens: 1000
+        max_tokens: 1000,
+        response_format: { type: "json_object" }
       });
 
       if (onStatusUpdate) onStatusUpdate('Saving card data...');
       
-      // Clean the response content to handle potential markdown formatting
-      let content = response.choices[0].message.content;
-      content = content.replace(/```json\n?|\n?```/g, '').trim();
-      
       try {
-        const parsedData = JSON.parse(content);
+        const parsedData = JSON.parse(response.choices[0].message.content);
         
         // Rename style properties to match our expected format
         const style = {
@@ -114,11 +152,39 @@ Return a JSON object with two main sections:
           createdAt: new Date(),
         };
 
+        // Create the card document
         const docRef = await addDoc(collection(db, 'business-cards'), cardData);
+
+        // Update usage stats
+        try {
+          const usageRef = doc(db, 'usage_stats', user.uid);
+          const usageDoc = await getDoc(usageRef);
+          
+          if (!usageDoc.exists()) {
+            // Create initial usage stats document
+            await setDoc(usageRef, {
+              cards: 1,
+              events: 0,
+              draftsPerCard: {},
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          } else {
+            // Update existing usage stats
+            await updateDoc(usageRef, {
+              cards: (usageDoc.data().cards || 0) + 1,
+              updatedAt: new Date()
+            });
+          }
+        } catch (usageError) {
+          console.error('Error updating usage stats:', usageError);
+          // Continue with the card creation even if usage stats update fails
+        }
+
         return { id: docRef.id, ...cardData };
       } catch (parseError) {
         console.error('Error parsing GPT response:', parseError);
-        console.error('Raw response:', content);
+        console.error('Raw response:', response.choices[0].message.content);
         throw new Error('Failed to parse business card data');
       }
     } catch (error) {
@@ -172,7 +238,45 @@ Return a JSON object with two main sections:
         throw new Error('User must be logged in to generate email drafts');
       }
 
-      // Generate the draft content
+      // Validate card data
+      if (!card || !card.id) {
+        throw new Error('Invalid card data');
+      }
+
+      // Get primary email from the emails array
+      const recipientEmail = card.emails && card.emails.length > 0 ? card.emails[0] : null;
+      if (!recipientEmail) {
+        throw new Error('No email address found on the business card');
+      }
+
+      // Check usage limits BEFORE making GPT call
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('User profile not found');
+      }
+
+      const userData = userDoc.data();
+      const userLimits = userData.limits || SUBSCRIPTION_PLANS.FREE.limits;
+
+      // Get current drafts for this card
+      const draftsQuery = query(
+        collection(db, 'email-drafts'),
+        where('cardId', '==', card.id),
+        where('userId', '==', user.uid)
+      );
+      const draftsSnapshot = await getDocs(draftsQuery);
+      const currentDrafts = draftsSnapshot.size;
+
+      if (currentDrafts >= userLimits.maxDraftsPerCard) {
+        throw {
+          type: 'PLAN_LIMIT',
+          message: `You have reached your plan's limit of ${userLimits.maxDraftsPerCard} email drafts per card. Please upgrade your plan to create more drafts.`
+        };
+      }
+
+      // Only proceed with GPT call if all checks pass
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -182,7 +286,7 @@ Return a JSON object with two main sections:
           },
           {
             role: "user",
-              content: `Write a concise message using these details:
+            content: `Write a concise message using these details:
 
 Sender: ${user.displayName}
 Recipient: ${card.name}
@@ -203,30 +307,61 @@ Guidelines:
       const draftContent = response.choices[0].message.content;
       console.log('Generated draft content:', draftContent); // Debug log
 
-      // Save the draft to Firestore
+      // Save the draft to Firestore with validated data
       const draftData = {
         content: draftContent,
         cardId: card.id,
         userId: user.uid,
         createdAt: new Date(),
-        recipientName: card.name,
-        recipientCompany: card.company,
-        recipientEmail: card.email
+        recipientName: card.name || 'Unknown',
+        recipientCompany: card.company || 'Unknown',
+        recipientEmail: recipientEmail,
+        recipientTitle: card.title || 'Unknown',
+        status: 'draft'
       };
 
       const docRef = await addDoc(collection(db, 'email-drafts'), draftData);
       console.log('Successfully saved draft with ID:', docRef.id); // Debug log
 
+      // Update usage stats
+      try {
+        const usageRef = doc(db, 'usage_stats', user.uid);
+        const usageDoc = await getDoc(usageRef);
+        
+        if (!usageDoc.exists()) {
+          // Create initial usage stats document
+          await setDoc(usageRef, {
+            cards: 0,
+            events: 0,
+            draftsPerCard: {
+              [card.id]: 1
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        } else {
+          // Get current drafts for this card
+          const currentDrafts = usageDoc.data().draftsPerCard?.[card.id] || 0;
+          
+          // Update only the specific card's draft count
+          const update = {
+            [`draftsPerCard.${card.id}`]: currentDrafts + 1,
+            updatedAt: new Date()
+          };
+          
+          await updateDoc(usageRef, update);
+        }
+      } catch (usageError) {
+        console.error('Error updating usage stats:', usageError);
+        // Continue even if usage stats update fails
+      }
+
       return {
-        content: draftContent,
         id: docRef.id,
         ...draftData
       };
     } catch (error) {
       console.error('Error in generateEmailDraft:', error);
-      if (error.code === 'permission-denied') {
-        throw new Error('You do not have permission to save drafts. Please make sure you are logged in.');
-      }
       throw error;
     }
   },
@@ -242,7 +377,13 @@ Guidelines:
         throw new Error('User must be logged in to view drafts');
       }
 
-      console.log('Fetching drafts for card:', cardId, 'user:', user.uid); // Debug log
+      // First verify the card belongs to the user
+      const cardRef = doc(db, 'business-cards', cardId);
+      const cardDoc = await getDoc(cardRef);
+      
+      if (!cardDoc.exists() || cardDoc.data().userId !== user.uid) {
+        throw new Error('You do not have permission to view drafts for this card');
+      }
 
       const q = query(
         collection(db, 'email-drafts'),
@@ -252,19 +393,16 @@ Guidelines:
       );
 
       const querySnapshot = await getDocs(q);
-      const drafts = querySnapshot.docs.map(doc => ({
+      return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log('Found drafts:', drafts); // Debug log
-      return drafts;
     } catch (error) {
       console.error('Error getting email drafts:', error);
       if (error.code === 'permission-denied') {
         throw new Error('You do not have permission to view drafts. Please make sure you are logged in.');
       }
-      return [];
+      throw error;
     }
   },
 
@@ -309,6 +447,48 @@ Guidelines:
       const user = authService.getCurrentUser();
       if (!user) {
         throw new Error('User must be logged in to create events');
+      }
+
+      // Check usage limits before creating event
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('User profile not found');
+      }
+
+      const userData = userDoc.data();
+      const userLimits = userData.limits || SUBSCRIPTION_PLANS.FREE.limits;
+
+      // Get current usage stats
+      const usageRef = doc(db, 'usage_stats', user.uid);
+      const usageDoc = await getDoc(usageRef);
+      
+      if (!usageDoc.exists()) {
+        // Create initial usage stats document
+        await setDoc(usageRef, {
+          cards: 0,
+          events: 1,
+          draftsPerCard: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else {
+        const currentEvents = usageDoc.data().events || 0;
+        
+        // Check if user has reached event limit
+        if (currentEvents >= userLimits.maxEvents) {
+          throw {
+            type: 'PLAN_LIMIT',
+            message: `You have reached your plan's limit of ${userLimits.maxEvents} events. Please upgrade your plan to create more events.`
+          };
+        }
+
+        // Update event count
+        await updateDoc(usageRef, {
+          events: increment(1),
+          updatedAt: new Date()
+        });
       }
 
       // Add user ID and creation timestamp
