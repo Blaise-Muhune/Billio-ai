@@ -325,8 +325,14 @@ expressApp.post('/api/webhook', async (req, res) => {
   let event;
 
   try {
+    // Ensure we're using the raw body buffer
+    const rawBody = req.body;
+    if (!rawBody) {
+      throw new Error('No raw body found in request');
+    }
+
     event = stripe.webhooks.constructEvent(
-      req.body,
+      rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
