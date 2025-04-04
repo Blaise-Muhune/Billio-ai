@@ -301,73 +301,6 @@ main.p-8.max-w-2xl.mx-auto
         )
           VaIcon(name="check" size="22px")
           span {{ saving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Complete Profile') }}
-
-    // QR Code Section - Moved outside the form
-    .mt-8.pt-8.border-t.border-gray-100
-      .text-center.mb-6
-        h2.text-xl.font-semibold.text-gray-900 Your Info QR Code
-        p.text-gray-600.mt-2 Share your Info easily by scanning this QR code
-      
-      .flex.flex-col.items-center.gap-4
-        // QR Code Display
-        .relative.bg-white.p-6.rounded-xl.shadow-lg.border.border-gray-100#qr-code-container
-          QrcodeVue(
-            :value="profileUrl"
-            :size="200"
-            level="H"
-            render-as="svg"
-            :margin="0"
-            class="bg-white transition-all duration-300"
-            ref="qrCodeRef"
-            :class="!isPremium && !showQR ? 'blur-sm' : ''"
-          )
-          // Premium Overlay
-          .absolute.inset-0.flex.flex-col.items-center.justify-center(
-            v-if="!isPremium && !showQR"
-          )
-            button(
-              type="button"
-              class="flex items-center gap-2 text-white hover:text-emerald-200 transition-colors duration-200"
-              @click="handleRevealQR"
-            )
-              VaIcon(name="lock" size="20px" class="text-emerald-500")
-              span.text-sm.font-medium Unlock
-
-        // Download Options
-        .flex.flex-col.items-center.gap-3(class="sm:flex-row sm:justify-center")
-          button(
-            type="button"
-            class="w-full sm:w-auto bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-            @click="isPremium ? downloadQRCode() : handlePremiumPrompt('download QR code')"
-            :class="!isPremium ? 'opacity-50 cursor-not-allowed' : ''"
-          )
-            VaIcon(name="download" size="16px")
-            VaIcon(name="qr_code" size="16px")
-            span(class="font-medium") Download QR
-            VaIcon(v-if="!isPremium" name="lock" size="14px" class="ml-1 text-gray-400")
-          
-          button(
-            type="button"
-            class="w-full sm:w-auto bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-            @click="isPremium ? downloadBusinessCard() : handlePremiumPrompt('download business card')"
-            :class="!isPremium ? 'opacity-50 cursor-not-allowed' : ''"
-          )
-            VaIcon(name="download" size="16px")
-            VaIcon(name="business_card" size="16px")
-            span(class="font-medium") Download Card
-            VaIcon(v-if="!isPremium" name="lock" size="14px" class="ml-1 text-gray-400")
-
-          button(
-            type="button"
-            class="w-full sm:w-auto bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm group relative"
-            @click="copyProfileUrl"
-          )
-            VaIcon(name="content_copy" size="16px")
-            span(class="font-medium") {{ copiedLink ? 'Copied!' : 'Copy Link' }}
-            span(
-              class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none"
-              v-if="!copiedLink"
-            ) Copy profile link to clipboard
 </template>
 
 <script setup>
@@ -376,7 +309,6 @@ import { useRouter, useRoute } from 'vue-router';
 import { authService } from '../../services/authService';
 import { storage } from '../../config/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import QrcodeVue from 'qrcode.vue';
 import { businessCardService } from '../../services/businessCardService';
 import { paymentService } from '../../services/paymentService';
 

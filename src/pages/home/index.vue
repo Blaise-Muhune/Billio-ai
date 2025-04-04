@@ -1544,7 +1544,7 @@ async function downloadBusinessCard() {
     ctx.font = '14px Inter, system-ui, sans-serif';
     ctx.fillStyle = '#94a3b8'; // slate-400 for subtlety
     ctx.textAlign = 'center';
-    ctx.fillText('billoai.com' + (user.value?.uid || 'username'), canvas.width / 2, canvas.height - 20);
+    ctx.fillText('billoai.com/' + (user.value?.uid || 'username'), canvas.width / 2, canvas.height - 20);
     
     // Add subtle border around the card
     ctx.strokeStyle = '#e2e8f0';

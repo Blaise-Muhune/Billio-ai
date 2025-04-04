@@ -46,6 +46,14 @@ const routes = [
       requiresAuth: true,
       title: 'Analytics - BilloAI'
     }
+  },
+  {
+    path: '/privacy-policy',
+    name: 'PrivacyPolicy',
+    component: () => import('../pages/privacy-policy/index.vue'),
+    meta: {
+      title: 'Privacy Policy - BilloAI'
+    }
   }
 ];
 

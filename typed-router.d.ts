@@ -23,6 +23,7 @@ declare module 'vue-router/auto-routes' {
     '/analytics/': RouteRecordInfo<'/analytics/', '/analytics', Record<never, never>, Record<never, never>>,
     '/auth/': RouteRecordInfo<'/auth/', '/auth', Record<never, never>, Record<never, never>>,
     '/home/': RouteRecordInfo<'/home/', '/home', Record<never, never>, Record<never, never>>,
+    '/privacy-policy/': RouteRecordInfo<'/privacy-policy/', '/privacy-policy', Record<never, never>, Record<never, never>>,
     '/profile/[username]': RouteRecordInfo<'/profile/[username]', '/profile/:username', { username: ParamValue<true> }, { username: ParamValue<false> }>,
     '/profile-setup/': RouteRecordInfo<'/profile-setup/', '/profile-setup', Record<never, never>, Record<never, never>>,
     '/subscription/': RouteRecordInfo<'/subscription/', '/subscription', Record<never, never>, Record<never, never>>,
