@@ -195,15 +195,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     .flex-1.w-full(class="pt-16")
       .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-8")
         //- Quick Actions Bar
-        .bg-gradient-to-r.from-emerald-500.to-teal-500.rounded-2xl.shadow-lg.p-6.mb-8
+        .bg-white.rounded-2xl.shadow-lg.border.border-emerald-100.p-6.mb-8
           .flex.flex-col.gap-4(class="sm:flex-row sm:items-center sm:justify-between")
-            h3.text-xl.font-semibold.text-white Your Networking Hub
+            .flex.items-center.gap-3
+              h3.text-xl.font-semibold.text-gray-900 Your Networking Hub
+              span.text-sm.text-emerald-600.bg-emerald-50.px-3.py-1.rounded-lg.font-medium {{ businessCards.length }} cards
             .flex.flex-col.gap-4(class="sm:flex-row sm:items-center")
               // Event Selector
               .relative.flex.items-center.w-full(class="sm:w-auto")
                 select(
                   v-model="selectedEventFilter"
-                  class="w-full bg-white text-gray-900 border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm appearance-none pr-8"
+                  class="w-full bg-white text-gray-700 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm appearance-none pr-8 shadow-sm hover:border-gray-300 transition-all duration-200"
                   :disabled="!user"
                   @change="handleEventChange"
                 )
@@ -216,21 +218,21 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 VaIcon(name="expand_more" size="16px" class="text-gray-500 absolute right-3 pointer-events-none")
               .flex.items-center.gap-2.w-full(class="sm:w-auto")
                 button(
-                  class="flex-1 bg-white text-emerald-600 hover:bg-gray-50 transition-all duration-200 px-4 py-2 rounded-xl flex items-center justify-center gap-2 sm:flex-initial"
+                  class="flex-1 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300 sm:flex-initial"
                   @click="handleCreateEvent"
                   :disabled="!user || !user.emailVerified"
                   :title="!user?.emailVerified ? 'Please verify your email to create events' : ''"
                 )
                   VaIcon(name="add" size="18px")
-                  span.text-sm.font-medium New Event
+                  span New Event
                 button(
-                  class="flex-1 bg-white text-emerald-600 hover:bg-gray-50 transition-all duration-200 px-4 py-2 rounded-xl flex items-center justify-center gap-2 sm:flex-initial"
+                  class="flex-1 bg-emerald-500 text-white hover:bg-emerald-600 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md sm:flex-initial"
                   @click="handleUploadCard"
                   :disabled="!user || !user.emailVerified"
                   :title="!user?.emailVerified ? 'Please verify your email to upload cards' : ''"
                 )
                   VaIcon(name="upload" size="18px")
-                  span.text-sm.font-medium Upload Card
+                  span Upload Card
 
         // Email Verification Notice
         .bg-amber-50.border-l-4.border-amber-400.p-4.rounded-xl.mb-8(
@@ -258,8 +260,8 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
 
         //- Upload Area
         .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-if="!uploading")
-          .border-2.border-dashed.border-gray-200.rounded-xl.p-8.transition-all.duration-300(
-            class="hover:border-emerald-500"
+          .border-2.border-dashed.border-emerald-200.rounded-xl.p-8.transition-all.duration-300.bg-emerald-50.bg-opacity-30(
+            class="hover:border-emerald-400 hover:bg-emerald-50"
             @dragover.prevent
             @drop.prevent="handleDrop"
           )
@@ -268,20 +270,27 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               h3.text-2xl.font-bold.text-gray-900.mb-2 Upload Business Cards
               p.text-gray-600.mb-6 Drag and drop your business cards or click to browse
               button(
-                class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
+                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
                 @click="handleUploadCard"
               )
                 VaIcon(name="file_upload" size="20px")
-                span.font-medium Browse Files
+                span Browse Files
 
         //- Upload Progress
         .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-else)
           .flex.flex-col.items-center.justify-center
-            .loading-spinner.mb-4
-            p.text-lg.font-medium.text-gray-900.mb-2 Processing...
-            p.text-gray-600 {{ processingStatus }}
-            .mt-4(v-if="error")
-              p.text-red-600.font-medium {{ error }}
+            template(v-if="!error")
+              template(v-if="successMessage")
+                .bg-emerald-100.text-emerald-800.p-4.rounded-xl.mb-4.flex.items-center.gap-3.w-full
+                  VaIcon(name="check_circle" size="24px" class="text-emerald-600")
+                  span.font-medium {{ successMessage }}
+              template(v-else)
+                .loading-spinner.mb-4
+                p.text-lg.font-medium.text-gray-900.mb-2 Processing...
+                p.text-gray-600 {{ processingStatus }}
+            template(v-else)
+              .mt-4
+                p.text-red-600.font-medium {{ error }}
 
         // Main Content Area
         .grid(class="grid-cols-1")
@@ -332,156 +341,181 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   v-else
                   v-for="card in sortedBusinessCards"
                   :key="card.id"
-                  class="rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl"
+                  class="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] group"
                   :style=`{
                     backgroundColor: card.style?.backgroundColor || '#ffffff',
                     color: getContrastColor(card.style?.backgroundColor || '#ffffff'),
                     fontFamily: getFontFamily(card.style?.fontStyle),
-                    borderColor: card.style?.secondaryColor || '#e5e7eb',
-                    borderWidth: '1px',
-                    borderStyle: 'solid'
                   }`
                 )
-                  // Top Action Bar
-                  .bg-gray-50.px-6.py-4.flex.flex-col.gap-3.border-b.border-gray-100(class="sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-3")
+                  // Top Action Bar with Glass Effect
+                  .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.flex-col.gap-3.border-b.border-gray-100(
+                    class="sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-3"
+                  )
                     button(
-                      class="w-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                      class="w-full bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300 sm:w-auto"
                       @click.stop="confirmGenerateEmail(card)"
                       :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
-                      class="sm:w-auto"
                     )
                       VaIcon(name="smart_toy" size="16px")
-                      span.font-medium AI message
+                      span AI message
                     .flex.items-center.gap-2.w-full.justify-end(class="sm:w-auto")
                       button(
-                        class="flex-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all duration-200 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                        class="flex-1 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300 sm:flex-initial"
                         @click="openMoveToEventModal(card)"
-                        class="sm:flex-initial"
                       )
                         VaIcon(name="event" size="14px")
-                        span.font-medium {{ card.eventId ? 'Change Event' : 'Add to Event' }}
+                        span {{ card.eventId ? 'Change Event' : 'Add to Event' }}
                       button(
-                        class="flex-1 bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200 px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
+                        class="flex-1 bg-white text-red-600 hover:bg-red-50 border border-red-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:border-red-300 sm:flex-initial"
                         @click.stop="confirmDeleteCard(card)"
-                        class="sm:flex-initial"
                       )
                         VaIcon(name="delete" size="16px")
-                        span.font-medium Delete
+                        span Delete
 
-                  // Card Content
-                  .flex-1.flex.flex-col.gap-6.p-8
-                    // Name and Title
-                    .space-y-2
-                      h3.text-2xl.font-bold(:style="{ color: card.style?.primaryColor || '#1f2937' }") {{ card.name }}
-                      p.text-gray-600.text-lg {{ card.title }}
-
-                    // Contact Info
+                  // Card Content with Modern Layout
+                  .flex-1.flex.flex-col.gap-8.p-8(class="sm:p-10")
+                    // Name and Title Section
                     .space-y-3
+                      h3.text-2xl(
+                        class="sm:text-3xl font-bold tracking-tight"
+                        :style="{ color: card.style?.primaryColor || '#1f2937' }"
+                      ) {{ card.name }}
+                      p.text-lg(
+                        class="sm:text-xl"
+                        :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                      ) {{ card.title }}
+
+                    // Contact Info with Modern Grid
+                    .grid.gap-4(class="grid-cols-1 sm:grid-cols-2")
                       // Emails
-                      .relative.flex.items-center.gap-3(v-if="card.emails?.length > 0")
+                      .relative.flex.items-center.gap-3(
+                        v-if="card.emails?.length > 0"
+                        class="col-span-full sm:col-span-1"
+                      )
                         VaIcon(name="email" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
                         .flex.flex-col.w-full
                           .flex.items-center.justify-between.w-full
-                            a.text-base(:style="{ color: card.style?.secondaryColor || '#4B5563' }" :href="'mailto:' + card.emails[0]") {{ card.emails[0] }}
+                            a.text-base.truncate(
+                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                              :href="'mailto:' + card.emails[0]"
+                              class="hover:underline"
+                            ) {{ card.emails[0] }}
                             button.p-1.rounded-lg.transition-colors(
                               v-if="card.emails.length > 1"
                               @click="toggleContactDropdown('email', card.id)"
-                              class="hover:bg-gray-100"
+                              class="hover:bg-black/5"
                             )
                               VaIcon(name="expand_more" size="18px" class="text-gray-400")
-                          .mt-1.w-full.bg-white.rounded-lg.shadow-lg.border.border-gray-200.overflow-hidden(
-                            v-if="card.emails.length > 1 && expandedContact.type === 'email' && expandedContact.cardId === card.id"
-                          )
-                            a.block.px-4.py-2.text-sm.transition-colors(
-                              v-for="email in card.emails.slice(1)"
-                              :key="email"
-                              :href="'mailto:' + email"
-                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                              class="hover:bg-gray-50"
-                            ) {{ email }}
 
                       // Phone Numbers
-                      .relative.flex.items-center.gap-3(v-if="card.phones?.length > 0")
+                      .relative.flex.items-center.gap-3(
+                        v-if="card.phones?.length > 0"
+                        class="col-span-full sm:col-span-1"
+                      )
                         VaIcon(name="phone" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
                         .flex.flex-col.w-full
                           .flex.items-center.justify-between.w-full
-                            a.text-base(:style="{ color: card.style?.secondaryColor || '#4B5563' }" :href="'tel:' + card.phones[0]") {{ card.phones[0] }}
+                            a.text-base.truncate(
+                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                              :href="'tel:' + card.phones[0]"
+                              class="hover:underline"
+                            ) {{ card.phones[0] }}
                             button.p-1.rounded-lg.transition-colors(
                               v-if="card.phones.length > 1"
                               @click="toggleContactDropdown('phone', card.id)"
-                              class="hover:bg-gray-100"
+                              class="hover:bg-black/5"
                             )
                               VaIcon(name="expand_more" size="18px" class="text-gray-400")
-                          .mt-1.w-full.bg-white.rounded-lg.shadow-lg.border.border-gray-200.overflow-hidden(
-                            v-if="card.phones.length > 1 && expandedContact.type === 'phone' && expandedContact.cardId === card.id"
-                          )
-                            a.block.px-4.py-2.text-sm.transition-colors(
-                              v-for="phone in card.phones.slice(1)"
-                              :key="phone"
-                              :href="'tel:' + phone"
-                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                              class="hover:bg-gray-50"
-                            ) {{ phone }}
 
                       // Websites
-                      .relative.flex.items-center.gap-3(v-if="card.websites?.length > 0")
+                      .relative.flex.items-center.gap-3(
+                        v-if="card.websites?.length > 0"
+                        class="col-span-full"
+                      )
                         VaIcon(name="language" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
                         .flex.flex-col.w-full
                           .flex.items-center.justify-between.w-full
-                            a.text-base(
+                            a.text-base.truncate(
                               :style="{ color: card.style?.secondaryColor || '#4B5563' }"
                               :href="formatWebsiteUrl(card.websites[0])"
                               target="_blank"
                               rel="noopener noreferrer"
+                              class="hover:underline"
                             ) {{ card.websites[0] }}
                             button.p-1.rounded-lg.transition-colors(
                               v-if="card.websites.length > 1"
                               @click="toggleContactDropdown('website', card.id)"
-                              class="hover:bg-gray-100"
+                              class="hover:bg-black/5"
                             )
                               VaIcon(name="expand_more" size="18px" class="text-gray-400")
-                          .mt-1.w-full.bg-white.rounded-lg.shadow-lg.border.border-gray-200.overflow-hidden(
-                            v-if="card.websites.length > 1 && expandedContact.type === 'website' && expandedContact.cardId === card.id"
-                          )
-                            a.block.px-4.py-2.text-sm.transition-colors(
-                              v-for="website in card.websites.slice(1)"
-                              :key="website"
-                              :href="formatWebsiteUrl(website)"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                              class="hover:bg-gray-50"
-                            ) {{ website }}
 
-                      // Company (unchanged)
-                      .flex.items-center.gap-3(v-if="card.company")
+                      // Company with Icon
+                      .flex.items-center.gap-3.col-span-full(v-if="card.company")
                         VaIcon(name="business" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
-                        span.text-base(:style="{ color: card.style?.secondaryColor || '#4B5563' }") {{ card.company }}
+                        span.text-base.truncate(:style="{ color: card.style?.secondaryColor || '#4B5563' }") {{ card.company }}
 
-                    // Event Tag
+                    // Event Tag with Modern Design
                     .mt-auto.pt-6
-                      .inline-flex.items-center.gap-2.px-4.py-2.rounded-full.text-base(
+                      .inline-flex.items-center.gap-2.px-4.py-2.rounded-full.text-base.shadow-sm(
                         :class=`card.eventId ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800'`
                       )
                         VaIcon(name="event" size="16px" :class="card.eventId ? 'text-emerald-600' : 'text-gray-600'")
                         span {{ getEventName(card.eventId) || 'No Event' }}
 
-                  // Bottom Action Bar
-                  .bg-gray-50.px-6.py-4.flex.items-center.justify-between.border-t.border-gray-100
+                  // Bottom Action Bar with Glass Effect
+                  .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.items-center.justify-between.border-t.border-gray-100
                     .flex.items-center.gap-4
                       button(
-                        class="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                        class="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-gray-50"
                         @click="openDraftsListModal(card)"
                       )
                         VaIcon(name="description" size="18px")
-                        span.text-base.font-medium Message Drafts
-                        span(class="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-lg ml-1") {{ cardDrafts[card.id]?.length || 0 }}
+                        span.text-sm.font-medium Message Drafts
+                        span(class="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-md border border-gray-100 ml-1") {{ cardDrafts[card.id]?.length || 0 }}
                       button(
-                        class="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors duration-200 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg"
+                        class="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-all duration-200 bg-white border border-gray-200 px-4 py-2 rounded-lg shadow-sm hover:border-gray-300"
                         @click="saveContact(card)"
                       )
                         VaIcon(name="person_add" size="18px")
                         span.text-sm.font-medium Save Contact
+
+                  // Dropdown Menus with Glass Effect
+                  .absolute.left-0.right-0.z-10(v-if="expandedContact.cardId === card.id")
+                    .mt-1.mx-6.bg-white.rounded-lg.shadow-lg.border.border-gray-100.overflow-hidden.backdrop-blur-md.bg-opacity-90(
+                      v-if="expandedContact.type === 'email' && card.emails.length > 1"
+                    )
+                      a.block.px-4.py-2.text-sm.transition-colors(
+                        v-for="email in card.emails.slice(1)"
+                        :key="email"
+                        :href="'mailto:' + email"
+                        :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                        class="hover:bg-gray-50"
+                      ) {{ email }}
+                    
+                    .mt-1.mx-6.bg-white.rounded-lg.shadow-lg.border.border-gray-100.overflow-hidden.backdrop-blur-md.bg-opacity-90(
+                      v-if="expandedContact.type === 'phone' && card.phones.length > 1"
+                    )
+                      a.block.px-4.py-2.text-sm.transition-colors(
+                        v-for="phone in card.phones.slice(1)"
+                        :key="phone"
+                        :href="'tel:' + phone"
+                        :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                        class="hover:bg-gray-50"
+                      ) {{ phone }}
+                    
+                    .mt-1.mx-6.bg-white.rounded-lg.shadow-lg.border.border-gray-100.overflow-hidden.backdrop-blur-md.bg-opacity-90(
+                      v-if="expandedContact.type === 'website' && card.websites.length > 1"
+                    )
+                      a.block.px-4.py-2.text-sm.transition-colors(
+                        v-for="website in card.websites.slice(1)"
+                        :key="website"
+                        :href="formatWebsiteUrl(website)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                        class="hover:bg-gray-50"
+                      ) {{ website }}
 
         // Stats Grid (Moved to bottom)
         .grid.mt-8(class="grid-cols-1 md:grid-cols-3 gap-6")
@@ -577,21 +611,19 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
         .p-8
           .flex.items-center.justify-between.mb-6
             h3.text-2xl.font-bold Email Draft
-            .flex.items-center.gap-2
-              p.text-sm.text-gray-500 {{ new Date(selectedDraft?.createdAt?.toDate()).toLocaleString() }}
           .bg-gray-50.p-6.rounded-xl.mb-6
             pre.whitespace-pre-wrap.text-base.leading-relaxed {{ emailDraft }}
           .flex.justify-end.gap-4
             button(
-              class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+              class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300"
               @click="showEmailModal = false"
             ) Close
             button(
-              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+              class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2"
               @click="copyEmailDraft"
             )
-              VaIcon(name="copy" size="16px")
-              span(class="font-medium") {{ copiedEmailDraft ? 'Copied!' : 'Copy' }}
+              VaIcon(name="content_copy" size="16px")
+              span {{ copiedEmailDraft ? 'Copied!' : 'Copy' }}
 
       // Confirmation Modal
       VaModal(
@@ -873,6 +905,9 @@ const eventNameError = ref('');
 
 const STORAGE_KEY = 'selectedEvent';
 
+// Add successMessage ref
+const successMessage = ref('');
+
 // Auth state management
 onMounted(() => {
   const unsubscribe = authService.onAuthStateChanged((currentUser) => {
@@ -944,6 +979,7 @@ async function uploadFile(file) {
 
   uploading.value = true;
   error.value = '';
+  successMessage.value = '';
   processingStatus.value = 'Starting upload...';
 
   try {
@@ -957,12 +993,25 @@ async function uploadFile(file) {
     businessCards.value.unshift(card);
     // Initialize expandedDrafts for the new card
     expandedDrafts.value[card.id] = false;
+    // Set success message
+    successMessage.value = card.message;
+    // Auto-hide success message after 5 seconds
+    setTimeout(() => {
+      if (uploading.value) {
+        uploading.value = false;
+        successMessage.value = '';
+      }
+    }, 5000);
   } catch (err) {
-    error.value = 'Error uploading business card';
+    error.value = err.message || 'Error uploading business card';
     console.error(err);
-  } finally {
-    uploading.value = false;
-    processingStatus.value = '';
+    // Auto-hide error after 5 seconds
+    setTimeout(() => {
+      if (uploading.value) {
+        uploading.value = false;
+        error.value = '';
+      }
+    }, 5000);
   }
 }
 
@@ -1860,5 +1909,63 @@ main {
     z-index: 40;
     overflow-y: auto;
   }
+}
+
+/* Add these styles to the existing <style> section */
+.card-container {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card-container:hover {
+  box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 640px) {
+  .card-container {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-radius: 0;
+  }
+}
+
+/* Update button styles */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Button hover effects */
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+/* Button active state */
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Button focus styles */
+button:focus {
+  outline: none;
+  ring-color: rgb(209, 213, 219);
+  ring-offset-width: 2px;
+}
+
+/* Clean shadow effect */
+.shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.shadow-sm:hover {
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
 }
 </style>

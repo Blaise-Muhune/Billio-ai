@@ -12,6 +12,24 @@ const openai = new OpenAI({
 
 export const businessCardService = {
   async uploadCard(file, eventId = null, onStatusUpdate = null) {
+    let storageRef = null;
+    let imageDeleted = false; // Flag to track if image has been deleted
+
+    // Helper function to safely delete the image
+    const safeDeleteImage = async () => {
+      if (storageRef && !imageDeleted) {
+        try {
+          await deleteObject(storageRef);
+          imageDeleted = true;
+        } catch (deleteError) {
+          // Only log if it's not a 'not-found' error
+          if (deleteError.code !== 'storage/object-not-found') {
+            console.error('Error deleting image:', deleteError);
+          }
+        }
+      }
+    };
+
     try {
       if (!storage || !db) {
         throw new Error('Firebase not initialized');
@@ -64,21 +82,37 @@ export const businessCardService = {
 
       // Upload image to Firebase Storage
       if (onStatusUpdate) onStatusUpdate('Uploading image...');
-      const storageRef = ref(storage, `business-cards/${user.uid}/${Date.now()}-${file.name}`);
+      storageRef = ref(storage, `business-cards/${user.uid}/${Date.now()}-${file.name}`);
       await uploadBytes(storageRef, file);
       const imageUrl = await getDownloadURL(storageRef);
 
-      // Extract text using GPT-4 Vision
-      if (onStatusUpdate) onStatusUpdate('Processing image with AI...');
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Analyze this business card and provide two things:
+      try {
+        // Extract text using GPT-4 Vision
+        if (onStatusUpdate) onStatusUpdate('Processing image with AI...');
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `First, validate if this image is a clear, readable business card:
+
+1. Validation Checks (return error object if ANY of these fail):
+   - Confirm this is a business card image (not a random photo, document, or other item)
+   - Verify the image is clear enough to read text (not blurry, too dark, or too bright)
+   - Check if there is visible contact information
+   - Ensure text is oriented correctly and not upside down
+
+If validation fails, return ONLY this error object:
+{
+  "error": true,
+  "message": "Specific reason why image is invalid (e.g., 'Not a business card', 'Image too blurry', etc.)"
+}
+
+If validation passes, analyze the business card and provide:
+
 1. Extract the following information: name, company, emails (as array), phones (as array), title, websites (as array), address, and any other relevant information.
 
 2. Analyze the visual style and ensure high contrast readability:
@@ -91,7 +125,7 @@ export const businessCardService = {
    - For white/very light backgrounds, use dark grays or navy instead of pure black
    - For dark backgrounds, use off-white or light gray instead of pure white
 
-Return a JSON object with two main sections:
+Return a JSON object with two main sections (ONLY if validation passes):
 {
   "info": {
     "name": "...",
@@ -112,83 +146,101 @@ Return a JSON object with two main sections:
     "designNotes": "Description of notable design elements and style choices"
   }
 }`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageUrl
+                  }
                 }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-        response_format: { type: "json_object" }
-      });
+              ]
+            }
+          ],
+          max_tokens: 1000,
+          response_format: { type: "json_object" }
+        });
 
-      if (onStatusUpdate) onStatusUpdate('Saving card data...');
-      
-      try {
-        const parsedData = JSON.parse(response.choices[0].message.content);
+        if (onStatusUpdate) onStatusUpdate('Saving card data...');
         
-        // Rename style properties to match our expected format
-        const style = {
-          ...parsedData.style,
-          backgroundColor: parsedData.style.cardBackgroundColor,
-          primaryColor: parsedData.style.mainTextColor,
-          secondaryColor: parsedData.style.secondaryTextColor
-        };
-        delete style.cardBackgroundColor;
-        delete style.mainTextColor;
-        delete style.secondaryTextColor;
-        
-        // Save to Firestore with user ID and style information
-        const cardData = {
-          ...parsedData.info,
-          style,
-          imageUrl,
-          eventId,
-          userId: user.uid,
-          createdAt: new Date(),
-        };
-
-        // Create the card document
-        const docRef = await addDoc(collection(db, 'business-cards'), cardData);
-
-        // Update usage stats
         try {
-          const usageRef = doc(db, 'usage_stats', user.uid);
-          const usageDoc = await getDoc(usageRef);
+          const parsedData = JSON.parse(response.choices[0].message.content);
           
-          if (!usageDoc.exists()) {
-            // Create initial usage stats document
-            await setDoc(usageRef, {
-              cards: 1,
-              events: 0,
-              draftsPerCard: {},
-              createdAt: new Date(),
-              updatedAt: new Date()
-            });
-          } else {
-            // Update existing usage stats
-            await updateDoc(usageRef, {
-              cards: (usageDoc.data().cards || 0) + 1,
-              updatedAt: new Date()
-            });
+          // Check if the response contains an error
+          if (parsedData.error) {
+            await safeDeleteImage();
+            throw new Error(parsedData.message || 'Invalid business card image');
           }
-        } catch (usageError) {
-          console.error('Error updating usage stats:', usageError);
-          // Continue with the card creation even if usage stats update fails
-        }
+          
+          // Rename style properties to match our expected format
+          const style = {
+            ...parsedData.style,
+            backgroundColor: parsedData.style.cardBackgroundColor,
+            primaryColor: parsedData.style.mainTextColor,
+            secondaryColor: parsedData.style.secondaryTextColor
+          };
+          delete style.cardBackgroundColor;
+          delete style.mainTextColor;
+          delete style.secondaryTextColor;
+          
+          // Save to Firestore with user ID and style information
+          const cardData = {
+            ...parsedData.info,
+            style,
+            imageUrl,
+            eventId,
+            userId: user.uid,
+            createdAt: new Date(),
+          };
 
-        return { id: docRef.id, ...cardData };
-      } catch (parseError) {
-        console.error('Error parsing GPT response:', parseError);
-        console.error('Raw response:', response.choices[0].message.content);
-        throw new Error('Failed to parse business card data');
+          // Create the card document
+          const docRef = await addDoc(collection(db, 'business-cards'), cardData);
+
+          // Update usage stats
+          try {
+            const usageRef = doc(db, 'usage_stats', user.uid);
+            const usageDoc = await getDoc(usageRef);
+            
+            if (!usageDoc.exists()) {
+              // Create initial usage stats document
+              await setDoc(usageRef, {
+                cards: 1,
+                events: 0,
+                draftsPerCard: {},
+                createdAt: new Date(),
+                updatedAt: new Date()
+              });
+            } else {
+              // Update existing usage stats
+              await updateDoc(usageRef, {
+                cards: (usageDoc.data().cards || 0) + 1,
+                updatedAt: new Date()
+              });
+            }
+          } catch (usageError) {
+            console.error('Error updating usage stats:', usageError);
+            // Continue with the card creation even if usage stats update fails
+          }
+
+          // Return success data with message
+          return { 
+            id: docRef.id, 
+            ...cardData,
+            message: `Successfully processed business card for ${cardData.name}! Added to your collection.`
+          };
+        } catch (parseError) {
+          await safeDeleteImage();
+          console.error('Error parsing GPT response:', parseError);
+          console.error('Raw response:', response.choices[0].message.content);
+          throw new Error('Failed to parse business card data');
+        }
+      } catch (error) {
+        await safeDeleteImage();
+        throw error;
       }
     } catch (error) {
+      await safeDeleteImage();
       console.error('Error uploading business card:', error);
+      
       if (error.code === 'permission-denied') {
         throw new Error('You do not have permission to upload cards. Please make sure you are logged in.');
       }
@@ -282,7 +334,7 @@ Return a JSON object with two main sections:
         messages: [
           {
             role: "system",
-            content: "You are an expert at writing concise, personalized messages. Create only the body of the message - no subject line, no signature. Focus on creating a clear, friendly message that demonstrates knowledge of both parties' professional context."
+            content: "You are an expert at writing concise, personalized messages for connecting with professionals after getting their business card. Create only the body of the message - no subject line, no signature. Focus on creating a clear, friendly message that demonstrates knowledge of both parties' professional context."
           },
           {
             role: "user",
@@ -295,7 +347,7 @@ Recipient's Title: ${card.title || 'not specified'}
 Recipient's Role/Context: ${card.eventId ? `Met at ${card.eventId}` : 'Recent business connection'}
 
 Guidelines:
-- Start directly with the message content (no greeting)
+- very short introduction with greeting about yourself and how you met if relevant
 - Reference their role and company naturally in the text
 - Keep it brief but warm and professional
 - End with a clear next step or call to action

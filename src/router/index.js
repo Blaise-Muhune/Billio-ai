@@ -54,6 +54,14 @@ const routes = [
     meta: {
       title: 'Privacy Policy - BilloAI'
     }
+  },
+  {
+    path: '/demo',
+    name: 'Demo',
+    component: () => import('../pages/demo/index.vue'),
+    meta: {
+      title: 'Demo & Tutorial - BilloAI'
+    }
   }
 ];
 
