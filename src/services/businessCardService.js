@@ -100,9 +100,10 @@ export const businessCardService = {
                   text: `First, validate if this image is a clear, readable business card:
 
 1. Validation Checks (return error object if ANY of these fail):
-   - Confirm this is a business card image or picture with contact information (not a random photo, document, or other item)
-   - Verify the image is clear enough to read text 
+   - Confirm this is a business card image (not a random photo, document, or other item)
+   - Verify the image is clear enough to read text
    - Check if there is visible contact information
+   - Ensure text is oriented correctly and not upside down
 
 If validation fails, return ONLY this error object:
 {
@@ -112,7 +113,7 @@ If validation fails, return ONLY this error object:
 
 If validation passes, analyze the business card and provide:
 
-1. Extract the following information: name, company, emails (as array), phones (as array) return well formatted phone numbers, title, websites (as array), address, and any other relevant information.
+1. Extract the following information: name, company, emails (as array), phones (as array), title, websites (as array), address, and any other relevant information.
 
 2. Analyze the visual style and ensure high contrast readability:
    - Determine the dominant background color of the card
@@ -686,7 +687,7 @@ return a json object with the following fields:
 
   async updateCard(cardData) {
     try {
-      const cardRef = doc(db, 'business-cards', cardData.id);
+      const cardRef = doc(db, 'businessCards', cardData.id);
       await updateDoc(cardRef, {
         name: cardData.name,
         title: cardData.title,
@@ -694,6 +695,7 @@ return a json object with the following fields:
         emails: cardData.emails,
         phones: cardData.phones,
         websites: cardData.websites,
+        style: cardData.style,
         updatedAt: serverTimestamp()
       });
       return cardData;
