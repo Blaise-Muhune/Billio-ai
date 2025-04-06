@@ -100,10 +100,9 @@ export const businessCardService = {
                   text: `First, validate if this image is a clear, readable business card:
 
 1. Validation Checks (return error object if ANY of these fail):
-   - Confirm this is a business card image (not a random photo, document, or other item)
-   - Verify the image is clear enough to read text (not blurry, too dark, or too bright)
+   - Confirm this is a business card image or picture with contact information (not a random photo, document, or other item)
+   - Verify the image is clear enough to read text 
    - Check if there is visible contact information
-   - Ensure text is oriented correctly and not upside down
 
 If validation fails, return ONLY this error object:
 {
