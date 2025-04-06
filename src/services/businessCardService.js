@@ -101,8 +101,7 @@ export const businessCardService = {
 
 1. Validation Checks (return error object if ANY of these fail):
    - Confirm the image contains a business card or contact information somewhere on the image
-   - Check if there is visible contact information
-   - Ensure text is oriented correctly and not upside down
+
 
 If validation fails, return ONLY this error object:
 {
