@@ -97,17 +97,11 @@ export const businessCardService = {
               content: [
                 {
                   type: "text",
-                  text: `First, validate if this image is a clear, readable business card:
-
-1. Validation Checks (return error object if ANY of these fail):
-   - Confirm the image contains a business card or contact information somewhere on the image
+                  text: `
 
 
-If validation fails, return ONLY this error object:
-{
-  "error": true,
-  "message": "Specific reason why image is invalid (e.g., 'Not a business card', 'Image too blurry', etc.)"
-}
+
+
 
 If validation passes, analyze the business card and provide:
 
@@ -143,7 +137,13 @@ Return a JSON object with two main sections (ONLY if validation passes):
     "contrastInfo": "Primary text contrast ratio: X:1, Secondary text contrast ratio: Y:1",
     "designNotes": "Description of notable design elements and style choices"
   }
-}`
+}
+If no relevant information is found, return ONLY this error object:
+{
+  "error": true,
+  "message": "Specific reason why image is invalid"
+}  
+`
                 },
                 {
                   type: "image_url",
