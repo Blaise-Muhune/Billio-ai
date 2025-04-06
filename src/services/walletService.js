@@ -15,19 +15,12 @@ export const walletService = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await user.getIdToken()}`
         },
-        body: JSON.stringify({
-          cardId: card.id,
-          name: card.name,
-          company: card.company,
-          title: card.title,
-          emails: card.emails,
-          phones: card.phones,
-          websites: card.websites
-        })
+        body: JSON.stringify(card)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate wallet pass');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate wallet pass');
       }
 
       // Get the .pkpass file as a blob
@@ -39,6 +32,7 @@ export const walletService = {
       // Create and trigger the download
       const link = document.createElement('a');
       link.href = passUrl;
+      link.type = 'application/vnd.apple.pkpass';
       link.download = `${card.name.replace(/\s+/g, '_')}.pkpass`;
       document.body.appendChild(link);
       link.click();
@@ -54,14 +48,15 @@ export const walletService = {
 
   // Check if the device supports Apple Wallet
   isAppleWalletSupported() {
-    // Check if the device is running iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Check if the device is running iOS or macOS
+    const isAppleDevice = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && !window.MSStream;
     
-    // Check if the device supports Apple Wallet
-    // This checks for the presence of the Apple Pay API which is a good indicator
-    // that the device supports wallet passes
-    const hasWallet = window.ApplePaySession && ApplePaySession.canMakePayments();
+    // Check if the device supports adding passes to wallet
+    // This checks for the presence of the addToWallet API
+    const hasWalletSupport = 'withSafariViewController' in window || 
+                            'withSafariView' in window || 
+                            document.createElement('link').relList.supports('smartcard');
     
-    return isIOS && hasWallet;
+    return isAppleDevice && hasWalletSupport;
   }
 }; 
