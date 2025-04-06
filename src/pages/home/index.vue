@@ -963,14 +963,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               span(class="font-medium") Download Card
 
             button(
-              v-if="walletService.isAppleWalletSupported()"
-              class="w-full sm:w-auto bg-black text-white hover:bg-gray-900 border border-black px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-              @click="isPremium ? addToAppleWallet() : handlePremiumPrompt('add to Apple Wallet')"
-              :class="!isPremium ? 'opacity-50 cursor-not-allowed' : ''"
+              class="w-full sm:w-auto bg-black text-white hover:bg-gray-900 border border-black px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm relative group"
+              @click="addToAppleWallet()"
+              :disabled="!walletService.isAppleWalletSupported()"
+              :class="!walletService.isAppleWalletSupported() ? 'opacity-50 cursor-not-allowed' : ''"
             )
               VaIcon(name="wallet" size="16px")
               span(class="font-medium") Add to Wallet
-              VaIcon(v-if="!isPremium" name="lock" size="14px" class="ml-1 text-gray-400")
+              span(
+                v-if="!walletService.isAppleWalletSupported()"
+                class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none"
+              ) Not supported on this device
 
             button(
               class="w-full sm:w-auto bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm group relative"
