@@ -328,40 +328,70 @@ Return a JSON object with two main sections (ONLY if validation passes):
         };
       }
 
+      // Get event details if card has an eventId
+      let eventContext = 'Recent business connection';
+      if (card.eventId) {
+        const eventRef = doc(db, 'events', card.eventId);
+        const eventDoc = await getDoc(eventRef);
+        if (eventDoc.exists()) {
+          const eventData = eventDoc.data();
+          eventContext = `Met at ${eventData.name}`;
+        }
+      }
+
       // Only proceed with GPT call if all checks pass
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "You are an expert at writing concise, personalized messages for connecting with professionals after getting their business card. Create only the body of the message - no subject line, no signature. Focus on creating a clear, friendly message that demonstrates knowledge of both parties' professional context."
+            content: "You are an expert at writing professional, personalized emails for business networking. Generate three components: 1) A compelling subject line, 2) The email body and 3) A professional signature. The email should be concise, friendly, and focused on building a professional connection."
           },
           {
             role: "user",
-            content: `Write a concise message using these details:
+            content: `Write an email with the following details:
 
 Sender: ${user.displayName}
+Sender's Title: ${user.title || 'Professional'}
 Recipient: ${card.name}
 Recipient's Company: ${card.company}
 Recipient's Title: ${card.title || 'not specified'}
-Recipient's Role/Context: ${card.eventId ? `Met at ${card.eventId}` : 'Recent business connection'}
+Context: ${eventContext}
 
 Guidelines:
-- very short introduction with greeting about yourself and how you met if relevant
-- Reference their role and company naturally in the text
-- Keep it brief but warm and professional
-- End with a clear next step or call to action
-- Do not add any signature`
+- Generate a compelling subject line that encourages opening the email
+- include small introduction of yourself of name and any relevant information
+- Keep the body brief but warm and professional
+- the body should be a single paragraph cuase it could be sent as a text message too.
+- Include a clear next step or call to action
+- the call to action should be something that is easy to do and not too pushy cause they might be in other city so thing like  "let's keep in touch" should be fine and not "let grab a coffee"
+- Add a professional signature with sender's name and title
+- Format the response as a JSON object with subject, body, and signature fields
+- generate a complete email that wont require any additional edits
+- make the email sound human and not robotic and a bit casual
+- make the email sound like you met them at an event and you are reaching out to them
+
+
+return a json object with the following fields:
+{
+  "subject": "...",
+  "body": "...",
+  "signature": "..."
+}
+`
           }
         ],
+        response_format: { type: "json_object" }
       });
 
-      const draftContent = response.choices[0].message.content;
-      console.log('Generated draft content:', draftContent); // Debug log
+      const emailData = JSON.parse(response.choices[0].message.content);
+      const body = `${emailData.body}`;
 
       // Save the draft to Firestore with validated data
       const draftData = {
-        content: draftContent,
+        subject: emailData.subject,
+        content: body,
+        signature: emailData.signature,
         cardId: card.id,
         userId: user.uid,
         createdAt: new Date(),
@@ -373,7 +403,7 @@ Guidelines:
       };
 
       const docRef = await addDoc(collection(db, 'email-drafts'), draftData);
-      console.log('Successfully saved draft with ID:', docRef.id); // Debug log
+      console.log('Successfully saved draft with ID:', docRef.id);
 
       // Update usage stats
       try {

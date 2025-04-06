@@ -36,7 +36,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             :disabled="true"
           ) {{ currentPlan === 'FREE' ? 'Current Plan' : 'Free Plan' }}
         .mt-8.space-y-4
-          .flex.items-center.gap-3(v-for="feature in ['Up to 5 business cards', 'Basic card scanning', '3 email drafts per card', 'Basic digital profile', 'Basic QR code sharing', 'Save contacts as vCard', 'View-only social links', 'No events management', 'Community support']" :key="feature")
+          .flex.items-center.gap-3(v-for="feature in ['Up to 5 business cards', 'Basic card scanning', '3 email drafts per card', 'Basic digital profile', 'Save contacts as vCard', 'View-only social links']" :key="feature")
             VaIcon(name="check_circle" size="20px" class="text-emerald-500")
             span.text-gray-700 {{ feature }}
 
