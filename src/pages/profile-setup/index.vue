@@ -216,6 +216,20 @@ main.p-8.max-w-2xl.mx-auto
               placeholder="facebook.com/username"
             )
 
+          // Other Link
+          .space-y-2
+            .flex.items-center.gap-2
+              .w-5.h-5.flex.items-center.justify-center
+                VaIcon(name="link" size="20px" class="text-gray-700")
+              label.block.text-sm.font-medium.text-gray-700 Other Link
+                span.text-gray-500.text-sm.ml-1 (optional)
+            input(
+              type="url"
+              v-model="formData.otherLink"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+              placeholder="https://example.com"
+            )
+
         // Music Platforms
         .space-y-4.mt-8
           .flex.items-center.gap-2.mb-4
@@ -340,7 +354,24 @@ const formData = ref({
   spotify: '',
   soundcloud: '',
   youtubeMusic: '',
-  appleMusic: ''
+  appleMusic: '',
+  otherLink: '',
+  visibility: {
+    nameTitle: true,
+    bio: true,
+    email: true,
+    phone: true,
+    address: true,
+    linkedin: true,
+    twitter: true,
+    instagram: true,
+    facebook: true,
+    spotify: true,
+    soundcloud: true,
+    youtubeMusic: true,
+    appleMusic: true,
+    otherLink: true
+  }
 });
 
 const isPremium = ref(false);
@@ -440,7 +471,24 @@ onMounted(async () => {
       spotify: '',
       soundcloud: '',
       youtubeMusic: '',
-      appleMusic: ''
+      appleMusic: '',
+      otherLink: '',
+      visibility: {
+        nameTitle: true,
+        bio: true,
+        email: true,
+        phone: true,
+        address: true,
+        linkedin: true,
+        twitter: true,
+        instagram: true,
+        facebook: true,
+        spotify: true,
+        soundcloud: true,
+        youtubeMusic: true,
+        appleMusic: true,
+        otherLink: true
+      }
     };
   }
 
@@ -509,6 +557,7 @@ async function saveProfile() {
       soundcloud: formData.value.soundcloud?.trim() || '',
       youtubeMusic: formData.value.youtubeMusic?.trim() || '',
       appleMusic: formData.value.appleMusic?.trim() || '',
+      otherLink: formData.value.otherLink?.trim() || '',
       photoURL: photoURL || '',
       profileCompleted: true,
       updatedAt: new Date()
@@ -573,4 +622,24 @@ function handleDownloadQRCode() {
 function handleDownloadBusinessCard() {
   // Implementation of downloadBusinessCard function
 }
+
+// Function to ensure URL starts with http:// or https://
+function formatUrl(url) {
+  if (!url) return '';
+  if (!/^https?:\/\//i.test(url)) {
+    return 'http://' + url;
+  }
+  return url;
+}
+
+// Apply formatUrl to all URL fields before saving
+formData.value.linkedin = formatUrl(formData.value.linkedin?.trim() || '');
+formData.value.twitter = formatUrl(formData.value.twitter?.trim() || '');
+formData.value.instagram = formatUrl(formData.value.instagram?.trim() || '');
+formData.value.facebook = formatUrl(formData.value.facebook?.trim() || '');
+formData.value.spotify = formatUrl(formData.value.spotify?.trim() || '');
+formData.value.soundcloud = formatUrl(formData.value.soundcloud?.trim() || '');
+formData.value.youtubeMusic = formatUrl(formData.value.youtubeMusic?.trim() || '');
+formData.value.appleMusic = formatUrl(formData.value.appleMusic?.trim() || '');
+formData.value.otherLink = formatUrl(formData.value.otherLink?.trim() || '');
 </script> 

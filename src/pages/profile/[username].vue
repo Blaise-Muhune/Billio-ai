@@ -271,9 +271,178 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                     class="text-gray-600"
                   )
 
+            //- Add visibility toggle for social links
+            button(
+              v-if="isOwner"
+              @click.stop.prevent="toggleVisibility('socialLinks')"
+              class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+              :title="profile.visibility?.socialLinks ? 'Hide from public' : 'Show to public'"
+            )
+              VaIcon(
+                :name="profile.visibility?.socialLinks ? 'visibility' : 'visibility_off'"
+                size="16px"
+                class="text-gray-600"
+              )
+
+        //- Music Links Section
+        .px-6.pb-8(
+          class="sm:px-8" 
+          v-if="hasMusicLinks && (isOwner || (profile.spotify && profile.visibility?.spotify) || (profile.soundcloud && profile.visibility?.soundcloud) || (profile.youtubeMusic && profile.visibility?.youtubeMusic) || (profile.appleMusic && profile.visibility?.appleMusic))"
+        )
+          .max-w-2xl.mx-auto
+            .grid.gap-4.justify-center(
+              class="grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(140px,140px))] place-items-center mx-auto"
+              style="max-width: 600px;"
+            )
+              //- Spotify
+              a(
+                v-if="profile.spotify && (isOwner || profile.visibility?.spotify)"
+                :href="formatSocialLink(profile.spotify, 'spotify')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-[#1DB954]/10 transition-colors text-center w-full"
+              )
+                .flex.items-center.justify-center.w-12.h-12.rounded-full(class="bg-[#1DB954]/10 mb-2")
+                  svg.w-6.h-6(class="text-[#1DB954]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                    path(fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z")
+                .text-sm.text-gray-900.font-medium Spotify
+                // Add visibility toggle for Spotify
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('spotify')"
+                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  :title="profile.visibility?.spotify ? 'Hide from public' : 'Show to public'"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.spotify ? 'visibility' : 'visibility_off'"
+                    size="16px"
+                    class="text-gray-600"
+                  )
+
+              //- SoundCloud
+              a(
+                v-if="profile.soundcloud && (isOwner || profile.visibility?.soundcloud)"
+                :href="formatSocialLink(profile.soundcloud, 'soundcloud')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-[#FF5500]/10 transition-colors text-center w-full"
+              )
+                .flex.items-center.justify-center.w-12.h-12.rounded-full(class="bg-[#FF5500]/10 mb-2")
+                  svg.w-6.h-6(class="text-[#FF5500]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                    path(fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z")
+                .text-sm.text-gray-900.font-medium SoundCloud
+                // Add visibility toggle for SoundCloud
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('soundcloud')"
+                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  :title="profile.visibility?.soundcloud ? 'Hide from public' : 'Show to public'"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.soundcloud ? 'visibility' : 'visibility_off'"
+                    size="16px"
+                    class="text-gray-600"
+                  )
+
+              //- YouTube Music
+              a(
+                v-if="profile.youtubeMusic && (isOwner || profile.visibility?.youtubeMusic)"
+                :href="formatSocialLink(profile.youtubeMusic, 'youtubeMusic')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-[#FF0000]/10 transition-colors text-center w-full"
+              )
+                .flex.items-center.justify-center.w-12.h-12.rounded-full(class="bg-[#FF0000]/10 mb-2")
+                  svg.w-6.h-6(class="text-[#FF0000]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                    path(fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z")
+                .text-sm.text-gray-900.font-medium YouTube Music
+                // Add visibility toggle for YouTube Music
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('youtubeMusic')"
+                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  :title="profile.visibility?.youtubeMusic ? 'Hide from public' : 'Show to public'"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.youtubeMusic ? 'visibility' : 'visibility_off'"
+                    size="16px"
+                    class="text-gray-600"
+                  )
+
+              //- Apple Music
+              a(
+                v-if="profile.appleMusic && (isOwner || profile.visibility?.appleMusic)"
+                :href="formatSocialLink(profile.appleMusic, 'appleMusic')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-[#000000]/10 transition-colors text-center w-full"
+              )
+                .flex.items-center.justify-center.w-12.h-12.rounded-full(class="bg-[#000000]/10 mb-2")
+                  svg.w-6.h-6(class="text-[#000000]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                    path(fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z")
+                .text-sm.text-gray-900.font-medium Apple Music
+                // Add visibility toggle for Apple Music
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('appleMusic')"
+                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  :title="profile.visibility?.appleMusic ? 'Hide from public' : 'Show to public'"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.appleMusic ? 'visibility' : 'visibility_off'"
+                    size="16px"
+                    class="text-gray-600"
+                  )
+
+            //- Add visibility toggle for music links
+            button(
+              v-if="isOwner"
+              @click.stop.prevent="toggleVisibility('musicLinks')"
+              class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+              :title="profile.visibility?.musicLinks ? 'Hide from public' : 'Show to public'"
+            )
+              VaIcon(
+                :name="profile.visibility?.musicLinks ? 'visibility' : 'visibility_off'"
+                size="16px"
+                class="text-gray-600"
+              )
+
+        //- Other Link
+        a(
+          v-if="profile.otherLink && (isOwner || profile.visibility?.otherLink)"
+          :href="profile.otherLink"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-center w-full"
+        )
+          .flex.items-center.justify-center.w-12.h-12.rounded-full.bg-gray-200.mb-2
+            VaIcon(name="link" size="24px" class="text-gray-600")
+          .text-sm.text-gray-900.font-medium Other Link
+          // Add visibility toggle for Other Link
+          button(
+            v-if="isOwner"
+            @click.stop.prevent="toggleVisibility('otherLink')"
+            class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+            :title="profile.visibility?.otherLink ? 'Hide from public' : 'Show to public'"
+          )
+            VaIcon(
+              :name="profile.visibility?.otherLink ? 'visibility' : 'visibility_off'"
+              size="16px"
+              class="text-gray-600"
+            )
+
     //- Call to Action (for non-subscribed users)
     .mt-6(v-if="!user || !user.isPremium")
       .bg-gradient-to-br.from-emerald-50.to-teal-50.rounded-2xl.border.border-emerald-100.p-8
+        //- Remove Button for Owner
+        button(
+          v-if="isOwner"
+          @click="showUpgradePrompt = true"
+          class="mb-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 flex items-center gap-2"
+        )
+          VaIcon(name="delete" size="20px")
+          span Remove
+
         //- Header
         .text-center.mb-8
           .inline-flex.items-center.justify-center.w-16.h-16.rounded-full.bg-emerald-500.bg-opacity-10.mb-4
@@ -324,6 +493,27 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             span.font-medium.text-lg Try BilloAI Free
             VaIcon(name="arrow_forward" size="24px" class="transition-transform duration-300 group-hover:translate-x-1")
 
+    //- Upgrade Prompt Modal
+    VaModal(
+      v-model="showUpgradePrompt"
+      :hide-default-actions="true"
+      class="rounded-2xl z-50"
+    )
+      .p-8
+        h3.text-2xl.font-bold.mb-6 Upgrade to Premium
+        p.text-gray-600.mb-4 Enjoy more features by upgrading your plan.
+        .flex.justify-end.gap-4.mt-8
+          button(
+            class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+            @click="showUpgradePrompt = false"
+          ) Cancel
+          button(
+            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+            @click="router.push('/subscription')"
+          )
+            VaIcon(name="upgrade" size="16px")
+            span(class="font-medium") Upgrade Now
+
       //- Empty State
       .text-center.py-12(v-if="!loading && !profile")
         VaIcon(name="qr_code" size="48px" class="text-gray-400 mx-auto mb-4")
@@ -360,6 +550,7 @@ const user = ref(null);
 const profile = ref(null);
 const loading = ref(true);
 const error = ref('');
+const showUpgradePrompt = ref(false);
 
 // Add isOwner computed property
 const isOwner = computed(() => {
@@ -373,7 +564,21 @@ async function toggleVisibility(field) {
     
     // Initialize visibility object if it doesn't exist
     if (!profile.value.visibility) {
-      profile.value.visibility = {};
+      profile.value.visibility = {
+        nameTitle: true,
+        bio: true,
+        email: true,
+        phone: true,
+        address: true,
+        linkedin: true,
+        twitter: true,
+        instagram: true,
+        facebook: true,
+        spotify: true,
+        soundcloud: true,
+        youtubeMusic: true,
+        appleMusic: true
+      };
     }
     
     // Toggle the visibility state
