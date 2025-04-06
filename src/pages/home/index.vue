@@ -6,7 +6,7 @@ meta:
 <template lang="pug">
 main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50 flex flex-col")
   // Premium Status Indicator
-  .fixed.top-4.right-4.z-50
+  .fixed.top-4.right-4.z-30
     router-link(
       to="/subscription"
       class="group inline-flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300"
@@ -22,7 +22,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
   //- App Interface (Always visible)
   .flex-1.w-full.flex.flex-col
     //- Top Navigation Bar (Fixed)
-    .w-full.bg-white.border-b.border-gray-100.fixed.top-0.z-50.shadow-sm
+    .w-full.bg-white.border-b.border-gray-100.fixed.top-0.z-30.shadow-sm
       .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8")
         .flex.items-center.justify-between.h-16
           //- Logo and Brand
@@ -481,16 +481,140 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                           )
 
                   // Bottom Action Bar with Glass Effect
-                  .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.items-center.justify-end.border-t.border-gray-100
+                  .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.items-center.justify-end.gap-2.border-t.border-gray-100
                     .relative.group
                       button(
-                        class="md:invisible md:group-hover:visible visible p-2 text-gray-400 hover:text-red-600 transition-all duration-200 rounded-full hover:bg-red-50 border border-gray-200 hover:border-red-200"
-                        @click.stop="confirmDeleteCard(card)"
+                        class="md:invisible md:group-hover:visible visible p-2 text-gray-400 hover:text-emerald-600 transition-all duration-200 rounded-full hover:bg-emerald-50 border border-gray-200 hover:border-emerald-200"
+                        @click.stop="openEditCardModal(card)"
                       )
-                        VaIcon(name="delete" size="20px")
+                        VaIcon(name="edit" size="20px")
+
+      // Edit Card Modal
+      VaModal(
+        v-model="showEditCardModal"
+        :hide-default-actions="true"
+        class="rounded-2xl"
+      )
+        .p-8
+          h3.text-2xl.font-bold.mb-6 Edit Business Card
+          .space-y-6
+            // Name and Title Section
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Name
+              input(
+                v-model="editCardData.name"
+                type="text"
+                placeholder="Enter name"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Title
+              input(
+                v-model="editCardData.title"
+                type="text"
+                placeholder="Enter title"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Company
+              input(
+                v-model="editCardData.company"
+                type="text"
+                placeholder="Enter company"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+
+            // Contact Information
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Email Addresses
+              .space-y-2
+                .flex.items-center.gap-2(v-for="(email, index) in editCardData.emails" :key="index")
+                  input(
+                    v-model="editCardData.emails[index]"
+                    type="email"
+                    placeholder="Enter email"
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                  )
+                  button(
+                    @click="removeEmail(index)"
+                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                  )
+                    VaIcon(name="remove_circle" size="20px")
+              button(
+                @click="addEmail"
+                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
+              )
+                VaIcon(name="add_circle" size="16px")
+                span Add Email
+
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Phone Numbers
+              .space-y-2
+                .flex.items-center.gap-2(v-for="(phone, index) in editCardData.phones" :key="index")
+                  input(
+                    v-model="editCardData.phones[index]"
+                    type="tel"
+                    placeholder="Enter phone"
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                  )
+                  button(
+                    @click="removePhone(index)"
+                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                  )
+                    VaIcon(name="remove_circle" size="20px")
+              button(
+                @click="addPhone"
+                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
+              )
+                VaIcon(name="add_circle" size="16px")
+                span Add Phone
+
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Websites
+              .space-y-2
+                .flex.items-center.gap-2(v-for="(website, index) in editCardData.websites" :key="index")
+                  input(
+                    v-model="editCardData.websites[index]"
+                    type="url"
+                    placeholder="Enter website"
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                  )
+                  button(
+                    @click="removeWebsite(index)"
+                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                  )
+                    VaIcon(name="remove_circle" size="20px")
+              button(
+                @click="addWebsite"
+                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
+              )
+                VaIcon(name="add_circle" size="16px")
+                span Add Website
+
+          // Edit Card Modal Actions
+          .flex.items-center.justify-between.gap-4.mt-8
+            button(
+              class="bg-red-50 text-red-600 hover:bg-red-100 px-6 py-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
+              @click="confirmDeleteCard(editCardData)"
+            )
+              VaIcon(name="delete" size="18px")
+              span
+            .flex.items-center.gap-4
+              button(
+                class="bg-gray-100 text-gray-700 px-6 py-6 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+                @click="showEditCardModal = false"
+              ) Cancel
+              button(
+                class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-6 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+                @click="saveCardChanges"
+                :disabled="saving"
+              )
+                .loading-spinner.w-4.h-4.border-2(v-if="saving")
+                VaIcon(v-else name="save" size="16px")
+                span(class="font-medium") {{ saving ? 'Saving...' : '' }}
 
         // Stats Grid (Moved to bottom)
-        .grid.mt-8(class="grid-cols-1 md:grid-cols-3 gap-6")
+        
           .stat-card.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6(
             v-for="stat in stats"
             :key="stat.label"
@@ -508,21 +632,29 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       VaModal(
         v-model="showDraftsListModal"
         :hide-default-actions="true"
-        class="rounded-2xl"
+        class="rounded-2xl z-[100] modal-container"
       )
-        .p-8
-          .flex.items-center.justify-between.mb-8
+        .p-6.relative
+          .flex.items-center.justify-between.mb-6
+            h3.text-lg.font-medium Message Drafts
             .flex.items-center.gap-3
-              h3.text-2xl.font-bold Message Drafts
-              span.text-sm.text-gray-500.px-2.py-1.bg-gray-100.rounded-lg {{ cardDrafts[selectedCardForDrafts?.id]?.length || 0 }} drafts
-            button(
-              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="confirmGenerateEmail(selectedCardForDrafts)"
-              :disabled="generatingDraft === selectedCardForDrafts?.id || loadingDrafts[selectedCardForDrafts?.id]"
-            )
-              .loading-spinner.w-4.h-4.border-2(v-if="generatingDraft === selectedCardForDrafts?.id")
-              VaIcon(v-else name="smart_toy" size="16px")
-              span.text-sm.font-medium {{ generatingDraft === selectedCardForDrafts?.id ? 'Generating...' : 'Generate New Draft' }}
+              span.text-sm.text-gray-600.bg-gray-100.px-2.py-1.rounded {{ cardDrafts[selectedCardForDrafts?.id]?.length || 0 }} drafts
+              button(
+                class="bg-white border border-emerald-200 text-emerald-600 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed group relative"
+                @click="confirmGenerateEmail(selectedCardForDrafts)"
+                :disabled="generatingDraft === selectedCardForDrafts?.id || loadingDrafts[selectedCardForDrafts?.id]"
+              )
+                VaIcon(
+                  name="smart_toy"
+                  size="14px"
+                  class="text-emerald-600"
+                )
+                span.text-sm.font-medium New Draft
+              button(
+                class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                @click="showDraftsListModal = false"
+              )
+                VaIcon(name="close" size="18px")
           
           // Card Info Section
           .bg-gray-50.rounded-xl.p-4.mb-6.flex.items-center.gap-4
@@ -566,21 +698,28 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               class="flex justify-center py-12"
             )
               .loading-spinner
-          
-          // Footer
-          .flex.justify-end.mt-6.pt-4.border-t.border-gray-200
+
+          // Bottom Close Button
+          .flex.justify-center.mt-6.pt-4.border-t.border-gray-100
             button(
-              class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+              class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors duration-200 flex items-center gap-2"
               @click="showDraftsListModal = false"
-            ) Close
+            )
+              VaIcon(name="close" size="18px")
+              span Close
 
       // Email Draft Modal
       VaModal(
         v-model="showEmailModal"
         :hide-default-actions="true"
-        class="rounded-2xl"
+        class="rounded-2xl z-[100] modal-container"
       )
-        .p-8
+        .p-8.relative(class="sm:mt-0 mt-16")
+          button.absolute.top-4.right-4.p-2.rounded-lg(
+            class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+            @click="showEmailModal = false"
+          )
+            VaIcon(name="close" size="24px")
           .flex.items-center.justify-between.mb-6
             h3.text-2xl.font-bold Email Draft
           .bg-gray-50.p-6.rounded-xl.mb-6
@@ -617,21 +756,16 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       VaModal(
         v-model="showConfirmModal"
         :hide-default-actions="true"
-        class="rounded-2xl"
+        class="rounded-2xl z-[100] modal-container"
       )
-        .p-8
+        .p-8.relative(class="sm:mt-0 mt-16")
+          button.absolute.top-4.right-4.p-2.rounded-lg(
+            class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+            @click="showConfirmModal = false"
+          )
+            VaIcon(name="close" size="24px")
           .flex.items-center.justify-between.mb-6
-            .flex.items-center.gap-3
-              h3.text-2xl.font-bold Message Drafts
-              span.text-sm.text-gray-500.px-2.py-1.bg-gray-100.rounded-lg {{ cardDrafts[selectedCardForGeneration?.id]?.length || 0 }} drafts
-            button(
-              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-2 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="proceedWithGeneration"
-              :disabled="generatingDraft === selectedCardForGeneration?.id"
-            )
-              .loading-spinner.w-4.h-4.border-2(v-if="generatingDraft === selectedCardForGeneration?.id")
-              VaIcon(v-else name="smart_toy" size="16px")
-              span.text-sm.font-medium {{ generatingDraft === selectedCardForGeneration?.id ? 'Generating...' : 'Generate New Draft' }}
+            h3.text-2xl.font-bold Message Drafts
           
           // Card Info Section
           .bg-gray-50.rounded-xl.p-4.mb-6.flex.items-center.gap-4
@@ -676,11 +810,26 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             )
               .loading-spinner
 
+          // Bottom Actions
+          .flex.justify-end.gap-4.mt-6.pt-4.border-t.border-gray-100
+            button(
+              class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300"
+              @click="showConfirmModal = false"
+            ) Close
+            button(
+              class="bg-emerald-500 text-white hover:bg-emerald-600 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center gap-2"
+              @click="proceedWithGeneration"
+              :disabled="generatingDraft === selectedCardForGeneration?.id"
+            )
+              .loading-spinner.w-3.h-3.border-2.border-white(v-if="generatingDraft === selectedCardForGeneration?.id")
+              VaIcon(v-else name="smart_toy" size="16px")
+              span {{ generatingDraft === selectedCardForGeneration?.id ? 'Generating...' : 'Generate New Draft' }}
+
       // Move to Event Modal
       VaModal(
         v-model="showMoveToEventModal"
         :hide-default-actions="true"
-        class="rounded-2xl"
+        class="rounded-2xl z-50"
       )
         .p-8
           h3.text-2xl.font-bold.mb-6 {{ selectedCardForMove?.eventId ? 'Change Event' : 'Add to Event' }}
@@ -710,7 +859,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       VaModal(
         v-model="showCreateEventModal"
         :hide-default-actions="true"
-        class="rounded-2xl"
+        class="rounded-2xl z-50"
       )
         .p-8
           h3.text-2xl.font-bold.mb-6 Create New Event
@@ -757,7 +906,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       VaModal(
         v-model="showDeleteModal"
         :hide-default-actions="true"
-        class="rounded-2xl"
+        class="rounded-2xl z-50"
       )
         .p-8
           h3.text-2xl.font-bold.mb-4 Delete Business Card
@@ -793,39 +942,34 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               :margin="0"
               class="bg-white transition-all duration-300"
               ref="qrCodeRef"
-              :class="!isPremium && !showQR ? 'blur-sm' : ''"
             )
-            // Premium Overlay
-            .absolute.inset-0.flex.flex-col.items-center.justify-center(
-              v-if="!isPremium && !showQR"
-            )
-              button(
-                class="flex items-center gap-2 text-white hover:text-emerald-200 transition-colors duration-200"
-                @click="handleRevealQR"
-              )
-                VaIcon(name="lock" size="20px" class="text-emerald-500")
-                span.text-sm.font-medium Unlock
           
           // Download Options
           .flex.flex-col.items-center.gap-3(class="sm:flex-row sm:justify-center")
             button(
               class="w-full sm:w-auto bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-              @click="isPremium ? downloadQRCode() : handlePremiumPrompt('download QR code')"
-              :class="!isPremium ? 'opacity-50 cursor-not-allowed' : ''"
+              @click="downloadQRCode()"
             )
               VaIcon(name="download" size="16px")
               VaIcon(name="qr_code" size="16px")
               span(class="font-medium") Download QR
-              VaIcon(v-if="!isPremium" name="lock" size="14px" class="ml-1 text-gray-400")
             
             button(
               class="w-full sm:w-auto bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-              @click="isPremium ? downloadBusinessCard() : handlePremiumPrompt('download business card')"
-              :class="!isPremium ? 'opacity-50 cursor-not-allowed' : ''"
+              @click="downloadBusinessCard()"
             )
               VaIcon(name="download" size="16px")
               VaIcon(name="business_card" size="16px")
               span(class="font-medium") Download Card
+
+            button(
+              v-if="walletService.isAppleWalletSupported()"
+              class="w-full sm:w-auto bg-black text-white hover:bg-gray-900 border border-black px-4 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+              @click="isPremium ? addToAppleWallet() : handlePremiumPrompt('add to Apple Wallet')"
+              :class="!isPremium ? 'opacity-50 cursor-not-allowed' : ''"
+            )
+              VaIcon(name="wallet" size="16px")
+              span(class="font-medium") Add to Wallet
               VaIcon(v-if="!isPremium" name="lock" size="14px" class="ml-1 text-gray-400")
 
             button(
@@ -851,7 +995,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     VaModal(
       v-model="showLoginPrompt"
       :hide-default-actions="true"
-      class="rounded-2xl"
+      class="rounded-2xl z-50"
     )
       .p-8
         .text-center.mb-8
@@ -877,6 +1021,7 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import { businessCardService } from '../../services/businessCardService';
 import { authService } from '../../services/authService';
 import { paymentService } from '../../services/paymentService';
+import { walletService } from '../../services/walletService';
 import { useRouter } from 'vue-router';
 import { storage } from '../../config/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -935,6 +1080,90 @@ const STORAGE_KEY = 'selectedEvent';
 
 // Add successMessage ref
 const successMessage = ref('');
+
+// Add these refs after other refs
+const showEditCardModal = ref(false);
+const editCardData = ref({
+  id: null,
+  name: '',
+  title: '',
+  company: '',
+  emails: [],
+  phones: [],
+  websites: []
+});
+const saving = ref(false);
+
+// Add these functions after other functions
+function openEditCardModal(card) {
+  editCardData.value = {
+    id: card.id,
+    name: card.name || '',
+    title: card.title || '',
+    company: card.company || '',
+    emails: [...(card.emails || [])],
+    phones: [...(card.phones || [])],
+    websites: [...(card.websites || [])]
+  };
+  showEditCardModal.value = true;
+}
+
+function addEmail() {
+  editCardData.value.emails.push('');
+}
+
+function removeEmail(index) {
+  editCardData.value.emails.splice(index, 1);
+}
+
+function addPhone() {
+  editCardData.value.phones.push('');
+}
+
+function removePhone(index) {
+  editCardData.value.phones.splice(index, 1);
+}
+
+function addWebsite() {
+  editCardData.value.websites.push('');
+}
+
+function removeWebsite(index) {
+  editCardData.value.websites.splice(index, 1);
+}
+
+async function saveCardChanges() {
+  try {
+    saving.value = true;
+    error.value = '';
+
+    // Filter out empty values
+    const updatedCard = {
+      ...editCardData.value,
+      emails: editCardData.value.emails.filter(email => email.trim()),
+      phones: editCardData.value.phones.filter(phone => phone.trim()),
+      websites: editCardData.value.websites.filter(website => website.trim())
+    };
+
+    await businessCardService.updateCard(updatedCard);
+
+    // Update the card in the local state
+    const index = businessCards.value.findIndex(c => c.id === updatedCard.id);
+    if (index !== -1) {
+      businessCards.value[index] = {
+        ...businessCards.value[index],
+        ...updatedCard
+      };
+    }
+
+    showEditCardModal.value = false;
+  } catch (err) {
+    console.error('Error updating card:', err);
+    error.value = 'Error updating business card';
+  } finally {
+    saving.value = false;
+  }
+}
 
 // Auth state management
 onMounted(() => {
@@ -1841,6 +2070,29 @@ function sendSMSDraft() {
   // Open default SMS client
   window.open(smsUrl, '_blank');
 }
+
+// Add the new function for Apple Wallet
+async function addToAppleWallet() {
+  try {
+    if (!user.value) {
+      router.push('/auth');
+      return;
+    }
+
+    await walletService.generateAppleWalletPass({
+      id: user.value.uid,
+      name: user.value.displayName,
+      title: user.value.title,
+      company: user.value.company,
+      emails: [user.value.email],
+      phones: user.value.phone ? [user.value.phone] : [],
+      websites: [profileUrl.value]
+    });
+  } catch (err) {
+    console.error('Error adding to Apple Wallet:', err);
+    error.value = 'Failed to add to Apple Wallet';
+  }
+}
 </script>
 
 <style scoped>
@@ -2074,5 +2326,21 @@ button:focus {
 
 .shadow-sm:hover {
   box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Add these new styles at the end of the style section */
+@media (max-width: 640px) {
+  .modal-container :deep(.va-modal__dialog) {
+    margin-top: 0;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-container :deep(.va-modal__content) {
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }
 </style>

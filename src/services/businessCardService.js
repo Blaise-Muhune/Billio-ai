@@ -1,5 +1,5 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc, increment, setDoc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc, increment, setDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { storage, db } from '../config/firebase';
 import { SUBSCRIPTION_PLANS } from '../config/plans';
 import OpenAI from 'openai';
@@ -681,6 +681,25 @@ return a json object with the following fields:
       if (error.code === 'permission-denied') {
         throw new Error('You do not have permission to delete this card. Please make sure you are logged in.');
       }
+      throw error;
+    }
+  },
+
+  async updateCard(cardData) {
+    try {
+      const cardRef = doc(db, 'business-cards', cardData.id);
+      await updateDoc(cardRef, {
+        name: cardData.name,
+        title: cardData.title,
+        company: cardData.company,
+        emails: cardData.emails,
+        phones: cardData.phones,
+        websites: cardData.websites,
+        updatedAt: serverTimestamp()
+      });
+      return cardData;
+    } catch (error) {
+      console.error('Error updating business card:', error);
       throw error;
     }
   }
