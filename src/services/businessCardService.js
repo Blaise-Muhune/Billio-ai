@@ -112,7 +112,7 @@ If validation fails, return ONLY this error object:
 
 If validation passes, analyze the business card and provide:
 
-1. Extract the following information: name, company, emails (as array), phones (as array), title, websites (as array), address, and any other relevant information.
+1. Extract the following information: name, company, emails (as array), phones (as array) return well formatted phone numbers, title, websites (as array), address, and any other relevant information.
 
 2. Analyze the visual style and ensure high contrast readability:
    - Determine the dominant background color of the card
