@@ -58,16 +58,31 @@ export const paymentService = {
       const user = authService.getCurrentUser();
       if (!user) throw new Error('User must be logged in');
 
+      console.log('Getting subscription status for user:', user.uid); // Debug log
+
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (!userDoc.exists()) {
+        console.log('User document not found, returning FREE plan'); // Debug log
         return { plan: 'FREE', subscriptionStatus: null };
       }
 
       const userData = userDoc.data();
+      console.log('User subscription data:', userData); // Debug log
+
+      // Check if subscription is active
+      const isActive = userData.subscriptionStatus === 'active' || 
+                      (userData.subscriptionStatus === 'canceled' && 
+                       userData.subscriptionEndDate && 
+                       new Date(userData.subscriptionEndDate) > new Date());
+
+      const plan = isActive ? (userData.plan || 'FREE') : 'FREE';
+      console.log('Determined plan:', plan, 'Active:', isActive); // Debug log
+
       return {
-        plan: userData.plan || 'FREE',
+        plan,
         subscriptionId: userData.subscriptionId,
         subscriptionStatus: userData.subscriptionStatus,
+        currentPeriodEnd: userData.subscriptionEndDate,
         limits: userData.limits || {
           maxCards: 5,
           maxEvents: 1,

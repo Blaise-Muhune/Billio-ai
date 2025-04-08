@@ -76,16 +76,36 @@ router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
 
-  if (requiresAuth && !user) {
-    // Redirect to auth page if user is not logged in and route requires auth
-    next({ 
-      name: 'Auth',
-      query: { redirect: to.fullPath }  // Save the intended destination
-    });
-  } else if (requiresGuest && user) {
-    // Redirect to home if user is logged in and route requires guest
-    next({ name: 'Home' });
-  } else {
+  try {
+    if (requiresAuth && !user) {
+      // Redirect to auth page if user is not logged in and route requires auth
+      next({ 
+        name: 'Auth',
+        query: { redirect: to.fullPath }  // Save the intended destination
+      });
+      return;
+    }
+
+    if (requiresGuest && user) {
+      // Redirect to home if user is logged in and route requires guest
+      next({ name: 'Home' });
+      return;
+    }
+
+    // If user is logged in and trying to access a route other than profile setup
+    if (user && to.name !== 'ProfileSetup') {
+      // Check if profile is completed
+      const profile = await authService.getUserProfile();
+      if (!profile?.profileCompleted && to.name !== 'Auth') {
+        // Redirect to profile setup if profile is not completed
+        next({ name: 'ProfileSetup' });
+        return;
+      }
+    }
+
+    next();
+  } catch (error) {
+    console.error('Navigation guard error:', error);
     next();
   }
 });

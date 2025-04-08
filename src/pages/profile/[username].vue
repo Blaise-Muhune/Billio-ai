@@ -31,12 +31,14 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           .absolute.inset-0.bg-black.opacity-10
           .relative.z-10.flex.flex-col.items-center
             //- Profile Image Container
-            .relative.mb-4
-              img(
-                :src="profile?.photoURL || '/default-avatar.png'"
-                class="w-32 h-32 rounded-2xl object-cover shadow-lg border-4 border-white"
-                alt="Profile picture"
-              )
+            .relative.mb-4.group
+              div(class="w-32 h-32 rounded-2xl overflow-hidden shadow-lg border-4 border-white transition-transform duration-200 group-hover:scale-105")
+                img(
+                  :src="profile?.photoURL || '/default-avatar.png'"
+                  class="w-full h-full object-cover"
+                  alt="Profile picture"
+                  @error="handleImageError"
+                )
               //- Verified Badge
               .absolute(
                 class="-bottom-2 -right-2 bg-white text-emerald-500 p-1.5 rounded-xl shadow-lg"
@@ -412,7 +414,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 .flex.items-center.gap-4
                   div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#FF0000]/10 group-hover:bg-[#FF0000]/20 transition-colors")
                     svg.w-6.h-6(class="text-[#FF0000]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                      path(fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z")
+                      path(fill="currentColor" d="M23.498 6.69a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z")
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 YouTube Music
                     .text-sm.text-gray-600.truncate {{ profile.youtubeMusic }}
@@ -428,12 +430,12 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                       class="text-gray-600"
                     )
 
-              //- Apple Music Link
+              //- Apple Music
               a(
                 v-if="profile.appleMusic && (isOwner || profile.visibility?.appleMusic)"
                 :href="formatSocialLink(profile.appleMusic, 'appleMusic')"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer" 
                 class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#FA2C55] hover:bg-[#FA2C55]/5 transition-all duration-300 group relative"
               )
                 .flex.items-center.gap-4
@@ -482,35 +484,48 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                       class="text-gray-600"
                     )
 
-              //- TikTok Link
-              a(
-                v-if="profile.tiktok && (isOwner || profile.visibility?.tiktok)"
-                :href="formatSocialLink(profile.tiktok, 'tiktok')"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-black hover:bg-black/5 transition-all duration-300 group relative"
-              )
-                .flex.items-center.gap-4
-                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-black/10 group-hover:bg-black/20 transition-colors")
-                    svg.w-6.h-6(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                      path(fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.37 6.37 0 0 0-1-.05A6.3 6.3 0 0 0 3 15.65a6.32 6.32 0 0 0 10.87 4.36 6.44 6.44 0 0 0 1.83-4.45v-7.2a8.19 8.19 0 0 0 3.89.97v-3.28c-.019.002-.037.002-.056.002L19.59 6.69z")
-                  .flex-1.min-w-0
-                    .text-sm.font-medium.text-gray-900 TikTok
-                    .text-sm.text-gray-600.truncate {{ profile.tiktok }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('tiktok')"
-                    class="p-1.5 rounded-lg hover:bg-black/10 transition-all duration-200"
-                    :title="profile.visibility?.tiktok ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.tiktok ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-black"
+              //- Custom Links Section
+              template(v-if="profile.customLinks && profile.customLinks.length > 0")
+                a(
+                  v-for="(link, index) in profile.customLinks"
+                  :key="index"
+                  v-if="isOwner || profile.visibility?.customLinks?.[index]"
+                  :href="formatSocialLink(link.url)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-gray-900 hover:bg-gray-900/5 transition-all duration-300 group relative"
+                )
+                  .flex.items-center.gap-4
+                    div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-gray-900/10 group-hover:bg-gray-900/20 transition-colors")
+                      img(
+                        v-if="link.iconUrl"
+                        :src="link.iconUrl"
+                        class="w-6 h-6 object-contain"
+                        :alt="link.name"
+                      )
+                      VaIcon(
+                        v-else
+                        name="link"
+                        size="24px"
+                        class="text-gray-600"
+                      )
+                    .flex-1.min-w-0
+                      .text-sm.font-medium.text-gray-900 {{ link.name }}
+                      .text-sm.text-gray-600.truncate {{ link.url }}
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleCustomLinkVisibility(index)"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="getCustomLinkVisibility(index) ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="getCustomLinkVisibility(index) ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
     //- Call to Action (for non-subscribed users)
-    .mt-6(v-if="!user || !user.isPremium")
+    .mt-6(v-if="!isPremium")
       .bg-gradient-to-br.from-emerald-50.to-teal-50.rounded-2xl.border.border-emerald-100.p-8
         //- Remove Button for Owner
         button(
@@ -565,7 +580,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
         .text-center
           button(
             @click="router.push('/')"
-            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-md hover:shadow-lg group"
+            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-lg hover:shadow-xl group"
           )
             VaIcon(name="rocket_launch" size="24px")
             span.font-medium.text-lg Try BilloAI Free
@@ -606,7 +621,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           span(class="font-medium") Join BilloAI to Connect
 
   //- Sticky Create Button
-  .fixed.bottom-8.right-8.z-50(v-if="!user || !user.isPremium")
+  .fixed.bottom-8.right-8.z-50(v-if="!isPremium")
     button(
       class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
       @click="router.push('/')"
@@ -621,6 +636,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { authService } from '../../services/authService';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { paymentService } from '../../services/paymentService';
 
 const route = useRoute();
 const router = useRouter();
@@ -756,6 +772,9 @@ async function loadProfile() {
       id: userDoc.id,
       ...userDoc.data()
     };
+
+    // Check premium status after loading profile
+    await checkPremiumStatus();
     
   } catch (err) {
     console.error('Error loading profile:', err);
@@ -821,6 +840,39 @@ async function signIn() {
   }
 }
 
+// Add these functions to the script section
+function getCustomLinkVisibility(index) {
+  if (!profile.value?.visibility?.customLinks) {
+    return true;
+  }
+  return profile.value.visibility.customLinks[index] !== false;
+}
+
+function toggleCustomLinkVisibility(index) {
+  if (!profile.value.visibility) {
+    profile.value.visibility = {};
+  }
+  if (!profile.value.visibility.customLinks) {
+    profile.value.visibility.customLinks = {};
+  }
+  profile.value.visibility.customLinks[index] = !getCustomLinkVisibility(index);
+  
+  // Update the profile in Firestore
+  const userRef = doc(db, 'users', user.value.uid);
+  updateDoc(userRef, {
+    'visibility.customLinks': profile.value.visibility.customLinks
+  }).catch(err => {
+    console.error('Error updating custom link visibility:', err);
+    error.value = 'Failed to update visibility settings';
+  });
+}
+
+// Add this to the script section
+function handleImageError(e) {
+  // If image fails to load, fallback to default avatar
+  e.target.src = '/default-avatar.png';
+}
+
 // Initialize
 onMounted(async () => {
   // Check if user is logged in
@@ -831,6 +883,30 @@ onMounted(async () => {
   // Load profile data
   await loadProfile();
 });
+
+// Add isPremium ref and check in script section
+const isPremium = ref(false);
+
+// Add checkPremiumStatus function
+async function checkPremiumStatus() {
+  try {
+    if (!profile.value) return;
+    
+    // Check if the profile owner has a premium plan
+    const userRef = doc(db, 'users', profile.value.id);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      isPremium.value = userData.plan === 'PRO' || userData.plan === 'BASIC';
+    } else {
+      isPremium.value = false;
+    }
+  } catch (err) {
+    console.error('Error checking premium status:', err);
+    isPremium.value = false;
+  }
+}
 </script>
 
 <style scoped>

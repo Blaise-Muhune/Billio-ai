@@ -4,26 +4,48 @@ meta:
 </route>
 
 <template lang="pug">
-main.p-8.max-w-2xl.mx-auto
+//- Loading State
+.flex.items-center.justify-center.min-h-screen(v-if="loading")
+  .loading-spinner
+
+//- Main Content
+main.p-8.max-w-2xl.mx-auto(v-else)
   .bg-white.rounded-xl.shadow-lg.p-6
     .text-center.mb-8
       h1.text-3xl.font-bold.text-emerald-600 {{ isEditing ? 'Edit Profile' : 'Complete Your Profile' }}
       p.text-gray-600.mt-2 {{ isEditing ? 'Update your information' : "Let's get to know you better" }}
     
+    //- Error Message (if any)
+    .bg-red-50.text-red-600.p-4.rounded-lg.mb-6(v-if="error")
+      .flex.items-center.gap-2
+        VaIcon(name="error" size="20px")
+        span {{ error }}
+    
     form(@submit.prevent="saveProfile").space-y-6
+      //- Hidden file input for icon uploads
+      input(
+        type="file"
+        ref="fileInput"
+        class="hidden"
+        accept="image/*"
+        @change="handleIconUpload"
+      )
+
       // Profile Picture
       .flex.flex-col.items-center.gap-4
-        .relative
-          img(
-            :src="profileImage || user?.photoURL"
-            class="w-32 h-32 rounded-full object-cover ring-4 ring-emerald-100"
-          )
+        .relative.group
+          .w-32.h-32.rounded-full.overflow-hidden.ring-4.ring-emerald-100.shadow-lg
+            img(
+              :src="profileImage || user?.photoURL || '/default-avatar.png'"
+              class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              alt="Profile picture"
+            )
           button(
             type="button"
-            class="absolute bottom-0 right-0 bg-emerald-500 text-white p-2 rounded-full hover:bg-emerald-600 transition-colors duration-200"
+            class="absolute bottom-0 right-0 bg-emerald-500 text-white p-2 rounded-full hover:bg-emerald-600 transition-colors duration-200 shadow-lg transform translate-y-0 group-hover:-translate-y-1"
             @click="$refs.imageInput.click()"
           )
-            VaIcon(name="camera" size="20px")
+            VaIcon(name="camera_alt" size="20px")
           input(
             type="file"
             ref="imageInput"
@@ -32,6 +54,9 @@ main.p-8.max-w-2xl.mx-auto
             @change="handleImageSelect"
           )
         p.text-sm.text-gray-500 Upload a profile picture (optional)
+        //- Preview of uploaded image
+        .mt-2.text-sm.text-gray-500(v-if="imageError")
+          span.text-red-500 {{ imageError }}
 
       // Name
       .space-y-2
@@ -313,7 +338,7 @@ main.p-8.max-w-2xl.mx-auto
               .flex.items-center.gap-2
                 .w-5.h-5.flex.items-center.justify-center
                   svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5")
-                    path(fill="#E4405F" d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z")
+                    path(fill="#E4405F" d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.256 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z")
                 label.block.text-sm.font-medium.text-gray-700 Instagram
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
@@ -417,6 +442,7 @@ main.p-8.max-w-2xl.mx-auto
                 VaIcon(name="add_link" size="24px" class="text-emerald-600")
                 h3.text-lg.font-medium.text-gray-900 Custom Links
               button(
+                type="button"
                 @click="addCustomLink"
                 class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors duration-200 flex items-center gap-2"
               )
@@ -434,7 +460,7 @@ main.p-8.max-w-2xl.mx-auto
                   h4.text-sm.font-medium.text-gray-700 Custom Link {{ index + 1 }}
                   .flex.items-center.gap-2
                     button(
-                      @click="toggleVisibility('customLinks.' + index)"
+                      @click="toggleCustomLinkVisibility(index)"
                       class="p-2 rounded-lg hover:bg-gray-200 transition-colors"
                       :title="getCustomLinkVisibility(index) ? 'Hide from public' : 'Show to public'"
                     )
@@ -468,11 +494,17 @@ main.p-8.max-w-2xl.mx-auto
                   // Icon Selection
                   .flex.items-center.gap-4
                     // Icon Preview
-                    .w-12.h-12.rounded-xl.bg-white.border.border-gray-200.flex.items-center.justify-center
+                    .w-12.h-12.rounded-xl.bg-white.border.border-gray-200.flex.items-center.justify-center.overflow-hidden.relative
+                      .absolute.inset-0.flex.items-center.justify-center.bg-black.bg-opacity-50.transition-opacity(
+                        v-if="saving && currentUploadIndex === index"
+                        class="opacity-100"
+                      )
+                        .loading-spinner.w-6.h-6.border-2.border-white
                       img(
-                        v-if="link.iconUrl"
-                        :src="link.iconUrl"
+                        v-if="link.iconUrl || link.previewUrl"
+                        :src="link.previewUrl || link.iconUrl"
                         class="w-6 h-6 object-contain"
+                        alt="Link icon"
                       )
                       VaIcon(
                         v-else
@@ -482,42 +514,22 @@ main.p-8.max-w-2xl.mx-auto
                       )
                     // Icon Upload Button
                     button(
+                      type="button"
                       @click="() => openIconUpload(index)"
-                      class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                      class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      :disabled="saving && currentUploadIndex === index"
                     )
-                      VaIcon(name="upload" size="20px" class="text-gray-600")
-                      span.text-sm.text-gray-700 Upload Icon
-                    input(
-                      type="file"
-                      :ref="'iconInput' + index"
-                      class="hidden"
-                      accept="image/*"
-                      @change="(e) => handleIconUpload(e, index)"
-                    )
-
-          // Premium Upgrade Banner (Non-Premium Users)
-          .mt-8.pt-8.border-t.border-gray-100(v-else)
-            .bg-gradient-to-br.from-amber-50.to-amber-100.rounded-xl.p-6
-              .flex.items-start.gap-4
-                .flex.items-center.justify-center.w-12.h-12.rounded-xl.bg-amber-500.bg-opacity-10
-                  VaIcon(name="workspace_premium" size="24px" class="text-amber-500")
-                .flex-1
-                  h3.text-lg.font-medium.text-gray-900.mb-2 Unlock Custom Links
-                  p.text-gray-600.mb-4 Upgrade to Premium to add unlimited custom links with your own icons.
-                  button(
-                    @click="router.push('/subscription')"
-                    class="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-2.5 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow"
-                  )
-                    VaIcon(name="workspace_premium" size="20px")
-                    span.font-medium Upgrade Now
+                      template(v-if="saving && currentUploadIndex === index")
+                        .loading-spinner.w-4.h-4.border-2.border-emerald-500
+                        span.text-sm.text-gray-700 Uploading...
+                      template(v-else)
+                        VaIcon(name="upload" size="20px" class="text-gray-600")
+                        span.text-sm.text-gray-700 {{ link.iconUrl ? 'Change Icon' : 'Upload Icon' }}
 
       // Required fields note
       .text-sm.text-gray-500.mb-6
         span.text-red-500 * 
         | Required fields
-
-      // Error message
-      .text-red-500.text-sm.mb-6(v-if="error") {{ error }}
 
       // Submit Button Container
       .flex.justify-center.w-full.mt-8
@@ -534,19 +546,29 @@ main.p-8.max-w-2xl.mx-auto
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { authService } from '../../services/authService';
-import { storage } from '../../config/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { businessCardService } from '../../services/businessCardService';
 import { paymentService } from '../../services/paymentService';
+import { useStore } from 'vuex';
 
 const router = useRouter();
 const route = useRoute();
+const store = useStore();
+const storage = getStorage();
 const user = ref(null);
 const error = ref('');
 const saving = ref(false);
+const loading = ref(true);
 const imageInput = ref(null);
 const profileImage = ref(null);
 const isEditing = ref(false);
+const fileInput = ref(null);
+let currentUploadIndex = -1;
+const isPremium = ref(false);
+const showQR = ref(false);
+const copiedLink = ref(false);
+const imageError = ref('');
+const imageFile = ref(null);
 
 const formData = ref({
   displayName: '',
@@ -595,18 +617,12 @@ const formData = ref({
   }
 });
 
-const isPremium = ref(false);
-const showQR = ref(false);
-const copiedLink = ref(false);
-
-// Add this function to extract company name from email domain
 function getCompanyFromEmail(email) {
   if (!email) return '';
   
   const domain = email.split('@')[1];
   if (!domain) return '';
   
-  // Expanded list of common email providers to ignore
   const commonProviders = [
     'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 
     'icloud.com', 'aol.com', 'mail.com', 'protonmail.com',
@@ -615,7 +631,6 @@ function getCompanyFromEmail(email) {
   
   if (commonProviders.includes(domain.toLowerCase())) return '';
   
-  // Convert domain to company name format
   return domain
     .split('.')[0]
     .split(/[-_]/)
@@ -627,17 +642,14 @@ function getCompanyFromEmail(email) {
     .trim();
 }
 
-// Add this function to extract name from email
 function getNameFromEmail(email) {
   if (!email) return '';
   
   const localPart = email.split('@')[0];
   
-  // Handle common email formats
   return localPart
     .split(/[._-]/)
     .map(word => {
-      // Properly capitalize each word
       word = word.toLowerCase();
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
@@ -645,47 +657,146 @@ function getNameFromEmail(email) {
     .trim();
 }
 
-onMounted(async () => {
-  const currentUser = authService.getCurrentUser();
-  if (!currentUser) {
-    router.push('/');
-    return;
-  }
+function openIconUpload(index) {
+  currentUploadIndex = index;
+  fileInput.value.click();
+}
 
-  user.value = currentUser;
+async function handleIconUpload(event) {
+  if (currentUploadIndex === -1) return;
   
-  // Check if we're editing or completing profile
-  const userProfile = await authService.getUserProfile();
-  isEditing.value = !!userProfile?.profileCompleted;
+  const file = event.target.files?.[0];
+  if (!file) return;
 
-  // Always set email from current user
-  formData.value.email = currentUser.email;
+  try {
+    // Reset any previous errors
+    error.value = '';
 
-  if (isEditing.value) {
-    // Load existing profile data but ensure email stays as current user's email
-    formData.value = {
-      ...userProfile,
-      email: currentUser.email, // Always use current email
-      displayName: currentUser.displayName || userProfile.displayName || getNameFromEmail(currentUser.email),
-    };
-  } else {
-    // New user setup with pre-filled data from email
-    const suggestedCompany = getCompanyFromEmail(currentUser.email);
-    const suggestedName = currentUser.displayName || getNameFromEmail(currentUser.email);
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      error.value = 'Please upload a valid image file (JPEG, PNG, GIF, or SVG)';
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      error.value = 'Image size should be less than 2MB';
+      return;
+    }
+
+    // Show loading state
+    saving.value = true;
+
+    // Create a unique filename with timestamp and sanitized name
+    const timestamp = Date.now();
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `custom-icons/${user.value.uid}/${timestamp}-${sanitizedName}`;
     
+    // Create storage reference
+    const iconRef = storageRef(storage, filename);
+    
+    // Upload the file with metadata
+    const metadata = {
+      contentType: file.type,
+      customMetadata: {
+        uploadedBy: user.value.uid,
+        originalName: file.name,
+        uploadedAt: new Date().toISOString()
+      }
+    };
+
+    // Upload file
+    const uploadTask = await uploadBytes(iconRef, file, metadata);
+    console.log('Icon uploaded successfully:', uploadTask.ref.fullPath);
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(uploadTask.ref);
+    console.log('Icon download URL:', downloadURL);
+    
+    // Update the custom link's icon URL
+    formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
+    
+    // Reset the file input
+    event.target.value = '';
+
+    // Show success message
+    const successMessage = 'Icon uploaded successfully!';
+    console.log(successMessage);
+
+  } catch (err) {
+    console.error('Error uploading icon:', err);
+    error.value = err.message || 'Failed to upload icon';
+  } finally {
+    saving.value = false;
+    currentUploadIndex = -1;
+  }
+}
+
+// Add this function to preview the icon before upload
+function previewIcon(event, index) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      error.value = 'Please upload a valid image file (JPEG, PNG, GIF, or SVG)';
+      return;
+    }
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (formData.value.customLinks[index]) {
+        formData.value.customLinks[index].previewUrl = e.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+
+  } catch (err) {
+    console.error('Error creating preview:', err);
+    error.value = 'Error creating preview';
+  }
+}
+
+onMounted(async () => {
+  try {
+    loading.value = true;
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      router.push('/home');
+      return;
+    }
+
+    user.value = currentUser;
+    console.log('Current user:', currentUser);
+    
+    // Check premium status first
+    await checkPremiumStatus();
+    console.log('Premium status after check:', isPremium.value);
+    
+    // Check if we're editing or completing profile
+    const userProfile = await authService.getUserProfile();
+    isEditing.value = !!userProfile?.profileCompleted;
+
+    // Initialize formData with default values
     formData.value = {
-      displayName: suggestedName,
-      email: currentUser.email,
-      company: suggestedCompany,
+      displayName: '',
       title: '',
+      company: '',
+      bio: '',
+      email: currentUser.email,
       phone: '',
       addressLine1: '',
       addressLine2: '',
       city: '',
       state: '',
       zipCode: '',
-      bio: '',
       linkedin: '',
+      github: '',
       twitter: '',
       instagram: '',
       facebook: '',
@@ -718,24 +829,72 @@ onMounted(async () => {
         customLinks: {}
       }
     };
-  }
 
-  await checkPremiumStatus();
+    if (isEditing.value && userProfile) {
+      // Merge existing profile data with default values
+      formData.value = {
+        ...formData.value,
+        ...userProfile,
+        email: currentUser.email,
+        displayName: currentUser.displayName || userProfile.displayName || getNameFromEmail(currentUser.email),
+        customLinks: userProfile.customLinks || [],
+        visibility: {
+          ...formData.value.visibility,
+          ...userProfile.visibility
+        }
+      };
+    } else {
+      // Set suggested values for new profile
+      const suggestedCompany = getCompanyFromEmail(currentUser.email);
+      const suggestedName = currentUser.displayName || getNameFromEmail(currentUser.email);
+      
+      formData.value.displayName = suggestedName;
+      formData.value.company = suggestedCompany;
+    }
+  } catch (err) {
+    console.error('Error loading profile:', err);
+    error.value = 'Error loading profile data';
+  } finally {
+    loading.value = false;
+  }
 });
 
 async function handleImageSelect(event) {
-  const file = event.target.files[0];
-  if (file) {
-    try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        profileImage.value = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('Error reading image:', err);
-      error.value = 'Error processing image';
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    // Reset error
+    imageError.value = '';
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      imageError.value = 'Please select an image file';
+      return;
     }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      imageError.value = 'Image size should be less than 5MB';
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      profileImage.value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Store the file for later upload
+    imageFile.value = file;
+  } catch (err) {
+    console.error('Error processing image:', err);
+    imageError.value = 'Error processing image';
+  } finally {
+    // Reset input
+    event.target.value = '';
   }
 }
 
@@ -752,10 +911,10 @@ async function saveProfile() {
 
     // Upload profile image if selected
     let photoURL = user.value.photoURL;
-    if (profileImage.value) {
-      const imageFile = await fetch(profileImage.value).then(r => r.blob());
-      const imageRef = storageRef(storage, `profile-images/${user.value.uid}`);
-      await uploadBytes(imageRef, imageFile);
+    if (imageFile.value) {
+      const filename = `profile-images/${user.value.uid}/${Date.now()}-${imageFile.value.name}`;
+      const imageRef = storageRef(storage, filename);
+      await uploadBytes(imageRef, imageFile.value);
       photoURL = await getDownloadURL(imageRef);
     }
 
@@ -841,9 +1000,10 @@ function handlePremiumPrompt(feature) {
 
 async function checkPremiumStatus() {
   try {
-    if (!user.value) return false;
     const status = await paymentService.getSubscriptionStatus();
-    isPremium.value = status.plan !== 'FREE';
+    console.log('Premium status response:', status); // Debug log
+    isPremium.value = status.plan === 'PRO' || status.plan === 'BASIC';
+    console.log('isPremium set to:', isPremium.value); // Debug log
   } catch (err) {
     console.error('Error checking premium status:', err);
     isPremium.value = false;
@@ -883,58 +1043,62 @@ function toggleVisibility(field) {
 }
 
 function addCustomLink() {
-  formData.value.customLinks.push({
+  if (!Array.isArray(formData.value.customLinks)) {
+    formData.value.customLinks = [];
+  }
+  if (!formData.value.visibility.customLinks) {
+    formData.value.visibility.customLinks = {};
+  }
+  
+  const newLink = {
     name: '',
     url: '',
     iconUrl: '',
     visibility: true
-  });
+  };
+  
+  formData.value.customLinks.push(newLink);
+  const newIndex = formData.value.customLinks.length - 1;
+  formData.value.visibility.customLinks[newIndex] = true;
 }
 
 function removeCustomLink(index) {
-  formData.value.customLinks.splice(index, 1);
-  formData.value.visibility.customLinks[index] = undefined;
+  if (!Array.isArray(formData.value.customLinks)) return;
+  
+  formData.value.customLinks = formData.value.customLinks.filter((_, i) => i !== index);
+  
+  // Reorder visibility settings
+  const newCustomLinksVisibility = {};
+  formData.value.customLinks.forEach((_, i) => {
+    newCustomLinksVisibility[i] = true;
+  });
+  formData.value.visibility.customLinks = newCustomLinksVisibility;
 }
 
 function getCustomLinkVisibility(index) {
+  if (!formData.value.visibility.customLinks) {
+    formData.value.visibility.customLinks = {};
+  }
   return formData.value.visibility.customLinks[index] !== false;
 }
 
 function toggleCustomLinkVisibility(index) {
-  if (!formData.value.visibility.customLinks[index]) {
-    formData.value.visibility.customLinks[index] = true;
-  } else {
-    formData.value.visibility.customLinks[index] = !formData.value.visibility.customLinks[index];
+  if (!formData.value.visibility.customLinks) {
+    formData.value.visibility.customLinks = {};
   }
+  formData.value.visibility.customLinks[index] = !getCustomLinkVisibility(index);
+}
+</script>
+
+<style scoped>
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  border-top-color: transparent;
+  border-left-color: transparent;
 }
 
-function openIconUpload(index) {
-  const input = this.$refs['iconInput' + index];
-  if (input) {
-    input.click();
-  }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
-
-async function handleIconUpload(event, index) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  try {
-    // Create a unique filename
-    const filename = `custom-icons/${user.value.uid}/${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, filename);
-    
-    // Upload the file
-    await uploadBytes(storageRef, file);
-    
-    // Get the download URL
-    const downloadURL = await getDownloadURL(storageRef);
-    
-    // Update the custom link's icon URL
-    formData.value.customLinks[index].iconUrl = downloadURL;
-  } catch (err) {
-    console.error('Error uploading icon:', err);
-    error.value = 'Failed to upload icon';
-  }
-}
-</script> 
+</style> 

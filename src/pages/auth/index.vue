@@ -224,7 +224,7 @@ const handleSignIn = async () => {
     if (!userProfile) {
       router.push('/profile-setup');
     } else {
-      router.push('/home');
+      router.push('/profile-setup');
     }
   } catch (err) {
     error.value = err.message;

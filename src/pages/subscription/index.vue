@@ -92,7 +92,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             .loading-spinner.w-4.h-4.border-2(v-if="loading")
             span(v-else) {{ currentPlan === 'PRO' ? 'Current Plan' : 'Upgrade to Pro' }}
         .mt-8.space-y-4
-          .flex.items-center.gap-3(v-for="feature in ['Unlimited business cards', 'Premium card scanning', 'Unlimited email drafts', 'Unlimited events', 'no banner ads','Premium digital profile', 'QR code integration', 'Download your business cards', 'Advanced social integration', 'Priority AI message generation', 'Advanced contact management', 'Premium support 24/7', 'Early access to new features']" :key="feature")
+          .flex.items-center.gap-3(v-for="feature in ['Unlimited business cards', 'Premium card scanning', 'Unlimited email drafts', 'Unlimited events','unlimited link customization', 'no banner ads','Premium digital profile', 'QR code integration', 'Download your business cards', 'Advanced social integration', 'Priority AI message generation', 'Advanced contact management', 'Premium support 24/7', 'Early access to new features']" :key="feature")
             VaIcon(name="check_circle" size="20px" class="text-emerald-500")
             span.text-gray-700 {{ feature }}
 

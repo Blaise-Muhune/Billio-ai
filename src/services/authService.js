@@ -109,9 +109,6 @@ export const authService = {
         ...profileData,
         updatedAt: new Date()
       });
-
-      // Redirect to home page
-      window.location.href = '/home';
       
       return true;
     } catch (error) {
