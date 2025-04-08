@@ -831,46 +831,74 @@ async function handleIconUpload(event) {
     }
 
     // Validate file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      error.value = 'Image size should be less than 2MB';
+      error.value = 'Image size should be less than 10MB';
       return;
     }
 
     // Show loading state
     saving.value = true;
 
+    // Check if user is authenticated
+    if (!user.value || !user.value.uid) {
+      error.value = 'You must be logged in to upload images';
+      saving.value = false;
+      return;
+    }
+
     // Create a unique filename with timestamp and sanitized name
     const timestamp = Date.now();
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `custom-icons/${user.value.uid}/${timestamp}-${sanitizedName}`;
     
-    // Create storage reference
-    const iconRef = storageRef(storage, filename);
-    
-    // Upload the file with metadata
-    const metadata = {
-      contentType: file.type,
-      customMetadata: {
-        uploadedBy: user.value.uid,
-        originalName: file.name,
-        uploadedAt: new Date().toISOString()
-      }
-    };
+    try {
+      // First try the custom-icons path with proper security rules
+      const filename = `custom-icons/${user.value.uid}/${timestamp}-${sanitizedName}`;
+      
+      // Create storage reference
+      const iconRef = storageRef(storage, filename);
+      
+      // Upload the file with metadata
+      const metadata = {
+        contentType: file.type,
+        customMetadata: {
+          uploadedBy: user.value.uid,
+          originalName: file.name,
+          uploadedAt: new Date().toISOString()
+        }
+      };
 
-    // Upload file
-    const uploadTask = await uploadBytes(iconRef, file, metadata);
-    console.log('Icon uploaded successfully:', uploadTask.ref.fullPath);
-    
-    // Get the download URL
-    const downloadURL = await getDownloadURL(uploadTask.ref);
-    console.log('Icon download URL:', downloadURL);
-    
-    // Update the custom link's icon URL
-    formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
+      // Upload file
+      const uploadTask = await uploadBytes(iconRef, file, metadata);
+      console.log('Icon uploaded successfully:', uploadTask.ref.fullPath);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(uploadTask.ref);
+      console.log('Icon download URL:', downloadURL);
+      
+      // Update the custom link's icon URL
+      formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
+    } catch (uploadError) {
+      console.error('Error with first upload path, trying backup path:', uploadError);
+      
+      // Try fallback path if the first one fails due to permission issues
+      const backupFilename = `users/${user.value.uid}/custom-icons/${timestamp}-${sanitizedName}`;
+      const backupIconRef = storageRef(storage, backupFilename);
+      
+      // Upload file with simplified metadata
+      await uploadBytes(backupIconRef, file);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(backupIconRef);
+      
+      // Update the custom link's icon URL
+      formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
+    }
     
     // Reset the file input
-    event.target.value = '';
+    if (event.target) {
+      event.target.value = '';
+    }
 
     // Show success message
     const successMessage = 'Icon uploaded successfully!';
@@ -878,7 +906,7 @@ async function handleIconUpload(event) {
 
   } catch (err) {
     console.error('Error uploading icon:', err);
-    error.value = err.message || 'Failed to upload icon';
+    error.value = 'Failed to upload icon: ' + (err.message || 'Unknown error');
   } finally {
     saving.value = false;
     currentUploadIndex = -1;
@@ -1024,10 +1052,10 @@ async function handleImageSelect(event) {
       return;
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024;
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      imageError.value = 'Image size should be less than 5MB';
+      imageError.value = 'Image size should be less than 10MB';
       return;
     }
 
@@ -1063,10 +1091,21 @@ async function saveProfile() {
     // Upload profile image if selected
     let photoURL = user.value.photoURL;
     if (imageFile.value) {
-      const filename = `profile-images/${user.value.uid}/${Date.now()}-${imageFile.value.name}`;
-      const imageRef = storageRef(storage, filename);
-      await uploadBytes(imageRef, imageFile.value);
-      photoURL = await getDownloadURL(imageRef);
+      try {
+        // First try with profile-images path
+        const filename = `profile-images/${user.value.uid}/${Date.now()}-${imageFile.value.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const imageRef = storageRef(storage, filename);
+        await uploadBytes(imageRef, imageFile.value);
+        photoURL = await getDownloadURL(imageRef);
+      } catch (uploadError) {
+        console.error('Error with profile image upload, trying backup path:', uploadError);
+        
+        // Try fallback path if the first one fails due to permission issues
+        const backupFilename = `users/${user.value.uid}/profile-images/${Date.now()}-${imageFile.value.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const backupImageRef = storageRef(storage, backupFilename);
+        await uploadBytes(backupImageRef, imageFile.value);
+        photoURL = await getDownloadURL(backupImageRef);
+      }
     }
 
     // Update user profile in Firebase Auth

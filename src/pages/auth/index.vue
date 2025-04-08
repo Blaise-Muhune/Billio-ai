@@ -4,7 +4,7 @@
     // Header
     .text-center.mb-10
       .mx-auto.w-32.h-12.mb-4
-        Logo
+        
       h2.text-4xl.font-bold.tracking-tight.text-gray-900.mb-2 Welcome Back
       p.text-base.text-gray-600 {{ isSignUp ? 'Create your account to get started' : 'Sign in to manage your business cards' }}
     
@@ -224,7 +224,7 @@ const handleSignIn = async () => {
     if (!userProfile) {
       router.push('/profile-setup');
     } else {
-      router.push('/profile-setup');
+      router.push('/home');
     }
   } catch (err) {
     error.value = err.message;

@@ -685,17 +685,25 @@ return a json object with the following fields:
 
   async updateCard(cardData) {
     try {
-      const cardRef = doc(db, 'businessCards', cardData.id);
-      await updateDoc(cardRef, {
+      const cardRef = doc(db, 'business-cards', cardData.id);
+      
+      // Prepare update data with style checking to avoid undefined values
+      const updateData = {
         name: cardData.name,
         title: cardData.title,
         company: cardData.company,
         emails: cardData.emails,
         phones: cardData.phones,
         websites: cardData.websites,
-        style: cardData.style,
         updatedAt: serverTimestamp()
-      });
+      };
+
+      // Only include style if it exists to avoid undefined field errors
+      if (cardData.style) {
+        updateData.style = cardData.style;
+      }
+      
+      await updateDoc(cardRef, updateData);
       return cardData;
     } catch (error) {
       console.error('Error updating business card:', error);

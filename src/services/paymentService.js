@@ -63,7 +63,7 @@ export const paymentService = {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (!userDoc.exists()) {
         console.log('User document not found, returning FREE plan'); // Debug log
-        return { plan: 'FREE', subscriptionStatus: null };
+        return { plan: 'FREE', subscriptionStatus: null, billingCycle: 'monthly' };
       }
 
       const userData = userDoc.data();
@@ -83,6 +83,8 @@ export const paymentService = {
         subscriptionId: userData.subscriptionId,
         subscriptionStatus: userData.subscriptionStatus,
         currentPeriodEnd: userData.subscriptionEndDate,
+        // Include billing cycle info from database or default to monthly
+        billingCycle: userData.billingCycle || 'monthly',
         limits: userData.limits || {
           maxCards: 5,
           maxEvents: 1,
@@ -184,6 +186,38 @@ export const paymentService = {
       };
     } catch (error) {
       console.error('Error getting usage stats:', error);
+      throw error;
+    }
+  },
+
+  // New method to force update plan in database 
+  async forceUpdatePlan(plan, billingCycle) {
+    try {
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User must be logged in');
+
+      console.log(`Manually updating plan to ${plan} (${billingCycle}) for user:`, user.uid);
+      
+      // Get plan limits from config
+      const planConfig = SUBSCRIPTION_PLANS[plan];
+      if (!planConfig) {
+        throw new Error(`Invalid plan: ${plan}`);
+      }
+
+      // Update user document in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        plan: plan,
+        billingCycle: billingCycle,
+        subscriptionStatus: 'active',
+        limits: planConfig.limits,
+        updatedAt: new Date()
+      });
+
+      console.log(`Successfully updated plan for user ${user.uid} to ${plan}`);
+      return true;
+    } catch (error) {
+      console.error('Error updating plan:', error);
       throw error;
     }
   }

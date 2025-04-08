@@ -22,6 +22,8 @@ const requiredEnvVars = [
   'FIREBASE_CLIENT_EMAIL',
   'STRIPE_BASIC_PRICE_ID',
   'STRIPE_PRO_PRICE_ID',
+  'STRIPE_BASIC_YEARLY_PRICE_ID',
+  'STRIPE_PRO_YEARLY_PRICE_ID',
   'STRIPE_WEBHOOK_SECRET'
 ];
 
@@ -74,11 +76,29 @@ expressApp.use((req, res, next) => {
 expressApp.post('/api/subscription/create', async (req, res) => {
   try {
     console.log('Received subscription creation request:', req.body);
-    const { priceId, userId, email, successUrl, cancelUrl } = req.body;
+    const { plan, billingCycle, userId, email, successUrl, cancelUrl } = req.body;
 
-    if (!priceId || !userId || !email || !successUrl || !cancelUrl) {
-      console.log('Missing fields:', { priceId, userId, email, successUrl, cancelUrl });
+    if (!plan || !billingCycle || !userId || !email || !successUrl || !cancelUrl) {
+      console.log('Missing fields:', { plan, billingCycle, userId, email, successUrl, cancelUrl });
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get price ID based on plan and billing cycle
+    let priceId;
+    if (plan === 'FREE') {
+      return res.status(400).json({ error: 'Cannot create subscription for FREE plan' });
+    } else {
+      const planConfig = EXTENDED_SUBSCRIPTION_PLANS[plan];
+      if (!planConfig) {
+        return res.status(400).json({ error: 'Invalid plan selected' });
+      }
+
+      priceId = planConfig[billingCycle].stripePriceId;
+      if (!priceId) {
+        return res.status(400).json({ 
+          error: `Price ID not configured for ${plan} plan with ${billingCycle} billing cycle`
+        });
+      }
     }
 
     // Create or get customer
@@ -340,6 +360,21 @@ const checkSubscriptionAccess = async (req, res, next) => {
 // Apply subscription check to premium routes
 expressApp.use('/api/premium', checkSubscriptionAccess);
 
+// Get product catalog
+expressApp.get('/api/subscription/catalog', async (req, res) => {
+  try {
+    res.json({
+      plans: EXTENDED_SUBSCRIPTION_PLANS,
+      discount: {
+        yearly: 20 // 20% discount for yearly plans
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching subscription catalog:', error);
+    res.status(500).json({ error: 'Failed to retrieve subscription catalog' });
+  }
+});
+
 // Add webhook handler for subscription events
 expressApp.post('/api/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -371,22 +406,31 @@ expressApp.post('/api/webhook', async (req, res) => {
         const userId = session.metadata.userId;
         const subscription = await stripe.subscriptions.retrieve(session.subscription);
 
-        // Map price ID to plan name
+        // Map price ID to plan name and billing cycle
         const priceId = subscription.items.data[0].price.id;
-        let planName;
+        let planName = 'BASIC';
+        let billingCycle = 'monthly';
         
+        // Determine plan name and billing cycle based on price ID
         if (priceId === process.env.STRIPE_PRO_PRICE_ID) {
           planName = 'PRO';
+          billingCycle = 'monthly';
         } else if (priceId === process.env.STRIPE_BASIC_PRICE_ID) {
           planName = 'BASIC';
-        } else {
-          console.warn(`Unknown price ID: ${priceId}, defaulting to BASIC plan`);
+          billingCycle = 'monthly';
+        } else if (priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
+          planName = 'PRO';
+          billingCycle = 'yearly';
+        } else if (priceId === process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
           planName = 'BASIC';
+          billingCycle = 'yearly';
+        } else {
+          console.warn(`Unknown price ID: ${priceId}, defaulting to BASIC monthly plan`);
         }
 
-        const planLimits = SUBSCRIPTION_PLANS[planName]?.limits || SUBSCRIPTION_PLANS.BASIC.limits;
+        const planLimits = EXTENDED_SUBSCRIPTION_PLANS[planName]?.[billingCycle]?.limits || SUBSCRIPTION_PLANS.BASIC.limits;
         
-        console.log(`Processing checkout.session.completed for user ${userId} with plan ${planName}`);
+        console.log(`Processing checkout.session.completed for user ${userId} with plan ${planName} (${billingCycle})`);
         
         // Update user's subscription status and limits in Firestore
         const userRef = db.collection('users').doc(userId);
@@ -394,6 +438,7 @@ expressApp.post('/api/webhook', async (req, res) => {
           subscriptionId: subscription.id,
           subscriptionStatus: subscription.status,
           plan: planName,
+          billingCycle: billingCycle,
           limits: {
             maxCards: planLimits.maxCards,
             maxEvents: planLimits.maxEvents,
@@ -472,6 +517,88 @@ expressApp.post('/api/webhook', async (req, res) => {
     });
   }
 });
+
+// Extended subscription plans with yearly options
+const EXTENDED_SUBSCRIPTION_PLANS = {
+  FREE: {
+    name: 'Free',
+    stripePriceId: null,
+    price: 0,
+    limits: SUBSCRIPTION_PLANS.FREE.limits,
+    features: [
+      'Up to 5 business cards',
+      'Basic card scanning',
+      '3 email drafts per card',
+      'Basic digital profile',
+      'Save contacts as vCard',
+      'View-only social links'
+    ]
+  },
+  BASIC: {
+    monthly: {
+      name: 'Basic Monthly',
+      stripePriceId: process.env.STRIPE_BASIC_PRICE_ID,
+      price: 9.99,
+      interval: 'month',
+      limits: SUBSCRIPTION_PLANS.BASIC.limits
+    },
+    yearly: {
+      name: 'Basic Yearly',
+      stripePriceId: process.env.STRIPE_BASIC_YEARLY_PRICE_ID,
+      price: 95.88, // 20% discount from monthly price
+      interval: 'year',
+      savings: 24,
+      fullPrice: 119.88,
+      limits: SUBSCRIPTION_PLANS.BASIC.limits
+    },
+    features: [
+      'Up to 20 business cards',
+      'Advanced card scanning',
+      '10 email drafts per card',
+      'No banner ads',
+      'Up to 5 events per month',
+      'Enhanced digital profile',
+      'QR code integration',
+      'Download QR codes',
+      'Full social media integration',
+      'AI email generation'
+    ]
+  },
+  PRO: {
+    monthly: {
+      name: 'Pro Monthly',
+      stripePriceId: process.env.STRIPE_PRO_PRICE_ID,
+      price: 29.99,
+      interval: 'month',
+      limits: SUBSCRIPTION_PLANS.PRO.limits
+    },
+    yearly: {
+      name: 'Pro Yearly',
+      stripePriceId: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
+      price: 287.88, // 20% discount from monthly price
+      interval: 'year',
+      savings: 72,
+      fullPrice: 359.88,
+      limits: SUBSCRIPTION_PLANS.PRO.limits
+    },
+    features: [
+      'Unlimited business cards',
+      'Premium card scanning',
+      'Unlimited email drafts',
+      'Unlimited events',
+      'Unlimited link customization',
+      'No banner ads',
+      'Premium digital profile',
+      'QR code integration',
+      'Download your business cards',
+      'Advanced social integration',
+      'Priority AI message generation',
+      'Advanced contact management',
+      'Premium support 24/7',
+      'Early access to new features'
+    ]
+  }
+};
 
 // Export the Express API for Vercel
 export default expressApp;

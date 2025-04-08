@@ -412,6 +412,18 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                               class="hover:bg-black/5"
                             )
                               VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                          
+                          // Dropdown (using HTML-like syntax instead of Pug's dot notation)
+                          div(
+                            v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id"
+                            class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                          )
+                            div(v-for="(email, idx) in card.emails.slice(1)")
+                              div(class="py-1")
+                                a(
+                                  :href="'mailto:' + email"
+                                  class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
+                                ) {{ email }}
 
                       // Phone Numbers
                       .relative.flex.items-center.gap-3(
@@ -432,6 +444,18 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                               class="hover:bg-black/5"
                             )
                               VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                          
+                          // Dropdown
+                          div(
+                            v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id"
+                            class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                          )
+                            div(v-for="(phone, idx) in card.phones.slice(1)")
+                              div(class="py-1")
+                                a(
+                                  :href="'tel:' + phone"
+                                  class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
+                                ) {{ phone }}
 
                       // Websites
                       .relative.flex.items-center.gap-3(
@@ -454,6 +478,20 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                               class="hover:bg-black/5"
                             )
                               VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                          
+                          // Dropdown
+                          div(
+                            v-if="expandedContact.type === 'website' && expandedContact.cardId === card.id"
+                            class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                          )
+                            div(v-for="(website, idx) in card.websites.slice(1)")
+                              div(class="py-1")
+                                a(
+                                  :href="formatWebsiteUrl(website)"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
+                                ) {{ website }}
 
                       // Company with Icon
                       .flex.items-center.gap-3.col-span-full(v-if="card.company")
@@ -1867,6 +1905,10 @@ async function downloadBusinessCard() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    // Add a more professional accent color on the left side
+    ctx.fillStyle = '#10b981'; // emerald-500
+    ctx.fillRect(0, 0, 40, canvas.height);
+    
     // Convert SVG to data URL
     const svgData = new XMLSerializer().serializeToString(qrSvg);
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
@@ -1880,9 +1922,9 @@ async function downloadBusinessCard() {
       img.src = svgUrl;
     });
     
-    // Draw QR code in center
-    const qrSize = 300;
-    const qrX = (canvas.width - qrSize) / 2;
+    // Draw QR code on the right side (moved from center)
+    const qrSize = 200;
+    const qrX = canvas.width - qrSize - 60;
     const qrY = (canvas.height - qrSize) / 2;
     ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
     
@@ -1891,21 +1933,78 @@ async function downloadBusinessCard() {
     ctx.lineWidth = 2;
     ctx.strokeRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
     
-    // Add name and title at the top
-    ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 36px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(user.value?.displayName || 'Your Name', canvas.width / 2, 80);
+    // Add logo/brand at top-right
+    ctx.fillStyle = '#10b981'; // emerald-500
+    ctx.font = 'bold 20px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('billoAI', canvas.width - 60, 60);
     
-    ctx.font = '20px Inter, system-ui, sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(user.value?.title || 'Professional Title', canvas.width / 2, 110);
+    // Add name and title on the left side
+    const textX = 80; // Left aligned text starting point
     
-    // Add subtle profile link at the bottom
+    // Name (larger and bolder)
+    ctx.fillStyle = '#1e293b'; // slate-800
+    ctx.font = 'bold 40px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(user.value?.displayName || 'Your Name', textX, 120);
+    
+    // Title - Make sure to use the title from the user's profile
+    ctx.font = '24px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#64748b'; // slate-500
+    ctx.fillText(user.value?.title || 'Professional', textX, 160);
+    
+    // Company (if available)
+    if (user.value?.company) {
+      ctx.font = 'italic 20px Inter, system-ui, sans-serif';
+      ctx.fillStyle = '#64748b'; // slate-500
+      ctx.fillText(user.value.company, textX, 190);
+    }
+    
+    // Contact information section with icons
+    const contactY = 250;
+    const lineHeight = 35;
+    ctx.font = '18px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#475569'; // slate-600
+    
+    // Email
+    if (user.value?.email) {
+      // Email icon (simplified)
+      ctx.fillStyle = '#0f766e'; // teal-700
+      ctx.fillRect(textX - 24, contactY - 14, 18, 14);
+      ctx.fillStyle = '#475569'; // slate-600
+      ctx.fillText(user.value.email, textX, contactY);
+    }
+    
+    // Phone (if available)
+    if (user.value?.phone) {
+      // Phone icon (simplified)
+      ctx.fillStyle = '#0f766e'; // teal-700
+      ctx.beginPath();
+      ctx.arc(textX - 15, contactY + lineHeight - 14, 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#475569'; // slate-600
+      ctx.fillText(user.value.phone, textX, contactY + lineHeight);
+    }
+    
+    // Website/portfolio (if available)
+    const profileUrl = `${window.location.origin}/profile/${user.value?.uid || 'username'}`;
+    ctx.fillStyle = '#0f766e'; // teal-700
+    ctx.fillRect(textX - 24, contactY + (2 * lineHeight) - 14, 18, 14);
+    ctx.fillStyle = '#475569'; // slate-600
+    ctx.fillText(profileUrl, textX, contactY + (2 * lineHeight));
+    
+    // Footer with tagline
+    ctx.font = '16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8'; // slate-400
+    ctx.textAlign = 'left';
+    ctx.fillText('Connect with me professionally', textX, canvas.height - 60);
+    
+    // QR scan hint
     ctx.font = '14px Inter, system-ui, sans-serif';
-    ctx.fillStyle = '#94a3b8'; // slate-400 for subtlety
-    ctx.textAlign = 'center';
-    ctx.fillText('billoai.com/' + (user.value?.uid || 'username'), canvas.width / 2, canvas.height - 20);
+    ctx.fillStyle = '#94a3b8'; // slate-400
+    ctx.textAlign = 'right';
+    ctx.fillText('Scan to view my profile', canvas.width - 60, qrY + qrSize + 40);
     
     // Add subtle border around the card
     ctx.strokeStyle = '#e2e8f0';
