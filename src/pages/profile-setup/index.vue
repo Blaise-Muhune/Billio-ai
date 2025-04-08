@@ -92,7 +92,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               | Company
               span.text-gray-500.text-sm.ml-1 (optional)
           button(
-            @click="toggleVisibility('company')"
+            type="button"
+            @click.prevent="toggleVisibility('company', $event)"
             class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             :title="formData.visibility.company ? 'Hide from public' : 'Show to public'"
           )
@@ -117,7 +118,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               | Job Title
               span.text-gray-500.text-sm.ml-1 (optional)
           button(
-            @click="toggleVisibility('title')"
+            type="button"
+            @click.prevent="toggleVisibility('title', $event)"
             class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             :title="formData.visibility.title ? 'Hide from public' : 'Show to public'"
           )
@@ -142,7 +144,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               | Phone Number
               span.text-gray-500.text-sm.ml-1 (optional)
           button(
-            @click="toggleVisibility('phone')"
+            type="button"
+            @click.prevent="toggleVisibility('phone', $event)"
             class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             :title="formData.visibility.phone ? 'Hide from public' : 'Show to public'"
           )
@@ -168,7 +171,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               | Bio
               span.text-gray-500.text-sm.ml-1 (optional)
           button(
-            @click="toggleVisibility('bio')"
+            type="button"
+            @click.prevent="toggleVisibility('bio', $event)"
             class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             :title="formData.visibility.bio ? 'Hide from public' : 'Show to public'"
           )
@@ -193,7 +197,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               | Address
               span.text-gray-500.text-sm.ml-1 (optional)
           button(
-            @click="toggleVisibility('address')"
+            type="button"
+            @click.prevent="toggleVisibility('address', $event)"
             class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             :title="formData.visibility.address ? 'Hide from public' : 'Show to public'"
           )
@@ -261,7 +266,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 LinkedIn
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('linkedin')"
+                type="button"
+                @click.prevent="toggleVisibility('linkedin', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.linkedin ? 'Hide from public' : 'Show to public'"
               )
@@ -290,7 +296,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 TikTok
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('tiktok')"
+                type="button"
+                @click.prevent="toggleVisibility('tiktok', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.tiktok ? 'Hide from public' : 'Show to public'"
               )
@@ -316,7 +323,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 Twitter/X
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('twitter')"
+                type="button"
+                @click.prevent="toggleVisibility('twitter', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.twitter ? 'Hide from public' : 'Show to public'"
               )
@@ -342,7 +350,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 Instagram
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('instagram')"
+                type="button"
+                @click.prevent="toggleVisibility('instagram', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.instagram ? 'Hide from public' : 'Show to public'"
               )
@@ -368,7 +377,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 Facebook
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('facebook')"
+                type="button"
+                @click.prevent="toggleVisibility('facebook', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.facebook ? 'Hide from public' : 'Show to public'"
               )
@@ -394,7 +404,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 GitHub
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('github')"
+                type="button"
+                @click.prevent="toggleVisibility('github', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.github ? 'Hide from public' : 'Show to public'"
               )
@@ -410,6 +421,114 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               placeholder="github.com/username"
             )
 
+          // Spotify
+          .space-y-2
+            .flex.items-center.gap-2.justify-between
+              .flex.items-center.gap-2
+                .w-5.h-5.flex.items-center.justify-center
+                  svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5")
+                    path(fill="#1DB954" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.201.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.14-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z")
+                label.block.text-sm.font-medium.text-gray-700 Spotify
+                  span.text-gray-500.text-sm.ml-1 (optional)
+              button(
+                type="button"
+                @click.prevent="toggleVisibility('spotify', $event)"
+                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                :title="formData.visibility.spotify ? 'Hide from public' : 'Show to public'"
+              )
+                VaIcon(
+                  :name="formData.visibility.spotify ? 'visibility' : 'visibility_off'"
+                  size="20px"
+                  class="text-gray-600"
+                )
+            input(
+              type="url"
+              v-model="formData.spotify"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1DB954] focus:border-transparent"
+              placeholder="spotify.com/artist/username"
+            )
+
+          // SoundCloud
+          .space-y-2
+            .flex.items-center.gap-2.justify-between
+              .flex.items-center.gap-2
+                .w-5.h-5.flex.items-center.justify-center
+                  svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5")
+                    path(fill="#FF3300" d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.042.099-.098l.255-2.105-.255-2.154c-.009-.06-.049-.1-.099-.1m-.899-1.574c-.05 0-.091.042-.096.1l-.169 3.728.169 3.674c.005.058.046.1.096.1.049 0 .092-.042.097-.1l.192-3.674-.192-3.728c-.005-.058-.048-.1-.097-.1m2.85-2.375c-.062 0-.112.051-.119.116l-.203 6.08.203 6.016c.007.065.057.116.119.116.061 0 .111-.051.117-.116l.23-6.016-.23-6.08c-.006-.065-.056-.116-.117-.116m.994-1.147c-.076 0-.138.062-.14.144l-.187 7.198.187 7.128c.002.082.064.144.14.144.075 0 .136-.062.138-.144l.213-7.128-.213-7.198c-.002-.082-.063-.144-.138-.144m1.093-1.021c-.086 0-.155.07-.158.162l-.174 8.37.174 8.298c.003.092.072.162.158.162.086 0 .155-.07.157-.162l.199-8.298-.199-8.37c-.002-.092-.071-.162-.157-.162m1.192-1.115c-.098 0-.176.079-.18.18l-.16 9.467.16 9.398c.004.102.082.18.18.18.097 0 .175-.078.178-.18l.183-9.398-.183-9.467c-.003-.101-.081-.18-.178-.18m1.288-1.209c-.008-.104-.085-.183-.19-.183-.103 0-.183.079-.189.183l-.148 11.543.148 11.47c.006.104.086.183.189.183.104 0 .182-.079.19-.183l.169-11.47-.169-11.543m.837 23.198c.115 0 .208-.093.215-.208l.157-11.447-.157-11.55c-.007-.115-.1-.208-.215-.208-.116 0-.21.093-.217.208l-.139 11.55.139 11.447c.007.115.101.208.217.208m1.045 0c.125 0 .228-.1.236-.224l.146-11.431-.146-11.52c-.008-.124-.111-.224-.236-.224-.127 0-.231.1-.239.224l-.129 11.52.129 11.431c.008.124.112.224.239.224m1.057-.015c.137 0 .248-.111.256-.248l.135-11.392-.135-11.494c-.008-.137-.119-.248-.256-.248-.139 0-.25.111-.258.248l-.119 11.494.119 11.392c.008.137.119.248.258.248m1.063-.017c.148 0 .266-.119.275-.268l.124-11.355-.124-11.454c-.009-.149-.127-.268-.275-.268-.149 0-.268.119-.277.268l-.109 11.454.109 11.355c.009.149.128.268.277.268m1.076-.021c.159 0 .287-.128.296-.288l.114-11.314-.114-11.426c-.009-.16-.137-.288-.308-.296-.16 0-.288.128-.298.288l-.1 11.426.1 11.314c.01.16.138.288.298.288m1.086-.024c.17 0 .307-.137.315-.308l.104-11.271-.104-11.389c-.008-.171-.145-.308-.315-.308-.172 0-.31.137-.318.308l-.091 11.389.091 11.271c.008.171.146.308.318.308m1.099-.029c.181 0 .326-.146.336-.327l.094-11.227-.094-11.361c-.01-.181-.155-.327-.336-.327-.18 0-.327.146-.337.327l-.082 11.361.082 11.227c.01.181.157.327.337.327m1.107-.033c.192 0 .347-.154.357-.348l.084-11.173-.084-11.322c-.01-.193-.165-.348-.357-.348-.19 0-.346.155-.356.348l-.073 11.322.073 11.173c.01.194.166.348.356.348m1.118-.037c.202 0 .367-.164.377-.369l.074-11.115-.074-11.295c-.01-.204-.175-.368-.377-.368-.203 0-.368.164-.378.368l-.064 11.295.064 11.115c.01.205.175.369.378.369m1.127-.042c.213 0 .386-.173.397-.388l.065-11.054-.065-11.255c-.011-.214-.184-.387-.397-.397-.214 0-.387.173-.397.387l-.055 11.255.055 11.054c.01.215.183.388.397.388m1.137-.046c.224 0 .405-.182.416-.407l.055-10.989-.055-11.227c-.011-.225-.192-.407-.416-.407-.224 0-.407.182-.418.407l-.045 11.227.045 10.989c.011.225.194.407.418.407m1.148-.05c.234 0 .424-.19.435-.427l.046-10.919-.046-11.197c-.011-.236-.201-.426-.435-.426-.234 0-.426.19-.437.426l-.037 11.197.037 10.919c.011.237.203.427.437.427m1.735-.785l.001-10.612-.001-11.151c-.012-.247-.21-.445-.457-.445-.247 0-.445.198-.457.445l-.037 11.151.037 10.612c.012.248.21.445.457.445.247 0 .445-.197.457-.445M24 12.945V11.55c-.001-2.212-1.794-4.005-4.006-4.005-.856 0-1.658.27-2.327.736C17.27 4.836 14.51 2 11.036 2c-.723 0-1.431.144-2.047.414-.306.135-.386.252-.386.504v15.984c.002.276.224.499.5.499h10.889c2.212-.001 4.007-1.795 4.007-4.006v-.001l.001-.449z")
+                label.block.text-sm.font-medium.text-gray-700 SoundCloud
+                  span.text-gray-500.text-sm.ml-1 (optional)
+              button(
+                type="button"
+                @click.prevent="toggleVisibility('soundcloud', $event)"
+                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                :title="formData.visibility.soundcloud ? 'Hide from public' : 'Show to public'"
+              )
+                VaIcon(
+                  :name="formData.visibility.soundcloud ? 'visibility' : 'visibility_off'"
+                  size="20px"
+                  class="text-gray-600"
+                )
+            input(
+              type="url"
+              v-model="formData.soundcloud"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#FF3300] focus:border-transparent"
+              placeholder="soundcloud.com/username"
+            )
+
+          // YouTube Music
+          .space-y-2
+            .flex.items-center.gap-2.justify-between
+              .flex.items-center.gap-2
+                .w-5.h-5.flex.items-center.justify-center
+                  svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5")
+                    path(fill="#FF0000" d="M23.498 6.69a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z")
+                label.block.text-sm.font-medium.text-gray-700 YouTube Music
+                  span.text-gray-500.text-sm.ml-1 (optional)
+              button(
+                type="button"
+                @click.prevent="toggleVisibility('youtubeMusic', $event)"
+                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                :title="formData.visibility.youtubeMusic ? 'Hide from public' : 'Show to public'"
+              )
+                VaIcon(
+                  :name="formData.visibility.youtubeMusic ? 'visibility' : 'visibility_off'"
+                  size="20px"
+                  class="text-gray-600"
+                )
+            input(
+              type="url"
+              v-model="formData.youtubeMusic"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#FF0000] focus:border-transparent"
+              placeholder="music.youtube.com/channel/ID"
+            )
+
+          // Apple Music
+          .space-y-2
+            .flex.items-center.gap-2.justify-between
+              .flex.items-center.gap-2
+                .w-5.h-5.flex.items-center.justify-center
+                  svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5")
+                    path(fill="#FA2C55" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701")
+                label.block.text-sm.font-medium.text-gray-700 Apple Music
+                  span.text-gray-500.text-sm.ml-1 (optional)
+              button(
+                type="button"
+                @click.prevent="toggleVisibility('appleMusic', $event)"
+                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                :title="formData.visibility.appleMusic ? 'Hide from public' : 'Show to public'"
+              )
+                VaIcon(
+                  :name="formData.visibility.appleMusic ? 'visibility' : 'visibility_off'"
+                  size="20px"
+                  class="text-gray-600"
+                )
+            input(
+              type="url"
+              v-model="formData.appleMusic"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#FA2C55] focus:border-transparent"
+              placeholder="music.apple.com/profile/username"
+            )
+
           // Other Link
           .space-y-2
             .flex.items-center.gap-2.justify-between
@@ -419,7 +538,8 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 label.block.text-sm.font-medium.text-gray-700 Other Link
                   span.text-gray-500.text-sm.ml-1 (optional)
               button(
-                @click="toggleVisibility('otherLink')"
+                type="button"
+                @click.prevent="toggleVisibility('otherLink', $event)"
                 class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 :title="formData.visibility.otherLink ? 'Hide from public' : 'Show to public'"
               )
@@ -435,7 +555,32 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               placeholder="https://example.com"
             )
 
-          // Custom Links Section (Premium Only)
+          //- Premium Feature Banner (for free users)
+          .mt-8.pt-8.border-t.border-gray-100(v-if="!isPremium")
+            .p-6.rounded-xl.border.bg-emerald-50
+              .mb-4
+                .flex.items-center.gap-2
+                  VaIcon(name="stars" size="24px" class="text-emerald-500")
+                  h3.text-lg.font-semibold.text-gray-900 Add Custom Links with Premium
+                p.text-sm.text-gray-600 Create unlimited custom links with your own icons
+              
+              .mb-4
+                .flex.items-start.gap-2.mb-2
+                  VaIcon(name="check_circle" size="18px" class="text-emerald-500 mt-0.5")
+                  p.text-sm.text-gray-700 Create branded links for your portfolio, blog, store and more
+                .flex.items-start.gap-2
+                  VaIcon(name="check_circle" size="18px" class="text-emerald-500 mt-0.5")
+                  p.text-sm.text-gray-700 Upload custom icons for each link to enhance your profile
+              
+              .flex.justify-center
+                button(
+                  @click="router.push('/subscription')"
+                  class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                )
+                  VaIcon(name="upgrade" size="20px")
+                  span.font-medium Upgrade Now
+
+          //- Custom Links Section (Premium Only)
           .space-y-4.mt-8.pt-8.border-t.border-gray-100(v-if="isPremium")
             .flex.items-center.justify-between.mb-4
               .flex.items-center.gap-2
@@ -443,24 +588,25 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                 h3.text-lg.font-medium.text-gray-900 Custom Links
               button(
                 type="button"
-                @click="addCustomLink"
+                @click="(event) => addCustomLink(event)"
                 class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors duration-200 flex items-center gap-2"
               )
                 VaIcon(name="add" size="20px")
                 span Add Link
 
-            // Custom Links List
+            //- Custom Links List
             .space-y-4
               .custom-link-item.bg-gray-50.rounded-xl.p-4.space-y-4(
                 v-for="(link, index) in formData.customLinks"
                 :key="index"
               )
-                // Link Header with Remove Button
+                //- Link Header with Remove Button
                 .flex.items-center.justify-between
                   h4.text-sm.font-medium.text-gray-700 Custom Link {{ index + 1 }}
                   .flex.items-center.gap-2
                     button(
-                      @click="toggleCustomLinkVisibility(index)"
+                      type="button"
+                      @click="(event) => toggleCustomLinkVisibility(index, event)"
                       class="p-2 rounded-lg hover:bg-gray-200 transition-colors"
                       :title="getCustomLinkVisibility(index) ? 'Hide from public' : 'Show to public'"
                     )
@@ -470,30 +616,30 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                         class="text-gray-600"
                       )
                     button(
-                      @click="removeCustomLink(index)"
+                      @click="(event) => removeCustomLink(index, event)"
                       class="p-2 rounded-lg hover:bg-red-100 text-red-600 transition-colors"
                     )
                       VaIcon(name="delete" size="18px")
 
-                // Link Fields
+                //- Link Fields
                 .space-y-3
-                  // Link Name
+                  //- Link Name
                   input(
                     v-model="link.name"
                     type="text"
                     class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Link Name (e.g. Portfolio, Blog)"
                   )
-                  // URL
+                  //- URL
                   input(
                     v-model="link.url"
                     type="url"
                     class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="https://example.com"
                   )
-                  // Icon Selection
+                  //- Icon Selection
                   .flex.items-center.gap-4
-                    // Icon Preview
+                    //- Icon Preview
                     .w-12.h-12.rounded-xl.bg-white.border.border-gray-200.flex.items-center.justify-center.overflow-hidden.relative
                       .absolute.inset-0.flex.items-center.justify-center.bg-black.bg-opacity-50.transition-opacity(
                         v-if="saving && currentUploadIndex === index"
@@ -512,10 +658,10 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                         size="24px"
                         class="text-gray-400"
                       )
-                    // Icon Upload Button
+                    //- Icon Upload Button
                     button(
                       type="button"
-                      @click="() => openIconUpload(index)"
+                      @click="(event) => openIconUpload(index, event)"
                       class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       :disabled="saving && currentUploadIndex === index"
                     )
@@ -526,12 +672,12 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                         VaIcon(name="upload" size="20px" class="text-gray-600")
                         span.text-sm.text-gray-700 {{ link.iconUrl ? 'Change Icon' : 'Upload Icon' }}
 
-      // Required fields note
+      //- Required fields note
       .text-sm.text-gray-500.mb-6
         span.text-red-500 * 
         | Required fields
 
-      // Submit Button Container
+      //- Submit Button Container
       .flex.justify-center.w-full.mt-8
         button(
           type="submit"
@@ -657,7 +803,12 @@ function getNameFromEmail(email) {
     .trim();
 }
 
-function openIconUpload(index) {
+function openIconUpload(index, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
   currentUploadIndex = index;
   fileInput.value.click();
 }
@@ -1038,11 +1189,20 @@ formData.value.youtubeMusic = formatUrl(formData.value.youtubeMusic?.trim() || '
 formData.value.appleMusic = formatUrl(formData.value.appleMusic?.trim() || '');
 formData.value.otherLink = formatUrl(formData.value.otherLink?.trim() || '');
 
-function toggleVisibility(field) {
+function toggleVisibility(field, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   formData.value.visibility[field] = !formData.value.visibility[field];
 }
 
-function addCustomLink() {
+function addCustomLink(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
   if (!Array.isArray(formData.value.customLinks)) {
     formData.value.customLinks = [];
   }
@@ -1062,7 +1222,12 @@ function addCustomLink() {
   formData.value.visibility.customLinks[newIndex] = true;
 }
 
-function removeCustomLink(index) {
+function removeCustomLink(index, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
   if (!Array.isArray(formData.value.customLinks)) return;
   
   formData.value.customLinks = formData.value.customLinks.filter((_, i) => i !== index);
@@ -1082,7 +1247,12 @@ function getCustomLinkVisibility(index) {
   return formData.value.visibility.customLinks[index] !== false;
 }
 
-function toggleCustomLinkVisibility(index) {
+function toggleCustomLinkVisibility(index, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
   if (!formData.value.visibility.customLinks) {
     formData.value.visibility.customLinks = {};
   }
