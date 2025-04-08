@@ -73,16 +73,22 @@ export const paymentService = {
       const isActive = userData.subscriptionStatus === 'active' || 
                       (userData.subscriptionStatus === 'canceled' && 
                        userData.subscriptionEndDate && 
-                       new Date(userData.subscriptionEndDate) > new Date());
+                       (userData.subscriptionEndDate instanceof Date || 
+                        userData.subscriptionEndDate.seconds || 
+                        new Date(userData.subscriptionEndDate) > new Date()));
 
       const plan = isActive ? (userData.plan || 'FREE') : 'FREE';
       console.log('Determined plan:', plan, 'Active:', isActive); // Debug log
+
+      // Handle the currentPeriodEnd - keep Timestamp object as is, no need to convert here
+      // This allows proper handling by consumers of this data
+      const currentPeriodEnd = userData.subscriptionEndDate || null;
 
       return {
         plan,
         subscriptionId: userData.subscriptionId,
         subscriptionStatus: userData.subscriptionStatus,
-        currentPeriodEnd: userData.subscriptionEndDate,
+        currentPeriodEnd: currentPeriodEnd,
         // Include billing cycle info from database or default to monthly
         billingCycle: userData.billingCycle || 'monthly',
         limits: userData.limits || {
@@ -102,10 +108,15 @@ export const paymentService = {
       const user = authService.getCurrentUser();
       if (!user) throw new Error('User must be logged in');
 
-      const { subscriptionId, subscriptionStatus } = await this.getSubscriptionStatus();
+      const { subscriptionId, subscriptionStatus, plan } = await this.getSubscriptionStatus();
       
+      // Better error message for manually set plans without a subscription ID
       if (!subscriptionId) {
-        throw new Error('No active subscription found');
+        if (plan !== 'FREE') {
+          throw new Error('This plan was set manually and cannot be canceled through Stripe. Please use the manual cancellation option.');
+        } else {
+          throw new Error('No active subscription found');
+        }
       }
 
       if (subscriptionStatus === 'canceled') {
@@ -139,19 +150,38 @@ export const paymentService = {
             limits: SUBSCRIPTION_PLANS.FREE.limits,
             updatedAt: new Date()
           });
-          return true;
+          return {
+            success: true,
+            endDate: null
+          };
         }
         throw new Error(data.error || 'Failed to cancel subscription');
+      }
+
+      console.log('Cancellation response from server:', data);
+      
+      // Extract the end date from the response - the server returns it as data.subscription.endDate
+      const endDate = data.subscription?.endDate;
+      console.log('Extracted end date from response:', endDate);
+      
+      if (!endDate) {
+        console.warn('No end date in response, checking if we can extract it another way');
+        console.log('Full response data:', JSON.stringify(data));
       }
 
       // Update local subscription status
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         subscriptionStatus: 'canceled',
+        subscriptionEndDate: endDate,
         updatedAt: new Date()
       });
 
-      return true;
+      // Return subscription end date along with success status
+      return {
+        success: true,
+        endDate: endDate
+      };
     } catch (error) {
       console.error('Error canceling subscription:', error);
       throw error;
@@ -220,5 +250,34 @@ export const paymentService = {
       console.error('Error updating plan:', error);
       throw error;
     }
-  }
+  },
+
+  // Get the current period end directly from Stripe
+  async getCurrentPeriodEnd() {
+    try {
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User must be logged in');
+
+      console.log('Getting current period end for user:', user.uid);
+
+      const response = await fetch(`/api/subscription/period-end/${user.uid}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get current period end');
+      }
+
+      const data = await response.json();
+      console.log('Current period end data:', data);
+
+      if (data.hasSubscription && data.currentPeriodEnd) {
+        // Return the date
+        return new Date(data.currentPeriodEnd);
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting current period end:', error);
+      throw error;
+    }
+  },
 }; 

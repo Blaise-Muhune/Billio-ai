@@ -208,11 +208,16 @@ expressApp.post('/api/subscription/cancel', async (req, res) => {
       );
 
       console.log('Successfully canceled subscription at period end:', subscription.id);
+      console.log('Subscription current_period_end timestamp:', subscription.current_period_end);
+      
+      // Convert timestamp to Date object
+      const endDate = new Date(subscription.current_period_end * 1000);
+      console.log('Converted end date:', endDate.toISOString());
 
       // Update user document with subscription status
       await userRef.update({
         subscriptionStatus: 'canceled',
-        subscriptionEndDate: new Date(subscription.current_period_end * 1000),
+        subscriptionEndDate: endDate,
         updatedAt: new Date()
       });
 
@@ -220,7 +225,7 @@ expressApp.post('/api/subscription/cancel', async (req, res) => {
       const currentPlan = userData.plan;
       const planFeatures = SUBSCRIPTION_PLANS[currentPlan];
 
-      console.log('Updated user document with canceled status');
+      console.log('Updated user document with canceled status and end date:', endDate.toISOString());
 
       res.json({
         success: true,
@@ -228,7 +233,7 @@ expressApp.post('/api/subscription/cancel', async (req, res) => {
         subscription: {
           status: 'canceled',
           currentPlan,
-          endDate: new Date(subscription.current_period_end * 1000),
+          endDate: endDate,
           features: planFeatures
         }
       });
@@ -599,6 +604,65 @@ const EXTENDED_SUBSCRIPTION_PLANS = {
     ]
   }
 };
+
+// Get current period end directly from Stripe
+expressApp.get('/api/subscription/period-end/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userData = userDoc.data();
+    
+    // If there's no subscription ID, user doesn't have an active subscription
+    if (!userData.subscriptionId) {
+      return res.json({ 
+        hasSubscription: false,
+        message: 'User has no active subscription'
+      });
+    }
+
+    try {
+      // Get subscription directly from Stripe
+      const subscription = await stripe.subscriptions.retrieve(userData.subscriptionId);
+      console.log(`Retrieved subscription for user ${userId}:`, subscription.id);
+      
+      // Get the current period end
+      const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+      console.log(`Current period ends on: ${currentPeriodEnd.toISOString()}`);
+      
+      // Update the user document with the current period end
+      await userRef.update({
+        subscriptionEndDate: currentPeriodEnd,
+        updatedAt: new Date()
+      });
+      
+      return res.json({
+        hasSubscription: true,
+        subscriptionId: subscription.id,
+        currentPeriodEnd: currentPeriodEnd,
+        status: subscription.status
+      });
+    } catch (stripeError) {
+      console.error('Stripe error:', stripeError);
+      return res.status(400).json({ 
+        error: stripeError.message,
+        code: stripeError.code
+      });
+    }
+  } catch (error) {
+    console.error('Error getting subscription period end:', error);
+    return res.status(500).json({ error: 'Failed to retrieve subscription period end' });
+  }
+});
 
 // Export the Express API for Vercel
 export default expressApp;

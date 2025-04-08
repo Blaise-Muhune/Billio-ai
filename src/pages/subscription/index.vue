@@ -13,7 +13,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     .text-center.mb-12
       h1.text-4xl.font-bold.text-gray-900.mb-4 Choose Your Plan
       p.text-xl.text-gray-600 Select the plan that best fits your networking needs
-      
+
     //- Billing Toggle (Monthly/Yearly)
     .flex.justify-center.mb-10
       .bg-gray-100.p-1.rounded-xl.inline-flex
@@ -88,7 +88,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     .mt-12.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8
       .flex.items-center.justify-between.mb-8
         .flex.items-center.gap-3
-          h2.text-2xl.font-bold.text-gray-900 Current Usage
+        h2.text-2xl.font-bold.text-gray-900 Current Usage
           //- Show plan with billing cycle
           .inline-flex.items-center.px-3.py-1.rounded-lg.text-sm.font-medium(
             :class="{ 'bg-gray-100 text-gray-700': currentPlan === 'FREE', 'bg-blue-100 text-blue-800': currentPlan === 'BASIC', 'bg-emerald-100 text-emerald-800': currentPlan === 'PRO' }"
@@ -99,6 +99,15 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
         .flex.items-center.gap-2.text-sm
           VaIcon(name="info" size="16px" class="text-gray-400")
           span.text-gray-500 Usage resets monthly
+      
+      //- Display subscription end date notice for canceled subscriptions
+      .p-4.mb-6.bg-amber-50.rounded-xl.border.border-amber-200(v-if="subscriptionStatus === 'canceled' && subscriptionEndDate")
+        .flex.items-center.gap-3
+          VaIcon(name="schedule" size="24px" class="text-amber-500")
+          .flex.flex-col
+            .font-medium.text-amber-800 Your subscription is ending soon
+            .text-amber-700 Access to premium features will end on {{ getFormattedEndDate(subscriptionEndDate) }}
+      
       .grid(class="grid-cols-1 md:grid-cols-3 gap-8")
         //- Business Cards Usage
         .usage-stat
@@ -160,9 +169,9 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
 
     //- Subscription Status Message
     .mt-4.text-center(v-if="subscriptionStatus === 'canceled'")
-      .inline-flex.items-center.gap-2.text-gray-600
+      .inline-flex.items-center.gap-2.text-gray-600.justify-center
         VaIcon(name="info" size="20px" class="text-gray-400")
-        span Your subscription will end at the end of the current billing period.
+        span Your subscription will end on {{ getFormattedEndDate(subscriptionEndDate) }}.
       .text-sm.text-gray-500.mt-2 You can resubscribe at any time to regain access to premium features.
 
     //- Cancel Confirmation Modal
@@ -172,47 +181,68 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       class="rounded-2xl"
     )
       .p-8
-        .flex.items-start.gap-4.mb-6
-          .flex-shrink-0
+        //- Header with warning icon
+        .bg-red-50.p-5.rounded-xl.mb-6.border.border-red-100
+          .flex.items-center.gap-4
+            .flex-shrink-0.bg-white.p-3.rounded-xl.shadow-sm
             VaIcon(name="warning" size="32px" class="text-red-500")
           div
-            h3.text-2xl.font-bold.mb-2 Cancel Subscription
-            p.text-gray-600 
-              | You'll continue to have access to all 
-              span.font-medium {{ currentPlan }} 
-              span ({{ billingCycle === 'yearly' ? 'Yearly' : 'Monthly' }})
-              |  plan features until the end of your current billing period.
-            .mt-4.p-4.bg-emerald-50.rounded-xl.border.border-emerald-100
+              h3.text-2xl.font-bold.text-red-700.mb-1 Cancel Subscription
+              p.text-red-600 Are you sure you want to cancel your subscription?
+        
+        //- Subscription details
+        .p-5.bg-white.rounded-xl.border.border-gray-200.mb-6
+          h4.text-lg.font-semibold.text-gray-900.mb-4 Your subscription details
+          .flex.items-center.justify-between.mb-3
+            span.text-gray-600 Current plan:
+            span.font-medium.text-gray-900 {{ currentPlan }} ({{ userBillingCycle === 'yearly' ? 'Yearly' : 'Monthly' }})
+          .flex.items-center.justify-between.mb-3
+            span.text-gray-600 Status:
+            .inline-flex.items-center.px-3.py-1.rounded-full.bg-emerald-100.text-emerald-700.text-sm.font-medium Active
+          .flex.items-center.justify-between
+            span.text-gray-600 Access until:
+            span.font-medium.text-gray-900(v-if="subscriptionEndDate") {{ getFormattedEndDate(subscriptionEndDate) }}
+            span.font-medium.text-amber-600(v-else) End of current billing period
+          
+        //- What happens next
+        .mb-6
+          h4.text-lg.font-semibold.text-gray-900.mb-4 What happens next
+          .p-5.bg-blue-50.rounded-xl.border.border-blue-100.mb-4
               .flex.items-start.gap-3
-                VaIcon(name="info" size="20px" class="text-emerald-500 mt-1")
-                div
-                  p.text-sm.font-medium.text-emerald-700 Current Access Period
-                  p.text-sm.text-emerald-600 You can use all {{ currentPlan }} features until {{ formatDate(subscriptionEndDate) }}
-            ul.mt-4.space-y-2.text-sm.text-gray-600
-              li.flex.items-center.gap-2
-                VaIcon(name="close" size="16px" class="text-red-500")
-                span After {{ formatDate(subscriptionEndDate) }}, you'll lose access to:
-              li.flex.items-center.gap-2.ml-6
-                VaIcon(name="arrow_right" size="16px" class="text-gray-400")
-                span Unlimited business cards
-              li.flex.items-center.gap-2.ml-6
-                VaIcon(name="arrow_right" size="16px" class="text-gray-400")
-                span Unlimited email drafts
-              li.flex.items-center.gap-2.ml-6
-                VaIcon(name="arrow_right" size="16px" class="text-gray-400")
-                span Unlimited events
+              .flex-shrink-0.bg-white.p-2.rounded-full
+                VaIcon(name="info" size="20px" class="text-blue-600")
+              div
+                p.font-medium.text-blue-800.mb-1 You'll maintain access for now
+                p.text-blue-700.text-sm You can use all {{ currentPlan }} features until {{ getFormattedEndDate(subscriptionEndDate) }}
+
+          .p-5.bg-white.rounded-xl.border.border-gray-200
+            h5.font-medium.text-gray-900.mb-3 After your subscription ends:
+            ul.space-y-3.text-sm.text-gray-700
+              li.flex.items-start.gap-2
+                VaIcon(name="arrow_downward" size="18px" class="text-amber-500 mt-0.5")
+                span Your plan will downgrade to the <strong>FREE</strong> tier
+              li.flex.items-start.gap-2
+                VaIcon(name="block" size="18px" class="text-red-500 mt-0.5")
+                span You'll lose access to premium features including unlimited cards, drafts, and events
+              li.flex.items-start.gap-2
+                VaIcon(name="restart_alt" size="18px" class="text-emerald-500 mt-0.5")
+                span You can resubscribe at any time to restore premium access
+
+        //- Action buttons
         .flex.justify-end.gap-4
           button(
-            class="px-6 py-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
+            class="px-6 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-100 transition-colors duration-200 border border-gray-300 font-medium"
             @click="showCancelModal = false"
-          ) Keep Subscription
+          ) Keep My Subscription
           button(
-            class="px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all duration-300 flex items-center gap-2"
+            class="px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
             @click="cancelSubscription"
             :disabled="canceling"
           )
-            .loading-spinner.w-4.h-4.border-2(v-if="canceling")
-            span(v-else) Yes, Cancel Subscription
+            .loading-spinner.w-4.h-4.border-2.border-t-white.border-b-white(v-if="canceling")
+            template(v-else)
+              VaIcon(name="cancel" size="18px")
+              span Cancel Subscription
 
     //- Success Modal
     VaModal(
@@ -220,51 +250,108 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       :hide-default-actions="true"
       class="rounded-2xl"
     )
-      .p-8.text-center
+      div(class="p-8")
+        //- Header with success animation
+        div(class="text-center mb-8")
         //- Success Animation
-        .success-animation.mb-6
-          .checkmark-circle
-            .checkmark.draw
+          div(class="success-animation mb-4")
+            div(class="checkmark-circle")
+              div(class="checkmark draw")
 
         //- Welcome Message
-        h2.text-3xl.font-bold.text-gray-900.mb-4 Welcome to {{ selectedPlan }}!
-        p.text-xl.text-gray-600.mb-8 Thank you for subscribing to BilloAI. Your journey to better networking starts now.
+          div(class="bg-emerald-50 rounded-xl py-5 px-6 border border-emerald-100")
+            h2.text-3xl.font-bold.text-emerald-800.mb-2 Welcome to {{ selectedPlan }}!
+            p.text-emerald-700 Your subscription has been successfully activated
 
-        //- Subscription Info
-        .bg-emerald-50.rounded-xl.p-6.mb-8
-          .flex.items-center.justify-between.mb-4
-            h3.text-lg.font-semibold.text-emerald-700 Your Subscription
-            .text-emerald-600.font-medium.text-sm(v-if="billingCycle === 'yearly'") Save 20% with yearly billing!
+        //- Subscription Info Card
+        div(class="bg-white rounded-xl p-6 mb-6 border border-gray-200 shadow-sm")
+          div(class="flex items-center justify-between mb-6")
+            h3.text-lg.font-semibold.text-gray-900 Your Subscription Details
+            div(
+              v-if="billingCycle === 'yearly'"
+              class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-sm font-medium"
+            ) 20% Yearly Savings!
           
-          //- Subscription Status
-          .flex.items-center.justify-center.mb-6.bg-white.rounded-lg.p-3.border.border-emerald-100
-            VaIcon(name="check_circle" size="20px" class="text-emerald-500 mr-2")
-            span.text-emerald-700.font-medium Your {{ selectedPlan }} subscription has been successfully activated
-          
-          .flex.flex-col.gap-2.mb-6
-            .flex.items-center.justify-between
-              span.text-gray-700 Plan:
-              span.font-medium.text-gray-900 {{ selectedPlan }} ({{ billingCycle === 'yearly' ? 'Yearly' : 'Monthly' }})
-            .flex.items-center.justify-between
-              span.text-gray-700 Price:
-              .flex.items-center.gap-2
-                span.font-medium.text-gray-900(v-if="billingCycle === 'monthly'") ${{ selectedPlan === 'BASIC' ? '9.99' : '29.99' }}/month
-                template(v-else)
-                  span.font-medium.text-gray-900 ${{ selectedPlan === 'BASIC' ? '95.88' : '287.88' }}/year
-                  span.text-sm.text-emerald-600 (${{ selectedPlan === 'BASIC' ? '7.99' : '23.99' }}/month equivalent)
+          div(class="grid gap-4 grid-cols-1 md:grid-cols-2")
+            //- Plan & Billing
+            div(class="flex flex-col gap-3")
+              div(class="flex items-center gap-3 mb-1")
+                div(class="p-2 rounded-lg bg-emerald-100")
+                  VaIcon(name="card_membership" size="24px" class="text-emerald-600")
+                h4.font-medium.text-gray-700 Plan & Billing
+              
+              div(class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg text-sm")
+                span.text-gray-600 Selected plan:
+                span.font-medium.text-gray-900 {{ selectedPlan }}
+              
+              div(class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg text-sm")
+                span.text-gray-600 Billing cycle:
+                span.font-medium.text-gray-900 {{ billingCycle === 'yearly' ? 'Yearly' : 'Monthly' }}
+            
+            //- Pricing
+            div(class="flex flex-col gap-3")
+              div(class="flex items-center gap-3 mb-1")
+                div(class="p-2 rounded-lg bg-emerald-100")
+                  VaIcon(name="payments" size="24px" class="text-emerald-600")
+                h4.font-medium.text-gray-700 Pricing
+              
+              div(class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg text-sm")
+                span.text-gray-600 Amount:
+                div(class="flex items-center gap-2")
+                  span.font-medium.text-gray-900(v-if="billingCycle === 'monthly'") {{ formatCurrency(getPlanPrice(selectedPlan, 'monthly')) }}/month
+                  template(v-else)
+                    span.font-medium.text-gray-900 {{ formatCurrency(getPlanPrice(selectedPlan, 'yearly')) }}/year
+              
+              div(
+                v-if="billingCycle === 'yearly'"
+                class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg text-sm"
+              )
+                span.text-gray-600 Monthly equivalent:
+                div(class="flex items-center gap-1")
+                  span.font-medium.text-gray-900 {{ formatCurrency(getMonthlyEquivalent(selectedPlan)) }}/month
+                  span.text-xs.text-emerald-600 (Save {{ getYearlySavings(selectedPlan) }})
     
-          //- Plan Features
-          h3.text-lg.font-semibold.text-emerald-700.mb-4 What's included in your plan:
-          .grid.grid-cols-2.gap-4
-            .flex.items-center.gap-2(v-for="feature in getPlanFeatures(selectedPlan)" :key="feature")
-              VaIcon(name="check_circle" size="20px" class="text-emerald-500")
+        //- Plan Features
+        div(class="bg-white rounded-xl p-6 mb-8 border border-gray-200 shadow-sm")
+          div(class="flex items-center gap-3 mb-6")
+            div(class="p-2 rounded-lg bg-emerald-100")
+              VaIcon(name="check_circle" size="24px" class="text-emerald-600")
+            h3.text-lg.font-semibold.text-gray-900 What's Included in Your Plan
+          
+          div(class="grid gap-3 grid-cols-1 sm:grid-cols-2")
+            div(
+              v-for="feature in getPlanFeatures(selectedPlan)" 
+              :key="feature"
+              class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 transition-all duration-200 hover:bg-emerald-50"
+            )
+              VaIcon(name="check_circle" size="18px" class="text-emerald-500 mt-0.5")
               span.text-gray-700.text-sm {{ feature }}
+
+        //- Next Steps
+        div(class="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-100")
+          div(class="flex items-center gap-3 mb-4")
+            div(class="p-2 rounded-lg bg-white")
+              VaIcon(name="lightbulb" size="24px" class="text-blue-600")
+            h3.text-lg.font-semibold.text-blue-800 What's Next?
+          
+          ul(class="space-y-3")
+            li(class="flex items-start gap-3")
+              div(class="bg-white p-1 rounded-full mt-0.5")
+                VaIcon(name="navigate_next" size="18px" class="text-blue-600")
+              span.text-blue-700 Explore your new premium features and start creating your digital business cards
+            
+            li(class="flex items-start gap-3")
+              div(class="bg-white p-1 rounded-full mt-0.5")
+                VaIcon(name="navigate_next" size="18px" class="text-blue-600")
+              span.text-blue-700 Check out the enhanced QR code options available on your profile
 
         //- Action Button
         button(
-          class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 font-medium text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 font-medium text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
           @click="applyChangesAndGoHome"
-        ) Start Exploring
+        )
+          VaIcon(name="rocket_launch" size="24px")
+          span Get Started
 </template>
 
 <script setup>
@@ -274,6 +361,8 @@ import { paymentService } from '../../services/paymentService';
 import { SUBSCRIPTION_PLANS, checkPlanLimits } from '../../config/stripe';
 import { authService } from '../../services/authService';
 import { formatDate } from '../../utils/dateUtils';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 const router = useRouter();
 const route = useRoute();
@@ -465,19 +554,27 @@ async function loadSubscriptionData() {
     await fetchProductCatalog();
 
     try {
-      const [subscription, usage] = await Promise.all([
-        paymentService.getSubscriptionStatus(),
-        paymentService.getUsageStats()
-      ]);
-      
+    const [subscription, usage] = await Promise.all([
+      paymentService.getSubscriptionStatus(),
+      paymentService.getUsageStats()
+    ]);
+    
       if (subscription) {
         currentPlan.value = subscription.plan || 'FREE';
         subscriptionStatus.value = subscription.subscriptionStatus;
-        subscriptionEndDate.value = subscription.currentPeriodEnd;
+        
+        // Ensure the subscription end date is properly set 
+        if (subscription.currentPeriodEnd) {
+          // Keep Firebase Timestamp as is to avoid conversion issues
+          subscriptionEndDate.value = subscription.currentPeriodEnd;
+          console.log('Subscription end date loaded:', getFormattedEndDate(subscriptionEndDate.value));
+        } else {
+          subscriptionEndDate.value = null;
+        }
       }
       
       if (usage) {
-        usageStats.value = usage;
+    usageStats.value = usage;
       }
       
       // Set billing cycle based on subscription
@@ -489,8 +586,8 @@ async function loadSubscriptionData() {
         }
       }
 
-      // Handle success/canceled states from Stripe Checkout
-      if (route.query.success) {
+    // Handle success/canceled states from Stripe Checkout
+    if (route.query.success) {
         // If plan is specified in URL, use that instead of currentPlan
         if (route.query.plan) {
           selectedPlan.value = route.query.plan;
@@ -507,14 +604,14 @@ async function loadSubscriptionData() {
           await verifySubscriptionUpdate(selectedPlan.value, billingCycle.value);
         }
         
-        showSuccessModal.value = true;
-      } else if (route.query.canceled) {
-        alert('Subscription canceled. Feel free to try again when you\'re ready.');
-      }
+      showSuccessModal.value = true;
+    } else if (route.query.canceled) {
+      alert('Subscription canceled. Feel free to try again when you\'re ready.');
+    }
 
-      // Clear the URL parameters
-      if (route.query.success || route.query.canceled) {
-        router.replace('/subscription');
+    // Clear the URL parameters
+    if (route.query.success || route.query.canceled) {
+      router.replace('/subscription');
       }
     } catch (dataError) {
       console.error('Error fetching subscription data:', dataError);
@@ -586,6 +683,19 @@ async function verifySubscriptionUpdate(expectedPlan, expectedCycle, maxAttempts
   }
 }
 
+// Format the subscription end date, handling all possible formats
+function getFormattedEndDate(date) {
+  if (!date) return 'End of billing period';
+  
+  // Handle Firestore Timestamp objects
+  if (date.seconds) {
+    return formatDate(new Date(date.seconds * 1000));
+  }
+  
+  // Handle regular Date objects and strings
+  return formatDate(date);
+}
+
 // Handle plan selection
 async function selectPlan(plan, cycle = 'monthly') {
   if (plan === currentPlan.value) return;
@@ -650,16 +760,215 @@ async function selectPlan(plan, cycle = 'monthly') {
 
 // Handle subscription cancellation
 async function confirmCancelSubscription() {
+  try {
   showCancelModal.value = true;
+    
+    console.log("Getting current subscription data...");
+    
+    // Get subscription data to check if there's a subscription ID
+    const subscription = await paymentService.getSubscriptionStatus();
+    console.log("Modal open - subscription data:", subscription);
+    
+    // For manual subscriptions without a subscriptionId
+    if (subscription && subscription.plan !== 'FREE' && !subscription.subscriptionId) {
+      console.log('No subscription ID found for plan:', subscription.plan);
+      
+      // Handle period end date, checking for Timestamp object
+      if (subscription.currentPeriodEnd) {
+        if (subscription.currentPeriodEnd.seconds) {
+          // Handle Firebase Timestamp object
+          subscriptionEndDate.value = new Date(subscription.currentPeriodEnd.seconds * 1000);
+          console.log('Set end date from Timestamp:', getFormattedEndDate(subscriptionEndDate.value));
+        } else {
+          // Regular Date object or string
+          subscriptionEndDate.value = new Date(subscription.currentPeriodEnd);
+          console.log('Set end date from currentPeriodEnd:', getFormattedEndDate(subscriptionEndDate.value));
+        }
+      } else {
+        // Set a default end date (30 days from now)
+        const defaultEndDate = new Date();
+        defaultEndDate.setDate(defaultEndDate.getDate() + 30);
+        subscriptionEndDate.value = defaultEndDate;
+        console.log('Set default end date for manual subscription:', getFormattedEndDate(subscriptionEndDate.value));
+      }
+      
+      return; // End here since we have the date needed
+    }
+    
+    // For regular subscriptions, try to get the end date from Stripe
+    try {
+      const periodEndDate = await paymentService.getCurrentPeriodEnd();
+      if (periodEndDate) {
+        subscriptionEndDate.value = periodEndDate;
+        console.log('Got period end directly from Stripe:', getFormattedEndDate(subscriptionEndDate.value));
+        return; // We got the date, no need to continue
+      }
+    } catch (stripeError) {
+      console.error('Error getting period end from Stripe:', stripeError);
+    }
+    
+    // Fallback: Try to get from the subscription status
+    if (subscription && subscription.currentPeriodEnd) {
+      // Check if it's a Firebase Timestamp
+      if (subscription.currentPeriodEnd.seconds) {
+        subscriptionEndDate.value = new Date(subscription.currentPeriodEnd.seconds * 1000);
+        console.log('Using end date from Timestamp:', getFormattedEndDate(subscriptionEndDate.value));
+      } else {
+        subscriptionEndDate.value = new Date(subscription.currentPeriodEnd);
+        console.log('Using end date from subscription status:', getFormattedEndDate(subscriptionEndDate.value));
+      }
+    } else {
+      console.log('No subscription end date available from subscription status');
+    }
+  } catch (error) {
+    console.error('Error in confirmCancelSubscription:', error);
+  }
 }
 
 async function cancelSubscription() {
   try {
     canceling.value = true;
-    await paymentService.cancelSubscription();
+    
+    // Get the subscription status first to check if there is an active subscription
+    const subscriptionData = await paymentService.getSubscriptionStatus();
+    console.log("Subscription data before cancellation:", subscriptionData);
+    
+    // If there is no subscriptionId but the user has a plan, it could be a manual subscription
+    if (!subscriptionData.subscriptionId && subscriptionData.plan !== 'FREE') {
+      console.log('No subscription ID found, but user has plan:', subscriptionData.plan);
+      console.log('Processing as manual cancellation...');
+      
+      // First, try to get the current period end date from the subscription data
+      if (!subscriptionEndDate.value) {
+        if (subscriptionData.currentPeriodEnd) {
+          // Handle Firestore Timestamp objects
+          if (subscriptionData.currentPeriodEnd.seconds) {
+            // Convert Firebase Timestamp to Date
+            subscriptionEndDate.value = new Date(subscriptionData.currentPeriodEnd.seconds * 1000);
+            console.log('Converted Timestamp to Date:', getFormattedEndDate(subscriptionEndDate.value));
+          } else {
+            // Regular Date object or string
+            subscriptionEndDate.value = new Date(subscriptionData.currentPeriodEnd);
+            console.log('Using existing end date:', getFormattedEndDate(subscriptionEndDate.value));
+          }
+        } else {
+          // Fallback: Try to get from Stripe API
+          try {
+            const periodEndDate = await paymentService.getCurrentPeriodEnd();
+            if (periodEndDate) {
+              subscriptionEndDate.value = periodEndDate;
+              console.log('Got period end for manual cancellation from API:', getFormattedEndDate(subscriptionEndDate.value));
+            } else {
+              // Set end date to 30 days from now if we can't get it from anywhere
+              subscriptionEndDate.value = new Date();
+              subscriptionEndDate.value.setDate(subscriptionEndDate.value.getDate() + 30);
+              console.log('Setting default end date for manual cancellation:', getFormattedEndDate(subscriptionEndDate.value));
+            }
+          } catch (periodEndError) {
+            console.error('Error getting period end for manual cancellation:', periodEndError);
+            
+            // Set a default end date
+            subscriptionEndDate.value = new Date();
+            subscriptionEndDate.value.setDate(subscriptionEndDate.value.getDate() + 30);
+            console.log('Setting default end date after error:', getFormattedEndDate(subscriptionEndDate.value));
+          }
+        }
+      }
+      
+      // Update user document to reflect cancellation
+      try {
+        const userRef = doc(db, 'users', authService.getCurrentUser().uid);
+        await updateDoc(userRef, {
+          subscriptionStatus: 'canceled',
+          subscriptionEndDate: subscriptionEndDate.value,
+          updatedAt: new Date()
+        });
+        
+        // Update local state
+        subscriptionStatus.value = 'canceled';
+        
+        console.log("Updated user document with manual cancellation:", getFormattedEndDate(subscriptionEndDate.value));
+        
+        // Close the modal
+        showCancelModal.value = false;
+        
+        // Show a confirmation message
+        alert(`Your subscription has been canceled. You'll continue to have access until ${getFormattedEndDate(subscriptionEndDate.value)}.`);
+        
+        // Reload subscription data
+        await loadSubscriptionData();
+        return;
+      } catch (dbError) {
+        console.error("Error updating user document for manual cancellation:", dbError);
+        throw new Error('Failed to process cancellation. Please contact support.');
+      }
+    }
+    
+    // For normal subscriptions with a subscriptionId, continue with standard process
+    // First, try to get the current period end date before cancellation
+    if (!subscriptionEndDate.value) {
+      try {
+        const periodEndDate = await paymentService.getCurrentPeriodEnd();
+        if (periodEndDate) {
+          subscriptionEndDate.value = periodEndDate;
+          console.log('Got period end before cancellation:', getFormattedEndDate(subscriptionEndDate.value));
+        }
+      } catch (periodEndError) {
+        console.error('Error getting period end before cancellation:', periodEndError);
+      }
+    }
+    
+    // Proceed with standard cancellation through the payment service
+    const result = await paymentService.cancelSubscription();
+    console.log("Cancellation result:", result);
+    
+    // Update subscription status
     subscriptionStatus.value = 'canceled';
+    
+    // Try to use the end date from the cancellation response
+    if (result.endDate) {
+      subscriptionEndDate.value = new Date(result.endDate);
+      console.log('Using end date from cancellation response:', getFormattedEndDate(subscriptionEndDate.value));
+    } 
+    // If we still don't have an end date, try to get it directly from Stripe
+    else if (!subscriptionEndDate.value) {
+      try {
+        const periodEndDate = await paymentService.getCurrentPeriodEnd();
+        if (periodEndDate) {
+          subscriptionEndDate.value = periodEndDate;
+          console.log('Got period end after cancellation:', getFormattedEndDate(subscriptionEndDate.value));
+        }
+      } catch (afterCancelError) {
+        console.error('Error getting period end after cancellation:', afterCancelError);
+      }
+    }
+    
+    // Ensure the end date is saved to the database
+    if (subscriptionEndDate.value) {
+      try {
+        const userRef = doc(db, 'users', authService.getCurrentUser().uid);
+        await updateDoc(userRef, {
+          subscriptionStatus: 'canceled',
+          subscriptionEndDate: subscriptionEndDate.value,
+          updatedAt: new Date()
+        });
+        console.log("Updated user document with end date:", getFormattedEndDate(subscriptionEndDate.value));
+      } catch (dbError) {
+        console.error("Error updating user document:", dbError);
+      }
+    }
+    
+    // Close the modal
     showCancelModal.value = false;
-    // Reload usage stats after cancellation
+    
+    // Show a confirmation message
+    if (subscriptionEndDate.value) {
+      alert(`Your subscription has been canceled. You'll continue to have access until ${getFormattedEndDate(subscriptionEndDate.value)}.`);
+    } else {
+      alert('Your subscription has been canceled. You\'ll continue to have access until the end of your current billing period.');
+    }
+    
+    // Reload subscription data
     await loadSubscriptionData();
   } catch (error) {
     console.error('Error canceling subscription:', error);
