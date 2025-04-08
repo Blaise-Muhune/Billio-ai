@@ -87,8 +87,29 @@ expressApp.post('/api/subscription/create', async (req, res) => {
     const customerDoc = await customersRef.doc(userId).get();
 
     if (customerDoc.exists) {
-      customer = { id: customerDoc.data().customerId };
+      // Try to retrieve the customer from Stripe
+      try {
+        customer = await stripe.customers.retrieve(customerDoc.data().customerId);
+        // If customer was deleted in Stripe, create a new one
+        if (customer.deleted) {
+          throw new Error('Customer was deleted');
+        }
+      } catch (error) {
+        // If customer doesn't exist in Stripe or was deleted, create a new one
+        customer = await stripe.customers.create({
+          email,
+          metadata: {
+            userId
+          }
+        });
+        // Update the customer ID in Firestore
+        await customersRef.doc(userId).set({
+          customerId: customer.id,
+          email
+        });
+      }
     } else {
+      // Create new customer if they don't exist
       customer = await stripe.customers.create({
         email,
         metadata: {
