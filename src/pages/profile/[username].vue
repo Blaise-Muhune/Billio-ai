@@ -82,88 +82,119 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   )
 
         //- Contact Information Section
-        .px-6.py-8.-mt-12(class="sm:px-8" v-if="isOwner || (profile.email && profile.visibility?.email) || (profile.phone && profile.visibility?.phone) || (hasAddress && profile.visibility?.address)")
+        .px-6.py-8.-mt-12(
+          class="sm:px-8" 
+          v-if="isOwner || (profile.email && profile.visibility?.email) || (profile.phone && profile.visibility?.phone) || (hasAddress && profile.visibility?.address)"
+        )
           .bg-white.rounded-xl.shadow-lg.p-6.max-w-2xl.mx-auto
-            //- Save Contact Button - Smaller and new color scheme
-            button(
-              class="bg-indigo-500 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-600 transition-all duration-300 flex items-center justify-center gap-2 mb-6 mx-auto shadow-sm"
-              @click="saveContact"
-            )
-              VaIcon(name="person_add" size="20px")
-              span.font-medium Save Contact
+            //- Section Header
+            .flex.items-center.justify-between.mb-6
+              .flex.items-center.gap-2
+                VaIcon(name="contact_page" size="24px" class="text-emerald-600")
+                h3.text-lg.font-semibold.text-gray-900 Contact Information
+              //- Edit Button for Owner
+              button(
+                v-if="isOwner"
+                @click="router.push('/profile-setup')"
+                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              )
+                VaIcon(name="edit" size="18px" class="text-gray-600")
 
-            //- Contact Grid - Using similar grid layout to social links
-            .grid.gap-4.justify-center(
-              class="grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(140px,140px))] place-items-center mx-auto"
-              style="max-width: 600px;"
-            )
+            //- Save Contact Button
+            .flex.justify-center.mb-8
+              button(
+                class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+                @click="saveContact"
+              )
+                VaIcon(name="person_add" size="24px")
+                span.text-lg.font-medium Save to Contacts
+                VaIcon(name="download" size="24px")
+
+            //- Contact Links List
+            .grid(class="grid-cols-1 sm:grid-cols-2 gap-4")
               //- Email
               a(
                 v-if="profile.email && (isOwner || profile.visibility?.email)"
                 :href="'mailto:' + profile.email"
-                class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-emerald-50 transition-colors text-center w-full"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-300 group relative"
               )
-                .flex.items-center.justify-center.w-12.h-12.rounded-full.bg-emerald-100.mb-2
-                  VaIcon(name="email" size="24px" class="text-emerald-600")
-                .text-sm.text-gray-900.font-medium Email
-                // Add visibility toggle for email
-                button(
+                .flex.items-center.gap-4
+                  div(
+                    class="flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors"
+                  )
+                    VaIcon(name="email" size="24px" class="text-emerald-600")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-500 Email
+                    .text-base.font-medium.text-gray-900.truncate {{ profile.email }}
+                //- Visibility Toggle
+                button.absolute.top-2.right-2(
                   v-if="isOwner"
                   @click.stop.prevent="toggleVisibility('email')"
-                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  class="p-1.5 rounded-lg hover:bg-emerald-100/50 transition-all duration-200"
                   :title="profile.visibility?.email ? 'Hide from public' : 'Show to public'"
                 )
                   VaIcon(
                     :name="profile.visibility?.email ? 'visibility' : 'visibility_off'"
-                    size="16px"
-                    class="text-gray-600"
+                    size="18px"
+                    class="text-emerald-600"
                   )
 
               //- Phone
               a(
                 v-if="profile.phone && (isOwner || profile.visibility?.phone)"
                 :href="'tel:' + profile.phone"
-                class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-emerald-50 transition-colors text-center"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-300 group relative"
               )
-                .flex.items-center.justify-center.w-12.h-12.rounded-full.bg-emerald-100.mb-2
-                  VaIcon(name="phone" size="24px" class="text-emerald-600")
-                .text-sm.text-gray-900.font-medium Phone
-                // Add visibility toggle for phone
-                button(
+                .flex.items-center.gap-4
+                  div(
+                    class="flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors"
+                  )
+                    VaIcon(name="phone" size="24px" class="text-emerald-600")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-500 Phone
+                    .text-base.font-medium.text-gray-900.truncate {{ profile.phone }}
+                //- Visibility Toggle
+                button.absolute.top-2.right-2(
                   v-if="isOwner"
                   @click.stop.prevent="toggleVisibility('phone')"
-                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  class="p-1.5 rounded-lg hover:bg-emerald-100/50 transition-all duration-200"
                   :title="profile.visibility?.phone ? 'Hide from public' : 'Show to public'"
                 )
                   VaIcon(
                     :name="profile.visibility?.phone ? 'visibility' : 'visibility_off'"
-                    size="16px"
-                    class="text-gray-600"
+                    size="18px"
+                    class="text-emerald-600"
                   )
               
               //- Address
-              .flex.flex-col.items-center.p-4.rounded-xl.bg-gray-50.text-center(
+              .block(
                 v-if="hasAddress && (isOwner || profile.visibility?.address)"
+                class="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 group relative hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-300 sm:col-span-2"
               )
-                .flex.items-center.justify-center.w-12.h-12.rounded-full.bg-emerald-100.mb-2
-                  VaIcon(name="location_on" size="24px" class="text-emerald-600")
-                .text-sm.text-gray-900.font-medium Address
-                // Add visibility toggle for address
-                button(
+                .flex.items-start.gap-4
+                  div(
+                    class="flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors"
+                  )
+                    VaIcon(name="location_on" size="24px" class="text-emerald-600")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-500 Address
+                    .text-base.font-medium.text-gray-900.whitespace-pre-line {{ formattedAddress }}
+                //- Visibility Toggle
+                button.absolute.top-2.right-2(
                   v-if="isOwner"
                   @click.stop.prevent="toggleVisibility('address')"
-                  class="mt-2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  class="p-1.5 rounded-lg hover:bg-emerald-100/50 transition-all duration-200"
                   :title="profile.visibility?.address ? 'Hide from public' : 'Show to public'"
                 )
                   VaIcon(
                     :name="profile.visibility?.address ? 'visibility' : 'visibility_off'"
-                    size="16px"
-                    class="text-gray-600"
+                    size="18px"
+                    class="text-emerald-600"
                   )
 
         //- Social and Music Links Container
         .px-6.pb-8(
-          class="sm:px-8"
+          class="sm:px-8" 
           v-if="hasSocialLinks || hasMusicLinks || (profile.github && (isOwner || profile.visibility?.github)) || (profile.otherLink && (isOwner || profile.visibility?.otherLink))"
         )
           .max-w-2xl.mx-auto
@@ -179,323 +210,304 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 )
                   VaIcon(name="edit" size="18px" class="text-gray-600")
 
-            //- Links Grid with Categories
-            .space-y-8
-              //- Professional Networks
-              .space-y-4(v-if="profile.linkedin || profile.github")
-                .flex.items-center.gap-2.mb-2
-                  VaIcon(name="business" size="20px" class="text-gray-600")
-                  h4.text-sm.font-medium.text-gray-700 Professional
-                .space-y-4
-                  //- LinkedIn
-                  a(
-                    v-if="profile.linkedin && (isOwner || profile.visibility?.linkedin)"
-                    :href="formatSocialLink(profile.linkedin, 'linkedin')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-[#0A66C2]/10 transition-all duration-300 w-full"
+            //- Links Grid
+            .grid(class="grid-cols-1 sm:grid-cols-2 gap-4")
+              //- LinkedIn Link
+              a(
+                v-if="profile.linkedin && (isOwner || profile.visibility?.linkedin)"
+                :href="formatSocialLink(profile.linkedin, 'linkedin')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#0A66C2] hover:bg-[#0A66C2]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#0A66C2]/10 group-hover:bg-[#0A66C2]/20 transition-colors")
+                    svg.w-6.h-6(class="text-[#0A66C2]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 LinkedIn
+                    .text-sm.text-gray-600.truncate {{ profile.linkedin }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('linkedin')"
+                    class="p-1.5 rounded-lg hover:bg-[#0A66C2]/10 transition-all duration-200"
+                    :title="profile.visibility?.linkedin ? 'Hide from public' : 'Show to public'"
                   )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-[#0A66C2]/10 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6(class="text-[#0A66C2]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 LinkedIn
-                      .text-xs.text-gray-500.truncate {{ profile.linkedin }}
-                    button(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('linkedin')"
-                      class="p-2 rounded-full hover:bg-[#0A66C2]/10 transition-colors"
-                      :title="profile.visibility?.linkedin ? 'Hide from public' : 'Show to public'"
+                    VaIcon(
+                      :name="profile.visibility?.linkedin ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-[#0A66C2]"
                     )
-                      VaIcon(
-                        :name="profile.visibility?.linkedin ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-[#0A66C2]"
-                      )
 
-                  //- GitHub
-                  a(
-                    v-if="profile.github && (isOwner || profile.visibility?.github)"
-                    :href="formatSocialLink(profile.github, 'github')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-black/5 transition-all duration-300 w-full"
+              //- Twitter Link
+              a(
+                v-if="profile.twitter && (isOwner || profile.visibility?.twitter)"
+                :href="formatSocialLink(profile.twitter, 'twitter')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-black hover:bg-black/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-black/10 group-hover:bg-black/20 transition-colors")
+                    svg.w-6.h-6(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 Twitter
+                    .text-sm.text-gray-600.truncate {{ profile.twitter }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('twitter')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.twitter ? 'Hide from public' : 'Show to public'"
                   )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-black/5 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.757-1.333-1.757-1.09-.744.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.775.418-1.305.76-1.605-2.665-.3-5.467-1.335-5.467-5.93 0-1.31.47-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23a11.47 11.47 0 013.003-.404c1.018.005 2.042.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.12 3.176.77.84 1.233 1.91 1.233 3.22 0 4.61-2.807 5.625-5.48 5.92.43.37.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .32.217.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 GitHub
-                      .text-xs.text-gray-500.truncate {{ profile.github }}
-                    button(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('github')"
-                      class="p-2 rounded-full hover:bg-black/5 transition-colors"
-                      :title="profile.visibility?.github ? 'Hide from public' : 'Show to public'"
+                    VaIcon(
+                      :name="profile.visibility?.twitter ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
                     )
-                      VaIcon(
-                        :name="profile.visibility?.github ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-black"
-                      )
 
-              //- Social Media
-              .space-y-4(v-if="profile.twitter || profile.instagram || profile.facebook")
-                .flex.items-center.gap-2.mb-2
-                  VaIcon(name="share" size="20px" class="text-gray-600")
-                  h4.text-sm.font-medium.text-gray-700 Social Media
-                .space-y-4
-                  //- Twitter
-                  a(
-                    v-if="profile.twitter && (isOwner || profile.visibility?.twitter)"
-                    :href="formatSocialLink(profile.twitter, 'twitter')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-black/5 transition-all duration-300 w-full"
-                  )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-black/5 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6.text-black(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 Twitter
-                      .text-xs.text-gray-500.truncate {{ profile.twitter }}
-                // Add visibility toggle for Twitter
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('twitter')"
-                  class="p-2 rounded-full hover:bg-black/5 transition-colors"
-                  :title="profile.visibility?.twitter ? 'Hide from public' : 'Show to public'"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.twitter ? 'visibility' : 'visibility_off'"
-                    size="18px"
-                    class="text-black"
-                  )
-
-                //- Instagram
-                a(
-                  v-if="profile.instagram && (isOwner || profile.visibility?.instagram)"
-                  :href="formatSocialLink(profile.instagram, 'instagram')"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-[#E4405F]/10 transition-all duration-300 w-full"
-                )
-                  .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-[#E4405F]/10 group-hover:scale-110 transition-transform duration-300")
+              //- Instagram Link
+              a(
+                v-if="profile.instagram && (isOwner || profile.visibility?.instagram)"
+                :href="formatSocialLink(profile.instagram, 'instagram')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#E4405F] hover:bg-[#E4405F]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#E4405F]/10 group-hover:bg-[#E4405F]/20 transition-colors")
                     svg.w-6.h-6(class="text-[#E4405F]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                      path(
-                        fill="currentColor"
-                        d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"
-                      )
-                  .flex-1
+                      path(fill="currentColor" d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z")
+                  .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Instagram
-                    .text-xs.text-gray-500.truncate {{ profile.instagram }}
-                // Add visibility toggle for Instagram
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('instagram')"
-                  class="p-2 rounded-full hover:bg-[#E4405F]/10 transition-colors"
-                  :title="profile.visibility?.instagram ? 'Hide from public' : 'Show to public'"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.instagram ? 'visibility' : 'visibility_off'"
-                    size="18px"
-                    class="text-[#E4405F]"
+                    .text-sm.text-gray-600.truncate {{ profile.instagram }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('instagram')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.instagram ? 'Hide from public' : 'Show to public'"
                   )
+                    VaIcon(
+                      :name="profile.visibility?.instagram ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
+                    )
 
-                //- Facebook
-                a(
-                  v-if="profile.facebook && (isOwner || profile.visibility?.facebook)"
-                  :href="formatSocialLink(profile.facebook, 'facebook')"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-[#1877F2]/10 transition-all duration-300 w-full"
-                )
-                  .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-[#1877F2]/10 group-hover:scale-110 transition-transform duration-300")
+              //- Facebook Link
+              a(
+                v-if="profile.facebook && (isOwner || profile.visibility?.facebook)"
+                :href="formatSocialLink(profile.facebook, 'facebook')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#1877F2] hover:bg-[#1877F2]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#1877F2]/10 group-hover:bg-[#1877F2]/20 transition-colors")
                     svg.w-6.h-6(class="text-[#1877F2]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                      path(
-                        fill="currentColor"
-                        d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                      )
-                  .flex-1
+                      path(fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z")
+                  .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Facebook
-                    .text-xs.text-gray-500.truncate {{ profile.facebook }}
-                // Add visibility toggle for Facebook
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('facebook')"
-                  class="p-2 rounded-full hover:bg-[#1877F2]/10 transition-colors"
-                  :title="profile.visibility?.facebook ? 'Hide from public' : 'Show to public'"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.facebook ? 'visibility' : 'visibility_off'"
-                    size="18px"
-                    class="text-[#1877F2]"
+                    .text-sm.text-gray-600.truncate {{ profile.facebook }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('facebook')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.facebook ? 'Hide from public' : 'Show to public'"
                   )
+                    VaIcon(
+                      :name="profile.visibility?.facebook ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
+                    )
 
-                //- Other Link
-                a(
-                  v-if="profile.otherLink && (isOwner || profile.visibility?.otherLink)"
-                  :href="formatSocialLink(profile.otherLink)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-black/5 transition-all duration-300 w-full"
-                )
-                  .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-black/5 group-hover:scale-110 transition-transform duration-300")
-                    svg.w-6.h-6.text-black(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                      path(
-                        fill="currentColor"
-                        d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"
-                      )
-                  .flex-1
+              //- GitHub Link
+              a(
+                v-if="profile.github && (isOwner || profile.visibility?.github)"
+                :href="formatSocialLink(profile.github, 'github')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-gray-900 hover:bg-gray-900/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-gray-900/10 group-hover:bg-gray-900/20 transition-colors")
+                    svg.w-6.h-6(class="text-gray-900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.022A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.291 2.747-1.022 2.747-1.022.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 GitHub
+                    .text-sm.text-gray-600.truncate {{ profile.github }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('github')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.github ? 'Hide from public' : 'Show to public'"
+                  )
+                    VaIcon(
+                      :name="profile.visibility?.github ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
+                    )
+
+              //- Spotify Link
+              a(
+                v-if="profile.spotify && (isOwner || profile.visibility?.spotify)"
+                :href="formatSocialLink(profile.spotify, 'spotify')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#1DB954] hover:bg-[#1DB954]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#1DB954]/10 group-hover:bg-[#1DB954]/20 transition-colors")
+                    svg.w-6.h-6(class="text-[#1DB954]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.201.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 Spotify
+                    .text-sm.text-gray-600.truncate {{ profile.spotify }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('spotify')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.spotify ? 'Hide from public' : 'Show to public'"
+                  )
+                    VaIcon(
+                      :name="profile.visibility?.spotify ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
+                    )
+
+              //- SoundCloud Link
+              a(
+                v-if="profile.soundcloud && (isOwner || profile.visibility?.soundcloud)"
+                :href="formatSocialLink(profile.soundcloud, 'soundcloud')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#FF3300] hover:bg-[#FF3300]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#FF3300]/10 group-hover:bg-[#FF3300]/20 transition-colors")
+                    svg.w-6.h-6(class="text-[#FF3300]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.042.099-.098l.255-2.105-.255-2.154c-.009-.06-.049-.1-.099-.1m-.899-1.574c-.05 0-.091.042-.096.1l-.169 3.728.169 3.674c.005.058.046.1.096.1.049 0 .092-.042.097-.1l.192-3.674-.192-3.728c-.005-.058-.048-.1-.097-.1m2.85-2.375c-.062 0-.112.051-.119.116l-.203 6.08.203 6.016c.007.065.057.116.119.116.061 0 .111-.051.117-.116l.23-6.016-.23-6.08c-.006-.065-.056-.116-.117-.116m.994-1.147c-.076 0-.138.062-.14.144l-.187 7.198.187 7.128c.002.082.064.144.14.144.075 0 .136-.062.138-.144l.213-7.128-.213-7.198c-.002-.082-.063-.144-.138-.144m1.093-1.021c-.086 0-.155.07-.158.162l-.174 8.37.174 8.298c.003.092.072.162.158.162.086 0 .155-.07.157-.162l.199-8.298-.199-8.37c-.002-.092-.071-.162-.157-.162m1.192-1.115c-.098 0-.176.079-.18.18l-.16 9.467.16 9.398c.004.102.082.18.18.18.097 0 .175-.078.178-.18l.183-9.398-.183-9.467c-.003-.101-.081-.18-.178-.18m1.288-1.209c-.008-.104-.085-.183-.19-.183-.103 0-.183.079-.189.183l-.148 11.543.148 11.47c.006.104.086.183.189.183.104 0 .182-.079.19-.183l.169-11.47-.169-11.543m.837 23.198c.115 0 .208-.093.215-.208l.157-11.447-.157-11.55c-.007-.115-.1-.208-.215-.208-.116 0-.21.093-.217.208l-.139 11.55.139 11.447c.007.115.101.208.217.208m1.045 0c.125 0 .228-.1.236-.224l.146-11.431-.146-11.52c-.008-.124-.111-.224-.236-.224-.127 0-.231.1-.239.224l-.129 11.52.129 11.431c.008.124.112.224.239.224m1.057-.015c.137 0 .248-.111.256-.248l.135-11.392-.135-11.494c-.008-.137-.119-.248-.256-.248-.139 0-.25.111-.258.248l-.119 11.494.119 11.392c.008.137.119.248.258.248m1.063-.017c.148 0 .266-.119.275-.268l.124-11.355-.124-11.454c-.009-.149-.127-.268-.275-.268-.149 0-.268.119-.277.268l-.109 11.454.109 11.355c.009.149.128.268.277.268m1.076-.021c.159 0 .287-.128.296-.288l.114-11.314-.114-11.426c-.009-.16-.137-.288-.308-.296-.16 0-.288.128-.298.288l-.1 11.426.1 11.314c.01.16.138.288.298.288m1.086-.024c.17 0 .307-.137.315-.308l.104-11.271-.104-11.389c-.008-.171-.145-.308-.315-.308-.172 0-.31.137-.318.308l-.091 11.389.091 11.271c.008.171.146.308.318.308m1.099-.029c.181 0 .326-.146.336-.327l.094-11.227-.094-11.361c-.01-.181-.155-.327-.336-.327-.18 0-.327.146-.337.327l-.082 11.361.082 11.227c.01.181.157.327.337.327m1.107-.033c.192 0 .347-.154.357-.348l.084-11.173-.084-11.322c-.01-.193-.165-.348-.357-.348-.19 0-.346.155-.356.348l-.073 11.322.073 11.173c.01.194.166.348.356.348m1.118-.037c.202 0 .367-.164.377-.369l.074-11.115-.074-11.295c-.01-.204-.175-.368-.377-.368-.203 0-.368.164-.378.368l-.064 11.295.064 11.115c.01.205.175.369.378.369m1.127-.042c.213 0 .386-.173.397-.388l.065-11.054-.065-11.255c-.011-.214-.184-.387-.397-.397-.214 0-.387.173-.397.387l-.055 11.255.055 11.054c.01.215.183.388.397.388m1.137-.046c.224 0 .405-.182.416-.407l.055-10.989-.055-11.227c-.011-.225-.192-.407-.416-.407-.224 0-.407.182-.418.407l-.045 11.227.045 10.989c.011.225.194.407.418.407m1.148-.05c.234 0 .424-.19.435-.427l.046-10.919-.046-11.197c-.011-.236-.201-.426-.435-.426-.234 0-.426.19-.437.426l-.037 11.197.037 10.919c.011.237.203.427.437.427m1.735-.785l.001-10.612-.001-11.151c-.012-.247-.21-.445-.457-.445-.247 0-.445.198-.457.445l-.037 11.151.037 10.612c.012.248.21.445.457.445.247 0 .445-.197.457-.445M24 12.945V11.55c-.001-2.212-1.794-4.005-4.006-4.005-.856 0-1.658.27-2.327.736C17.27 4.836 14.51 2 11.036 2c-.723 0-1.431.144-2.047.414-.306.135-.386.252-.386.504v15.984c.002.276.224.499.5.499h10.889c2.212-.001 4.007-1.795 4.007-4.006v-.001l.001-.449z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 SoundCloud
+                    .text-sm.text-gray-600.truncate {{ profile.soundcloud }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('soundcloud')"
+                    class="p-1.5 rounded-lg hover:bg-[#FF3300]/10 transition-all duration-200"
+                    :title="profile.visibility?.soundcloud ? 'Hide from public' : 'Show to public'"
+                  )
+                    VaIcon(
+                      :name="profile.visibility?.soundcloud ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-[#FF3300]"
+                    )
+
+              //- YouTube Music Link
+              a(
+                v-if="profile.youtubeMusic && (isOwner || profile.visibility?.youtubeMusic)"
+                :href="formatSocialLink(profile.youtubeMusic, 'youtubeMusic')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#FF0000] hover:bg-[#FF0000]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#FF0000]/10 group-hover:bg-[#FF0000]/20 transition-colors")
+                    svg.w-6.h-6(class="text-[#FF0000]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 YouTube Music
+                    .text-sm.text-gray-600.truncate {{ profile.youtubeMusic }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('youtubeMusic')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.youtubeMusic ? 'Hide from public' : 'Show to public'"
+                  )
+                    VaIcon(
+                      :name="profile.visibility?.youtubeMusic ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
+                    )
+
+              //- Apple Music Link
+              a(
+                v-if="profile.appleMusic && (isOwner || profile.visibility?.appleMusic)"
+                :href="formatSocialLink(profile.appleMusic, 'appleMusic')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-[#FA2C55] hover:bg-[#FA2C55]/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-[#FA2C55]/10 group-hover:bg-[#FA2C55]/20 transition-colors")
+                    svg.w-6.h-6(class="text-[#FA2C55]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 Apple Music
+                    .text-sm.text-gray-600.truncate {{ profile.appleMusic }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('appleMusic')"
+                    class="p-1.5 rounded-lg hover:bg-[#FA2C55]/10 transition-all duration-200"
+                    :title="profile.visibility?.appleMusic ? 'Hide from public' : 'Show to public'"
+                  )
+                    VaIcon(
+                      :name="profile.visibility?.appleMusic ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-[#FA2C55]"
+                    )
+
+              //- Other Link
+              a(
+                v-if="profile.otherLink && (isOwner || profile.visibility?.otherLink)"
+                :href="formatSocialLink(profile.otherLink)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-gray-900 hover:bg-gray-900/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-gray-900/10 group-hover:bg-gray-900/20 transition-colors")
+                    svg.w-6.h-6(class="text-gray-900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z")
+                  .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Other Link
-                    .text-xs.text-gray-500.truncate {{ profile.otherLink }}
-                // Add visibility toggle for Other Link
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('otherLink')"
-                  class="p-2 rounded-full hover:bg-black/5 transition-colors"
-                  :title="profile.visibility?.otherLink ? 'Hide from public' : 'Show to public'"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.otherLink ? 'visibility' : 'visibility_off'"
-                    size="18px"
-                    class="text-black"
+                    .text-sm.text-gray-600.truncate {{ profile.otherLink }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('otherLink')"
+                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                    :title="profile.visibility?.otherLink ? 'Hide from public' : 'Show to public'"
                   )
-
-              //- Music Platforms
-              .space-y-4(v-if="profile.spotify || profile.soundcloud || profile.youtubeMusic || profile.appleMusic")
-                .flex.items-center.gap-2.mb-2
-                  VaIcon(name="music_note" size="20px" class="text-gray-600")
-                  h4.text-sm.font-medium.text-gray-700 Music
-                .space-y-4
-                  //- Spotify
-                  a(
-                    v-if="profile.spotify && (isOwner || profile.visibility?.spotify)"
-                    :href="formatSocialLink(profile.spotify, 'spotify')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-[#1DB954]/10 transition-all duration-300 w-full"
-                  )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-[#1DB954]/10 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6(class="text-[#1DB954]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 Spotify
-                      .text-xs.text-gray-500.truncate {{ profile.spotify }}
-                    // Add visibility toggle for Spotify
-                    button(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('spotify')"
-                      class="p-2 rounded-full hover:bg-[#1DB954]/10 transition-colors"
-                      :title="profile.visibility?.spotify ? 'Hide from public' : 'Show to public'"
+                    VaIcon(
+                      :name="profile.visibility?.otherLink ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-gray-600"
                     )
-                      VaIcon(
-                        :name="profile.visibility?.spotify ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-[#1DB954]"
-                      )
 
-                  //- SoundCloud
-                  a(
-                    v-if="profile.soundcloud && (isOwner || profile.visibility?.soundcloud)"
-                    :href="formatSocialLink(profile.soundcloud, 'soundcloud')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-[#FF3300]/10 transition-all duration-300 w-full"
+              //- TikTok Link
+              a(
+                v-if="profile.tiktok && (isOwner || profile.visibility?.tiktok)"
+                :href="formatSocialLink(profile.tiktok, 'tiktok')"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-black hover:bg-black/5 transition-all duration-300 group relative"
+              )
+                .flex.items-center.gap-4
+                  div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-black/10 group-hover:bg-black/20 transition-colors")
+                    svg.w-6.h-6(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                      path(fill="currentColor" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.37 6.37 0 0 0-1-.05A6.3 6.3 0 0 0 3 15.65a6.32 6.32 0 0 0 10.87 4.36 6.44 6.44 0 0 0 1.83-4.45v-7.2a8.19 8.19 0 0 0 3.89.97v-3.28c-.019.002-.037.002-.056.002L19.59 6.69z")
+                  .flex-1.min-w-0
+                    .text-sm.font-medium.text-gray-900 TikTok
+                    .text-sm.text-gray-600.truncate {{ profile.tiktok }}
+                  button.absolute.top-2.right-2(
+                    v-if="isOwner"
+                    @click.stop.prevent="toggleVisibility('tiktok')"
+                    class="p-1.5 rounded-lg hover:bg-black/10 transition-all duration-200"
+                    :title="profile.visibility?.tiktok ? 'Hide from public' : 'Show to public'"
                   )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-[#FF3300]/10 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6(class="text-[#FF3300]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M20.5 16.8c-.1.1-.1.1-.2.1-.1 0-.1-.1-.1-.2l.2-1.9-.2-1.9c0-.1 0-.1.1-.2.1 0 .1-.1.2-.1.1 0 .1.1.1.2l.2 2-.2 1.9c-.1.1-.1.1-.1.1zm-3.4-4.2c-.1 0-.1.1-.1.2l-.4 2.5.4 2.5v.2c.1 0 .1-.1.1-.2l.5-2.5-.5-2.5c0-.1-.1-.2-.1-.2h.1zm1.7-.1c-.1 0-.1.1-.1.2l-.3 2.8.3 2.7c0 .1.1.1.1.1.1 0 .1-.1.1-.2l.4-2.7-.4-2.7c0-.1-.1-.2-.1-.2zm-3.4-1.5c-.1 0-.1.1-.1.1l-.5 4.4.5 4.4c0 .1.1.1.1.1.1 0 .1-.1.1-.1l.6-4.4-.6-4.4c0-.1-.1-.1-.1-.1zm1.7.1c-.1 0-.1.1-.1.2l-.4 4.2.4 4.2c0 .1.1.2.1.2.1 0 .1-.1.1-.2l.5-4.2-.5-4.2c0-.1-.1-.2-.1-.2zm-6.8-2.6c-.1 0-.1 0-.1.1l-.3 1.6.3 1.6c0 .1 0 .1.1.1s.1 0 .1-.1l.3-1.6-.3-1.6c0-.1 0-.1-.1-.1zm1.6.3c-.1 0-.1 0-.1.1l-.4 1.9.4 1.9c0 .1 0 .1.1.1.1 0 .1 0 .1-.1l.4-1.9-.4-1.9c0-.1 0-.1-.1-.1zm1.8.4c-.1 0-.1.1-.1.1l-.4 2.2.4 2.2c0 .1.1.1.1.1s.1-.1.1-.1l.4-2.2-.4-2.2c0-.1-.1-.1-.1-.1zm1.7.2c-.1 0-.1.1-.1.1l-.4 2.8.4 2.8c0 .1.1.1.1.1.1 0 .1-.1.1-.1l.4-2.8-.4-2.8c0-.1-.1-.1-.1-.1zM7.5 9.8c-.1 0-.1 0-.1.1L7 11.4l.4 1.5c0 .1 0 .1.1.1.1 0 .1 0 .1-.1l.5-1.5-.5-1.5c0-.1 0-.1-.1-.1zm1.6.8c-.1 0-.1 0-.1.1l-.4 1.8.4 1.8c0 .1 0 .1.1.1.1 0 .1 0 .1-.1l.4-1.8-.4-1.8c0-.1 0-.1-.1-.1zm1.7.3c-.1 0-.1.1-.1.1l-.4 2.2.4 2.2c0 .1.1.1.1.1s.1-.1.1-.1l.4-2.2-.4-2.2c0-.1-.1-.1-.1-.1zM2 13.6c0 .1 0 .1.1.1.1 0 .1 0 .1-.1l.2-.9-.2-.9c0-.1 0-.1-.1s-.1 0-.1.1l-.2.9.2.9zm1.1-1.7c-.1 0-.1 0-.1.1l-.3 1.5.3 1.5c0 .1 0 .1.1.1.1 0 .1 0 .1-.1l.3-1.5-.3-1.5c0-.1 0-.1-.1-.1zm1.1.2c-.1 0-.1 0-.1.1l-.3 1.9.3 1.9c0 .1 0 .1.1.1.1 0 .1 0 .1-.1l.3-1.9-.3-1.9c0-.1 0-.1-.1-.1zM.9 13.7c0 .1 0 .1.1.1s.1 0 .1-.1l.2-1-.2-1c0-.1 0-.1-.1-.1s-.1 0-.1.1l-.2 1 .2 1z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 SoundCloud
-                      .text-xs.text-gray-500.truncate {{ profile.soundcloud }}
-                    // Add visibility toggle for SoundCloud
-                    button(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('soundcloud')"
-                      class="p-2 rounded-full hover:bg-[#FF3300]/10 transition-colors"
-                      :title="profile.visibility?.soundcloud ? 'Hide from public' : 'Show to public'"
+                    VaIcon(
+                      :name="profile.visibility?.tiktok ? 'visibility' : 'visibility_off'"
+                      size="18px"
+                      class="text-black"
                     )
-                      VaIcon(
-                        :name="profile.visibility?.soundcloud ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-[#FF3300]"
-                      )
-
-                  //- YouTube Music
-                  a(
-                    v-if="profile.youtubeMusic && (isOwner || profile.visibility?.youtubeMusic)"
-                    :href="formatSocialLink(profile.youtubeMusic, 'youtubeMusic')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-[#FF0000]/10 transition-all duration-300 w-full"
-                  )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-[#FF0000]/10 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6(class="text-[#FF0000]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 YouTube Music
-                      .text-xs.text-gray-500.truncate {{ profile.youtubeMusic }}
-                    // Add visibility toggle for YouTube Music
-                    button(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('youtubeMusic')"
-                      class="p-2 rounded-full hover:bg-[#FF0000]/10 transition-colors"
-                      :title="profile.visibility?.youtubeMusic ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.youtubeMusic ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-[#FF0000]"
-                      )
-
-                  //- Apple Music
-                  a(
-                    v-if="profile.appleMusic && (isOwner || profile.visibility?.appleMusic)"
-                    :href="formatSocialLink(profile.appleMusic, 'appleMusic')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="group flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-black/5 transition-all duration-300 w-full"
-                  )
-                    .flex.items-center.justify-center.w-12.h-12.rounded-xl(class="bg-black/5 group-hover:scale-110 transition-transform duration-300")
-                      svg.w-6.h-6(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026-.747.043-1.49.123-2.193.4-1.336.53-2.3 1.452-2.865 2.78-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.802.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03a12.5 12.5 0 001.57-.1c.822-.106 1.596-.35 2.295-.81a5.046 5.046 0 001.88-2.207c.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.003-11.393zm-6.423 3.99v5.712c0 .417-.058.827-.244 1.206-.29.59-.76.962-1.388 1.14-.35.1-.706.157-1.07.173-.95.045-1.773-.6-1.943-1.536a1.88 1.88 0 011.038-2.022c.323-.16.67-.25 1.018-.324.378-.082.758-.153 1.134-.24.274-.063.457-.23.51-.516a.904.904 0 00.02-.193c0-1.815 0-3.63-.002-5.443a.725.725 0 00-.026-.185c-.04-.15-.15-.243-.304-.234-.16.01-.318.035-.475.066-.76.15-1.52.303-2.28.456l-2.325.47-1.374.278c-.016.003-.032.01-.048.013-.277.077-.377.203-.39.49-.002.042 0 .086 0 .13-.002 2.602 0 5.204-.003 7.805 0 .42-.047.836-.215 1.227-.278.64-.77 1.04-1.434 1.233-.35.1-.71.16-1.075.172-.96.036-1.755-.6-1.92-1.544-.14-.812.23-1.685 1.154-2.075.357-.15.73-.232 1.108-.31.287-.06.575-.116.86-.177.383-.083.583-.323.6-.714v-.15c0-2.96 0-5.922.002-8.882 0-.123.013-.25.042-.37.07-.285.273-.448.546-.518.255-.066.515-.112.774-.165.733-.15 1.466-.296 2.2-.444l2.27-.46c.67-.134 1.34-.27 2.01-.403.22-.043.443-.088.664-.106.31-.025.523.17.554.482.008.073.012.148.012.223.002 1.91.002 3.822 0 5.732z"
-                        )
-                    .flex-1
-                      .text-sm.font-medium.text-gray-900 Apple Music
-                      .text-xs.text-gray-500.truncate {{ profile.appleMusic }}
-                    // Add visibility toggle for Apple Music
-                    button(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('appleMusic')"
-                      class="p-2 rounded-full hover:bg-black/5 transition-colors"
-                      :title="profile.visibility?.appleMusic ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.appleMusic ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-black"
-                      )
 
     //- Call to Action (for non-subscribed users)
     .mt-6(v-if="!user || !user.isPremium")
@@ -697,8 +709,29 @@ function formatSocialLink(url, platform) {
     return url;
   }
   
-  // Add https:// if not present
+  // Platform-specific formatting
+  switch (platform) {
+    case 'tiktok':
+      return `https://tiktok.com/${url.startsWith('@') ? url.slice(1) : url}`;
+    case 'twitter':
+      return `https://twitter.com/${url.startsWith('@') ? url.slice(1) : url}`;
+    case 'instagram':
+      return `https://instagram.com/${url.startsWith('@') ? url.slice(1) : url}`;
+    case 'linkedin':
+      return `https://linkedin.com/in/${url}`;
+    case 'github':
+      return `https://github.com/${url}`;
+    case 'spotify':
+      return `https://open.spotify.com/artist/${url}`;
+    case 'soundcloud':
+      return `https://soundcloud.com/${url}`;
+    case 'youtubeMusic':
+      return `https://music.youtube.com/channel/${url}`;
+    case 'appleMusic':
+      return `https://music.apple.com/${url}`;
+    default:
   return `https://${url}`;
+  }
 }
 
 // Load profile data
