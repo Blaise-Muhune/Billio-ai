@@ -486,43 +486,42 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
 
               //- Custom Links Section
               template(v-if="profile.customLinks && profile.customLinks.length > 0")
-                a(
-                  v-for="(link, index) in profile.customLinks"
-                  :key="index"
-                  v-if="isOwner || profile.visibility?.customLinks?.[index] !== false"
-                  :href="formatSocialLink(link.url)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-gray-900 hover:bg-gray-900/5 transition-all duration-300 group relative"
-                )
-                  .flex.items-center.gap-4
-                    div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-gray-900/10 group-hover:bg-gray-900/20 transition-colors")
-                      img(
-                        v-if="link.iconUrl"
-                        :src="link.iconUrl"
-                        class="w-6 h-6 object-contain"
-                        :alt="link.name"
+                template(v-for="(link, index) in profile.customLinks" :key="index")
+                  a(
+                    v-if="isOwner || profile.visibility?.customLinks[index] !== false"
+                    :href="formatSocialLink(link.url)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="block p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-gray-900 hover:bg-gray-900/5 transition-all duration-300 group relative"
+                  )
+                    .flex.items-center.gap-4
+                      div(class="flex items-center justify-center w-12 h-12 rounded-xl bg-gray-900/10 group-hover:bg-gray-900/20 transition-colors")
+                        img(
+                          v-if="link.iconUrl"
+                          :src="link.iconUrl"
+                          class="w-6 h-6 object-contain"
+                          :alt="link.name"
+                        )
+                        VaIcon(
+                          v-else
+                          name="link"
+                          size="24px"
+                          class="text-gray-600"
+                        )
+                      .flex-1.min-w-0
+                        .text-sm.font-medium.text-gray-900 {{ link.name }}
+                        .text-sm.text-gray-600.truncate {{ link.url }}
+                      button.absolute.top-2.right-2(
+                        v-if="isOwner"
+                        @click.stop.prevent="toggleCustomLinkVisibility(index)"
+                        class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                        :title="getCustomLinkVisibility(index) ? 'Hide from public' : 'Show to public'"
                       )
-                      VaIcon(
-                        v-else
-                        name="link"
-                        size="24px"
-                        class="text-gray-600"
-                      )
-                    .flex-1.min-w-0
-                      .text-sm.font-medium.text-gray-900 {{ link.name }}
-                      .text-sm.text-gray-600.truncate {{ link.url }}
-                    button.absolute.top-2.right-2(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleCustomLinkVisibility(index)"
-                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                      :title="getCustomLinkVisibility(index) ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="getCustomLinkVisibility(index) ? 'visibility' : 'visibility_off'"
-                        size="18px"
-                        class="text-gray-600"
-                      )
+                        VaIcon(
+                          :name="profile.visibility?.customLinks[index] !== false ? 'visibility' : 'visibility_off'"
+                          size="18px"
+                          class="text-gray-600"
+                        )
 
     //- Call to Action (for non-subscribed users)
     .mt-6(v-if="!isPremium")
@@ -773,6 +772,19 @@ async function loadProfile() {
       ...userDoc.data()
     };
 
+    // Ensure visibility object exists
+    if (!profile.value.visibility) {
+      profile.value.visibility = {};
+    }
+    
+    // Ensure customLinks visibility object exists
+    if (!profile.value.visibility.customLinks) {
+      profile.value.visibility.customLinks = {};
+    }
+    
+    console.log('Profile loaded:', profile.value);
+    console.log('Visibility settings:', profile.value.visibility);
+    
     // Check premium status after loading profile
     await checkPremiumStatus();
     
@@ -845,6 +857,9 @@ function getCustomLinkVisibility(index) {
   if (!profile.value?.visibility?.customLinks) {
     return true;
   }
+  // Check if the index exists in the customLinks visibility object
+  // If not present or undefined, default to true
+  // If explicitly false, return false
   return profile.value.visibility.customLinks[index] !== false;
 }
 
@@ -857,13 +872,20 @@ function toggleCustomLinkVisibility(index) {
       profile.value.visibility = {};
     }
     
-    // Initialize customLinks array in visibility if it doesn't exist
+    // Initialize customLinks object in visibility if it doesn't exist
     if (!profile.value.visibility.customLinks) {
       profile.value.visibility.customLinks = {};
     }
     
-    // Toggle the visibility state
-    profile.value.visibility.customLinks[index] = !getCustomLinkVisibility(index);
+    // Get current state
+    const currentState = getCustomLinkVisibility(index);
+    
+    // Toggle the visibility state - explicitly set to true or false
+    profile.value.visibility.customLinks[index] = !currentState;
+    
+    // Log for debugging
+    console.log(`Toggling visibility for link ${index}: ${currentState} -> ${!currentState}`);
+    console.log('Updated visibility object:', profile.value.visibility);
     
     // Update the profile in Firestore with the complete visibility object
     const userRef = doc(db, 'users', user.value.uid);
