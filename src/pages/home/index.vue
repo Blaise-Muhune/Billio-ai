@@ -40,7 +40,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 target="_blank"
               )
                 VaIcon(name="person" size="18px")
-                span(class="font-medium") View Profile
+                span(class="font-medium") Public Profile
               button(
                 v-if="user"
                 class="flex items-center gap-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
@@ -1335,7 +1335,9 @@ async function generateEmailDraft(card) {
     error.value = '';
     
     const draft = await businessCardService.generateEmailDraft(card);
-    console.log('Generated draft:', draft);
+    if(env.VITE_APP_ENV === 'development') {
+      console.log('Generated draft:', draft);
+    }
     
     // Reload drafts for this card
     await loadDrafts(card.id);
@@ -1366,7 +1368,9 @@ async function loadDrafts(cardId) {
     loadingDrafts.value[cardId] = true;
     const drafts = await businessCardService.getEmailDrafts(cardId);
     cardDrafts.value[cardId] = drafts;
-    console.log('Loaded drafts for card:', cardId, drafts);
+    if(env.VITE_APP_ENV === 'development') {
+      console.log('Loaded drafts for card:', cardId, drafts);
+    }
   } catch (err) {
     console.error('Error loading drafts:', err);
     error.value = 'Error loading email drafts';
@@ -1425,7 +1429,9 @@ async function proceedWithGeneration() {
       error.value = '';
       
       const draft = await businessCardService.generateEmailDraft(selectedCardForGeneration.value);
-      console.log('Generated draft:', draft);
+      if(env.VITE_APP_ENV === 'development') {
+        console.log('Generated draft:', draft);
+      }
       
       // Reload drafts for this card
       await loadDrafts(selectedCardForGeneration.value.id);
@@ -1493,7 +1499,9 @@ function contactItems(card) {
 async function loadEvents() {
   try {
     events.value = await businessCardService.getEvents();
-    console.log('Loaded events:', events.value);
+    if(env.VITE_APP_ENV === 'development') {
+      console.log('Loaded events:', events.value);
+    }
   } catch (err) {
     error.value = 'Error loading events';
     console.error('Error loading events:', err);
@@ -1541,7 +1549,9 @@ async function createEvent() {
     // Reload cards to ensure everything is in sync
     await loadCards();
     
-    console.log('Event created successfully:', event);
+    if(env.VITE_APP_ENV === 'development') {
+      console.log('Event created successfully:', event);
+    }
   } catch (err) {
     console.error('Error creating event:', err);
     if (err.type === 'PLAN_LIMIT') {

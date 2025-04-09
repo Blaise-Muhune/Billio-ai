@@ -125,6 +125,20 @@ export const paymentService = {
 
       console.log('Canceling subscription:', subscriptionId);
 
+      // Get user document reference
+      const userRef = doc(db, 'users', user.uid);
+      
+      // Update email in user document to ensure it's available for confirmation emails
+      await updateDoc(userRef, {
+        email: user.email,
+        subscriptionEmail: user.email,
+        emailSubscribed: true,
+        updatedAt: new Date()
+      }).catch(err => {
+        console.warn('Failed to update email fields before cancellation:', err);
+        // Continue with cancellation even if email update fails
+      });
+
       const response = await fetch('/api/subscription/cancel', {
         method: 'POST',
         headers: {
@@ -132,7 +146,8 @@ export const paymentService = {
         },
         body: JSON.stringify({ 
           userId: user.uid,
-          subscriptionId 
+          subscriptionId,
+          userEmail: user.email // Include email directly in the cancellation request
         })
       });
 
@@ -142,7 +157,6 @@ export const paymentService = {
         // If subscription not found in Stripe, update local state anyway
         if (response.status === 404 && data.code === 'subscription_not_found') {
           // Update local subscription status
-          const userRef = doc(db, 'users', user.uid);
           await updateDoc(userRef, {
             subscriptionId: null,
             subscriptionStatus: 'canceled',
@@ -170,7 +184,6 @@ export const paymentService = {
       }
 
       // Update local subscription status
-      const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         subscriptionStatus: 'canceled',
         subscriptionEndDate: endDate,

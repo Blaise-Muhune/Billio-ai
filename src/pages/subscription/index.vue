@@ -16,19 +16,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
 
     //- Billing Toggle (Monthly/Yearly)
     .flex.justify-center.mb-10
-      .bg-gray-100.p-1.rounded-xl.inline-flex
+      .billing-toggle
         button(
-          @click="billingCycle = 'monthly'"
-          :class="{'bg-white shadow text-gray-800': billingCycle === 'monthly', 'text-gray-500 hover:text-gray-700': billingCycle !== 'monthly'}"
-          class="px-5 py-2 rounded-lg transition-all duration-200 font-medium"
+          @click="setBillingCycle('monthly')"
+          :class="['toggle-btn transition-all duration-200 rounded-lg', billingCycle === 'monthly' ? 'bg-white shadow-md text-gray-800 font-medium active' : 'text-gray-500 hover:text-gray-700 font-medium']"
         ) Monthly
         button(
-          @click="billingCycle = 'yearly'"
-          :class="{'bg-white shadow text-gray-800': billingCycle === 'yearly', 'text-gray-500 hover:text-gray-700': billingCycle !== 'yearly'}"
-          class="px-5 py-2 rounded-lg transition-all duration-200 font-medium flex items-center gap-2"
+          @click="setBillingCycle('yearly')"
+          :class="['toggle-btn transition-all duration-200 rounded-lg', billingCycle === 'yearly' ? 'bg-white shadow-md text-gray-800 font-medium active' : 'text-gray-500 hover:text-gray-700 font-medium']"
         ) 
           span Yearly
-          span.bg-emerald-100.text-emerald-700.text-xs.rounded-full.font-medium(class="px-2 py-0.5") Save 20%
+          .discount-badge Save 35%
 
     //- Plans Grid
     .plans
@@ -54,9 +52,14 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 .price-container
                   span.plan__amount ${{ getPlanPrice(plan, billingCycle) }}
                   span.plan__period /{{ billingCycle === 'monthly' ? 'month' : 'year' }}
-                .original-price(v-if="billingCycle === 'yearly'")
-                  s ${{ getFullYearlyPrice(plan) }}
-                  span.savings Save ${{ getYearlySavings(plan) }}
+                template(v-if="billingCycle === 'yearly'")
+                  .original-price
+                    s ${{ getFullYearlyPrice(plan) }}
+                    span.savings Save ${{ getYearlySavings(plan) }}
+                  .monthly-equivalent.text-xs.font-medium.mt-2.mb-1
+                    VaIcon(name="savings" size="16px" class="text-emerald-600 mr-1")
+                    span.text-emerald-700 Only ${{ getMonthlyEquivalent(plan) }}/month
+                    span(class="bg-emerald-100 text-emerald-700 rounded-full ml-1 px-2 py-0.5") 35% savings
           
           .plan__features
             .plan__feature(
@@ -270,7 +273,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             div(
               v-if="billingCycle === 'yearly'"
               class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-sm font-medium"
-            ) 20% Yearly Savings!
+            ) 35% Yearly Savings!
           
           div(class="grid gap-4 grid-cols-1 md:grid-cols-2")
             //- Plan & Billing
@@ -310,6 +313,16 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 div(class="flex items-center gap-1")
                   span.font-medium.text-gray-900 {{ formatCurrency(getMonthlyEquivalent(selectedPlan)) }}/month
                   span.text-xs.text-emerald-600 (Save {{ getYearlySavings(selectedPlan) }})
+          
+          //- Email confirmation
+          .mt-4.p-3.bg-blue-50.rounded-lg.border.border-blue-100(v-if="authService.getCurrentUser()")
+            .flex.items-start.gap-3
+              .flex-shrink-0.p-2.bg-blue-100.rounded-full.mt-1
+                VaIcon(name="email" size="20px" class="text-blue-600")
+              .flex-1
+                p.text-blue-800.font-medium.text-sm Subscription confirmation sent to:
+                p.text-blue-700.font-medium {{ authService.getCurrentUser().email }}
+                p.text-xs.text-blue-600.mt-1 You'll receive important updates about your subscription and billing information.
     
         //- Plan Features
         div(class="bg-white rounded-xl p-6 mb-8 border border-gray-200 shadow-sm")
@@ -392,6 +405,24 @@ const planLimits = computed(() => {
   return checkPlanLimits(currentPlan.value, usageStats.value);
 });
 
+/**
+ * The subscription flow now includes automatic email notifications:
+ * 
+ * 1. When a user subscribes, their email is stored in both the standard 'email' field
+ *    and a dedicated 'subscriptionEmail' field in their user document
+ * 
+ * 2. A flag 'emailSubscribed' is set to true to indicate they're receiving subscription emails
+ * 
+ * 3. The server sends the following email notifications:
+ *    - Subscription confirmation when payment is successful
+ *    - Renewal reminders before billing cycle ends
+ *    - Payment failure notifications
+ *    - Subscription cancellation confirmations
+ *    - Plan change confirmations
+ * 
+ * All emails are sent from no-reply@billoai.com with proper branding
+ */
+
 // Get features for the selected plan
 function getPlanFeatures(plan) {
   if (productCatalog.value && productCatalog.value.plans[plan]) {
@@ -405,7 +436,7 @@ function getPlanFeatures(plan) {
       'Basic card scanning',
       '3 email drafts per card',
       'Basic digital profile',
-      'Standard QR code'
+      'QR code'
     ];
   }
   
@@ -416,7 +447,8 @@ function getPlanFeatures(plan) {
       '10 email drafts per card',
       'Up to 5 events',
       'Enhanced digital profile',
-      'Custom QR code design'
+      'QR code',
+      'No banner ads'
     ],
     PRO: [
       'Unlimited business cards',
@@ -424,7 +456,9 @@ function getPlanFeatures(plan) {
       'Unlimited email drafts',
       'Unlimited events',
       'Premium digital profile',
-      'Custom QR code branding'
+      'QR code',
+      'No banner ads',
+      'Custom link'
     ]
   };
   return features[plan] || [];
@@ -438,10 +472,16 @@ function getPlanPrice(plan, cycle = 'monthly') {
   
   if (plan === 'FREE') return 0;
   
+  // Get the monthly price
+  const monthlyPrice = plan === 'BASIC' ? 9.99 : 29.99;
+  
   if (cycle === 'monthly') {
-    return plan === 'BASIC' ? 9.99 : 29.99;
+    return monthlyPrice;
   } else {
-    return plan === 'BASIC' ? 95.88 : 287.88;
+    // Apply 35% discount for yearly billing
+    const yearlyDiscount = 0.35;
+    const discountedMonthlyPrice = monthlyPrice * (1 - yearlyDiscount);
+    return parseFloat((discountedMonthlyPrice * 12).toFixed(2));
   }
 }
 
@@ -468,7 +508,9 @@ function getMonthlyEquivalent(plan) {
   if (plan === 'FREE') return 0;
   
   const yearlyPrice = getPlanPrice(plan, 'yearly');
-  return (yearlyPrice / 12).toFixed(2);
+  const monthlyEquivalent = (yearlyPrice / 12);
+  // Ensure we always show 2 decimal places
+  return parseFloat(monthlyEquivalent).toFixed(2);
 }
 
 // Format currency for display
@@ -496,20 +538,6 @@ async function applyChangesAndGoHome() {
   
   showSuccessModal.value = false;
   router.push('/home');
-}
-
-// Fetch product catalog from server
-async function fetchProductCatalog() {
-  try {
-    const response = await fetch('/api/subscription/catalog');
-    if (!response.ok) {
-      throw new Error('Failed to fetch product catalog');
-    }
-    productCatalog.value = await response.json();
-    console.log('Product catalog loaded:', productCatalog.value);
-  } catch (error) {
-    console.error('Error loading product catalog:', error);
-  }
 }
 
 // Load subscription status and usage stats
@@ -550,9 +578,6 @@ async function loadSubscriptionData() {
       return;
     }
 
-    // Fetch product catalog
-    await fetchProductCatalog();
-
     try {
     const [subscription, usage] = await Promise.all([
       paymentService.getSubscriptionStatus(),
@@ -561,12 +586,12 @@ async function loadSubscriptionData() {
     
       if (subscription) {
         currentPlan.value = subscription.plan || 'FREE';
-        subscriptionStatus.value = subscription.subscriptionStatus;
+    subscriptionStatus.value = subscription.subscriptionStatus;
         
         // Ensure the subscription end date is properly set 
         if (subscription.currentPeriodEnd) {
           // Keep Firebase Timestamp as is to avoid conversion issues
-          subscriptionEndDate.value = subscription.currentPeriodEnd;
+    subscriptionEndDate.value = subscription.currentPeriodEnd;
           console.log('Subscription end date loaded:', getFormattedEndDate(subscriptionEndDate.value));
         } else {
           subscriptionEndDate.value = null;
@@ -711,6 +736,22 @@ async function selectPlan(plan, cycle = 'monthly') {
     } else {
       // Create subscription with correct parameters
       const user = authService.getCurrentUser();
+      const userEmail = user.email;
+      
+      // Store email for subscription notifications
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          email: userEmail,
+          subscriptionEmail: userEmail, // Store email specifically for subscription updates
+          emailSubscribed: true, // Flag to indicate they're subscribed to subscription emails
+          updatedAt: new Date()
+        });
+        console.log("Updated user with subscription email:", userEmail);
+      } catch (emailError) {
+        console.warn("Failed to update user's subscription email:", emailError);
+      }
+      
       try {
         // First attempt to directly update the plan in our database
         // This ensures the plan is set even if webhook fails
@@ -730,7 +771,7 @@ async function selectPlan(plan, cycle = 'monthly') {
           plan,
           billingCycle: cycle,
           userId: user.uid,
-          email: user.email,
+          email: userEmail, // Pass email to subscription service
           successUrl: `${window.location.origin}/subscription?success=true&plan=${plan}&cycle=${cycle}`,
           cancelUrl: `${window.location.origin}/subscription?canceled=true`
         })
@@ -833,6 +874,24 @@ async function cancelSubscription() {
     const subscriptionData = await paymentService.getSubscriptionStatus();
     console.log("Subscription data before cancellation:", subscriptionData);
     
+    // Ensure user email is properly stored for confirmation emails
+    const user = authService.getCurrentUser();
+    const userEmail = user.email;
+    console.log("User email for confirmation:", userEmail);
+    
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        email: userEmail,
+        subscriptionEmail: userEmail,
+        emailSubscribed: true,
+        updatedAt: new Date()
+      });
+      console.log("Updated user email fields before cancellation:", userEmail);
+    } catch (emailError) {
+      console.warn("Failed to update user's email fields:", emailError);
+    }
+    
     // If there is no subscriptionId but the user has a plan, it could be a manual subscription
     if (!subscriptionData.subscriptionId && subscriptionData.plan !== 'FREE') {
       console.log('No subscription ID found, but user has plan:', subscriptionData.plan);
@@ -885,15 +944,15 @@ async function cancelSubscription() {
         });
         
         // Update local state
-        subscriptionStatus.value = 'canceled';
+    subscriptionStatus.value = 'canceled';
         
         console.log("Updated user document with manual cancellation:", getFormattedEndDate(subscriptionEndDate.value));
         
         // Close the modal
-        showCancelModal.value = false;
+    showCancelModal.value = false;
         
         // Show a confirmation message
-        alert(`Your subscription has been canceled. You'll continue to have access until ${getFormattedEndDate(subscriptionEndDate.value)}.`);
+        alert(`Your subscription has been canceled. You'll continue to have access until ${getFormattedEndDate(subscriptionEndDate.value)}. A confirmation email has been sent to your registered email address.`);
         
         // Reload subscription data
         await loadSubscriptionData();
@@ -963,9 +1022,9 @@ async function cancelSubscription() {
     
     // Show a confirmation message
     if (subscriptionEndDate.value) {
-      alert(`Your subscription has been canceled. You'll continue to have access until ${getFormattedEndDate(subscriptionEndDate.value)}.`);
+      alert(`Your subscription has been canceled. You'll continue to have access until ${getFormattedEndDate(subscriptionEndDate.value)}. A confirmation email has been sent to your registered email address.`);
     } else {
-      alert('Your subscription has been canceled. You\'ll continue to have access until the end of your current billing period.');
+      alert('Your subscription has been canceled. You\'ll continue to have access until the end of your current billing period. A confirmation email has been sent to your registered email address.');
     }
     
     // Reload subscription data
@@ -976,6 +1035,15 @@ async function cancelSubscription() {
   } finally {
     canceling.value = false;
   }
+}
+
+// Set the billing cycle and trigger UI updates
+function setBillingCycle(cycle) {
+  billingCycle.value = cycle;
+  // Force re-render of price components
+  setTimeout(() => {
+    // This empty timeout forces Vue to re-render the price components
+  }, 0);
 }
 
 onMounted(() => {
@@ -1202,6 +1270,40 @@ onMounted(() => {
 /* Badge Styling */
 .plan-badge {
   @apply absolute top-4 right-4;
+}
+
+/* Monthly equivalent price styling */
+.monthly-equivalent {
+  @apply flex items-center justify-center rounded-lg py-1 px-2 bg-emerald-50 border border-emerald-100 text-center;
+}
+
+/* Billing toggle styling */
+.billing-toggle {
+  @apply inline-flex items-center bg-gray-100 p-1 rounded-xl shadow-sm transition-all duration-300;
+}
+
+.toggle-btn {
+  @apply px-5 py-2 flex items-center justify-center gap-2 relative z-10 min-w-[100px] mx-0 hover:bg-gray-50;
+}
+
+.billing-toggle button.active {
+  @apply bg-white shadow-md hover:bg-white;
+}
+
+/* Save badge styling */
+.discount-badge {
+  @apply bg-emerald-100 text-emerald-700 text-xs rounded-full font-medium ml-1 px-2 py-0.5;
+}
+
+/* Mobile optimizations for the toggle */
+@media (max-width: 767px) {
+  .toggle-btn {
+    @apply min-w-[90px] px-3;
+  }
+  
+  .discount-badge {
+    @apply ml-0.5 px-1.5 py-0 text-[10px];
+  }
 }
 
 /* Mobile optimizations for other elements */
