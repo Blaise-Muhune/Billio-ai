@@ -67,7 +67,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 )
             
             //- Bio Section - Moved next to name and title
-            .text-white.text-center.mt-4.mb-2.max-w-xl.mx-auto(v-if="profile.bio && (isOwner || profile.visibility?.bio)")
+            .text-white.text-center.mt-4.mb-4.max-w-xl.mx-auto(v-if="profile.bio && (isOwner || profile.visibility?.bio)")
               .flex.items-center.justify-center.gap-2
                 p.text-sm.leading-relaxed {{ profile.bio }}
                 // Add visibility toggle for bio
@@ -83,139 +83,86 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                     class="text-white"
                   )
 
-        //- Contact Information Section
-        .px-6.py-4.-mt-12(
-          class="sm:px-8" 
-          v-if="isOwner || (profile.email && profile.visibility?.email) || (profile.phone && profile.visibility?.phone) || (hasAddress && profile.visibility?.address)"
-        )
-          //- Section Header
-          .flex.items-center.justify-between.mb-3
-            .flex.items-center.gap-2
-              VaIcon(name="contact_page" size="18px" class="text-emerald-600")
-              h3.text-base.font-medium.text-gray-900 Contact Information
-            //- Edit Button for Owner
-            button(
-              v-if="isOwner"
-              @click="router.push('/profile-setup')"
-              class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            //- Contact Information - Integrated with header
+            .flex.flex-wrap.justify-center.gap-3.mt-3.max-w-lg.w-full(
+              v-if="isOwner || (profile.email && profile.visibility?.email) || (profile.phone && profile.visibility?.phone) || (hasAddress && profile.visibility?.address)"
             )
-              VaIcon(name="edit" size="16px" class="text-gray-600")
+              //- Email
+              .flex.items-center.gap-2.rounded-full(
+                class="px-3 py-1.5 bg-white bg-opacity-20"
+                v-if="profile.email && (isOwner || profile.visibility?.email)"
+              )
+                VaIcon(name="email" size="16px" class="text-white")
+                a.text-xs.text-white.truncate(:href="'mailto:' + profile.email") {{ profile.email }}
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('email')"
+                  class="p-1 rounded-full hover:bg-white/10"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.email ? 'visibility' : 'visibility_off'"
+                    size="14px"
+                    class="text-white"
+                  )
 
-          //- Save Contact Button
-          .py-4
+              //- Phone
+              .flex.items-center.gap-2.rounded-full(
+                class="px-3 py-1.5 bg-white bg-opacity-20"
+                v-if="profile.phone && (isOwner || profile.visibility?.phone)"
+              )
+                VaIcon(name="phone" size="16px" class="text-white")
+                a.text-xs.text-white.truncate(:href="'tel:' + profile.phone") {{ profile.phone }}
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('phone')"
+                  class="p-1 rounded-full hover:bg-white/10"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.phone ? 'visibility' : 'visibility_off'"
+                    size="14px"
+                    class="text-white"
+                  )
+                
+              //- Address
+              .flex.items-center.gap-2.rounded-full(
+                class="px-3 py-1.5 bg-white bg-opacity-20"
+                v-if="hasAddress && (isOwner || profile.visibility?.address)"
+              )
+                VaIcon(name="location_on" size="16px" class="text-white")
+                span.text-xs.text-white.truncate {{ formattedAddress }}
+                button(
+                  v-if="isOwner"
+                  @click.stop.prevent="toggleVisibility('address')"
+                  class="p-1 rounded-full hover:bg-white/10"
+                )
+                  VaIcon(
+                    :name="profile.visibility?.address ? 'visibility' : 'visibility_off'"
+                    size="14px"
+                    class="text-white"
+                  )
+            
+            //- Save Contact Button
             button(
-              class="save-contact-btn bg-gradient-to-r from-blue-500 to-indigo-600 text-white w-full max-w-md px-6 py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-3 shadow-md hover:shadow-xl mx-auto relative overflow-hidden group"
+              class="mt-5 w-full sm:w-auto bg-white text-emerald-700 px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto font-medium"
               @click="saveContact"
             )
-              //- Animated pulse effect
-              div(class="absolute inset-0 bg-white opacity-0 transition-opacity duration-500 pulse-animation")
-              //- Download icon with animation
-              div(class="relative z-10 flex items-center justify-center gap-3")
-                VaIcon(
-                  name="person_add" 
-                  size="20px" 
-                  class="transform transition-transform duration-300"
-                )
-                span.font-medium.text-base Save to Contacts
-                VaIcon(
-                  name="download" 
-                  size="20px" 
-                  class="transform transition-transform duration-300 download-icon"
-                )
-              
-              //- Shine effect on hover
-              div(class="absolute top-0 left-0 w-full h-full pointer-events-none opacity-0 shine-container")
-                div(class="absolute -inset-full h-[400%] w-[200%] top-0 -left-[100%] bg-gradient-to-r from-transparent via-white to-transparent opacity-20 transform rotate-45 shine-effect")
+              VaIcon(name="person_add" size="20px")
+              span.text-base Save to Contacts
+              VaIcon(name="download" size="18px" class="ml-1")
 
-          //- Contact Cards - Minimal design
-          .space-y-1.mt-2
-            //- Email
-            a(
-              v-if="profile.email && (isOwner || profile.visibility?.email)"
-              :href="'mailto:' + profile.email" 
-              class="flex items-center p-2 hover:bg-gray-50 rounded-lg border border-gray-100"
-            )
-              VaIcon(name="email" size="16px" class="text-emerald-500 mr-2")
-              span.text-sm.flex-1 {{ profile.email }}
-              //- Visibility Toggle
-              button(
-                v-if="isOwner"
-                @click.stop.prevent="toggleVisibility('email')"
-                class="p-1"
-                :title="profile.visibility?.email ? 'Hide from public' : 'Show to public'"
-              )
-                VaIcon(
-                  :name="profile.visibility?.email ? 'visibility' : 'visibility_off'"
-                  size="16px"
-                  class="text-gray-400"
-                )
-
-            //- Phone
-            a(
-              v-if="profile.phone && (isOwner || profile.visibility?.phone)"
-              :href="'tel:' + profile.phone" 
-              class="flex items-center p-2 hover:bg-gray-50 rounded-lg border border-gray-100"
-            )
-              VaIcon(name="phone" size="16px" class="text-emerald-500 mr-2")
-              span.text-sm.flex-1 {{ profile.phone }}
-              //- Visibility Toggle
-              button(
-                v-if="isOwner"
-                @click.stop.prevent="toggleVisibility('phone')"
-                class="p-1"
-                :title="profile.visibility?.phone ? 'Hide from public' : 'Show to public'"
-              )
-                VaIcon(
-                  :name="profile.visibility?.phone ? 'visibility' : 'visibility_off'"
-                  size="16px"
-                  class="text-gray-400"
-                )
-              
-            //- Address
-            .flex.items-center.p-2.rounded-lg.border.border-gray-100(
-              v-if="hasAddress && (isOwner || profile.visibility?.address)"
-            )
-              VaIcon(name="location_on" size="16px" class="text-emerald-500 mr-2")
-              span.text-sm.flex-1 {{ formattedAddress }}
-              //- Visibility Toggle
-              button(
-                v-if="isOwner"
-                @click.stop.prevent="toggleVisibility('address')"
-                class="p-1"
-                :title="profile.visibility?.address ? 'Hide from public' : 'Show to public'"
-              )
-                VaIcon(
-                  :name="profile.visibility?.address ? 'visibility' : 'visibility_off'"
-                  size="16px"
-                  class="text-gray-400"
-                )
-
-        //- Contact information and links divider
-        .px-6.pt-2.pb-4(class="sm:px-8")
-          .flex.items-center.justify-center.gap-3.my-6
-            .h-px.flex-grow.bg-gradient-to-r.from-transparent.via-gray-300.to-transparent
-            .bg-white.p-2.rounded-full.shadow-sm
-              VaIcon(name="link" size="18px" class="text-blue-500")
-            .h-px.flex-grow.bg-gradient-to-r.from-transparent.via-gray-300.to-transparent
-
-        //- Social and Music Links Container
-        .px-6.pt-0.pb-8(
+        //- Remove the divider and adjust spacing
+        .px-6.pt-6.pb-8(
           class="sm:px-8" 
           v-if="hasSocialLinks || hasMusicLinks || (profile.github && (isOwner || profile.visibility?.github)) || (profile.otherLink && (isOwner || profile.visibility?.otherLink))"
         )
           .max-w-2xl.mx-auto
-            //- Section Headers
-            .flex.items-center.justify-between.mb-6
-              .flex.items-center.gap-2
-                VaIcon(name="share" size="24px" class="text-blue-600")
-                h3.text-lg.font-semibold.text-gray-900 My Links
-              .flex.items-center
-                button(
-                  v-if="isOwner"
-                  @click="router.push('/profile-setup')"
-                  class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                )
-                  VaIcon(name="edit" size="18px" class="text-gray-600")
+            //- Remove the section headers with "My Links" title
+            .flex.items-center.justify-end.mb-2(v-if="isOwner")
+              button(
+                @click="router.push('/profile-setup')"
+                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              )
+                VaIcon(name="edit" size="18px" class="text-gray-600")
 
             //- Links Grid - Redesigned for better compact layout
             .grid(class="grid-cols-2 sm:grid-cols-3 gap-3 max-w-xl mx-auto")
