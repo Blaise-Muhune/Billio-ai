@@ -1335,7 +1335,7 @@ async function generateEmailDraft(card) {
     error.value = '';
     
     const draft = await businessCardService.generateEmailDraft(card);
-    if(env.VITE_APP_ENV === 'development') {
+    if(import.meta.env.VITE_APP_ENV === 'development') {
       console.log('Generated draft:', draft);
     }
     
@@ -1368,7 +1368,7 @@ async function loadDrafts(cardId) {
     loadingDrafts.value[cardId] = true;
     const drafts = await businessCardService.getEmailDrafts(cardId);
     cardDrafts.value[cardId] = drafts;
-    if(env.VITE_APP_ENV === 'development') {
+    if(import.meta.env.VITE_APP_ENV === 'development') {
       console.log('Loaded drafts for card:', cardId, drafts);
     }
   } catch (err) {
@@ -1429,7 +1429,7 @@ async function proceedWithGeneration() {
       error.value = '';
       
       const draft = await businessCardService.generateEmailDraft(selectedCardForGeneration.value);
-      if(env.VITE_APP_ENV === 'development') {
+      if(import.meta.env.VITE_APP_ENV === 'development') {
         console.log('Generated draft:', draft);
       }
       
@@ -1499,7 +1499,7 @@ function contactItems(card) {
 async function loadEvents() {
   try {
     events.value = await businessCardService.getEvents();
-    if(env.VITE_APP_ENV === 'development') {
+    if(import.meta.env.VITE_APP_ENV === 'development') {
       console.log('Loaded events:', events.value);
     }
   } catch (err) {
@@ -1549,7 +1549,7 @@ async function createEvent() {
     // Reload cards to ensure everything is in sync
     await loadCards();
     
-    if(env.VITE_APP_ENV === 'development') {
+    if(import.meta.env.VITE_APP_ENV === 'development') {
       console.log('Event created successfully:', event);
     }
   } catch (err) {
