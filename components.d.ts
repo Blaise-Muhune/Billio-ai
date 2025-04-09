@@ -15,5 +15,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SidebarContents: typeof import('./src/components/SidebarContents.vue')['default']
+    VaIcon: typeof import('vuestic-ui')['VaIcon']
+    VaModal: typeof import('vuestic-ui')['VaModal']
   }
 }

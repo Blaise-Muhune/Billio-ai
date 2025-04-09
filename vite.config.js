@@ -6,7 +6,7 @@ import VueRouter from 'unplugin-vue-router/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
-import { VuesticPlugin } from 'vuestic-ui/vite-plugin'
+// Remove problematic Vuestic plugin import
 import legacy from '@vitejs/plugin-legacy'
 
 // https://vitejs.dev/config/
@@ -17,7 +17,15 @@ export default defineConfig({
       VueRouterAutoImports, // swap 'vue-router' for VueRouterAutoImports from unplugin-vue-router
       //{ '@/store/auth.js': ['useAuthStore']}, // Pinia auth store
     ]}),
-    Components(),
+    Components({
+      // Include Vuestic components in auto-import
+      resolvers: [
+        (name) => {
+          if (name.startsWith('Va'))
+            return { name, from: 'vuestic-ui' }
+        }
+      ]
+    }),
     VueRouter({
       routeBlockLang: 'yaml',
       routesFolder: 'src/pages',
@@ -38,9 +46,7 @@ export default defineConfig({
         }
       }
     }),
-    VuesticPlugin({
-      styles: 'minimal',
-    }),
+    // Remove Vuestic plugin that's causing the error
     // Add legacy browser support
     legacy({
       targets: ['defaults', 'not IE 11']

@@ -48,15 +48,14 @@ app.use(router)
 
 // Vuestic UI config
 import { createVuestic } from 'vuestic-ui'
-const vuestic = createVuestic({
+app.use(createVuestic({
   config: {
     colors: {
       primary: '#10B981', // emerald-500
       secondary: '#059669', // emerald-600
     },
   },
-})
-app.use(vuestic)
+}))
 
 // Error handling
 app.config.errorHandler = (err, vm, info) => {
