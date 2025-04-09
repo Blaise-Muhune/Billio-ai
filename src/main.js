@@ -3,6 +3,7 @@ const DEFAULT_PAGE_DESCRIPTION = 'Digitize your business cards with AI. Save tim
 // Base Vue config
 import { createApp } from 'vue'
 import App from './App.vue'
+import { init } from '@vercel/analytics';
 
 // Import styles first
 import 'vuestic-ui/styles/essential.css'
@@ -63,5 +64,8 @@ app.config.errorHandler = (err, vm, info) => {
   console.error('Component:', vm)
   console.error('Info:', info)
 }
+init({
+  projectId: 'prj_KCUOU8lnC6afUsLFtAHDIP6xZICt', // Replace with your actual Vercel project ID
+});
 
 app.mount('#app')

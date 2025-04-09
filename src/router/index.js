@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { authService } from '../services/authService';
+import { trackPageView } from '@vercel/analytics';
 
 const routes = [
   {
@@ -68,6 +69,10 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+router.afterEach((to) => {
+  trackPageView(to.fullPath);
 });
 
 // Navigation guard
