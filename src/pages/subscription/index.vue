@@ -478,10 +478,7 @@ function getPlanPrice(plan, cycle = 'monthly') {
   if (cycle === 'monthly') {
     return monthlyPrice;
   } else {
-    // Apply 35% discount for yearly billing
-    const yearlyDiscount = 0.35;
-    const discountedMonthlyPrice = monthlyPrice * (1 - yearlyDiscount);
-    return parseFloat((discountedMonthlyPrice * 12).toFixed(2));
+    return plan === 'BASIC' ? 76.99 : 233.99;
   }
 }
 
