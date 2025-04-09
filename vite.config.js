@@ -1,11 +1,13 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
-import Vue from '@vitejs/plugin-vue'
+import vue from '@vitejs/plugin-vue'
 // Baseline Helpers
 import VueRouter from 'unplugin-vue-router/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
+import { VuesticPlugin } from 'vuestic-ui/vite-plugin'
+import legacy from '@vitejs/plugin-legacy'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,18 +20,31 @@ export default defineConfig({
     Components(),
     VueRouter({
       routeBlockLang: 'yaml',
-      //routesFolder: 'src/views',
-      /* config options w/defaults */
-      //routesFolder: 'src/pages',
-      //extensions: ['.vue'],
-      //exclude: [],
-      //dts: './typed-router.d.ts',
-      //getRouteName: (routeNode) => myOwnGenerateRouteName(routeNode),
-      //routeBlockLang: 'json5',
-      //importMode: 'async',
+      routesFolder: 'src/pages',
+      dts: 'typed-router.d.ts',
     }),
-    // ⚠️  VueRouter() must be placed before Vue
-    Vue(),
+    AutoImport({
+      imports: ['vue', 'vue-router'],
+      dts: 'auto-imports.d.ts',
+    }),
+    Components({
+      dirs: ['src/components'],
+      dts: 'components.d.ts',
+    }),
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: tag => tag === 'pug' || tag === 'Analytics'
+        }
+      }
+    }),
+    VuesticPlugin({
+      styles: 'minimal',
+    }),
+    // Add legacy browser support
+    legacy({
+      targets: ['defaults', 'not IE 11']
+    }),
   ],
   resolve: {
     alias: {
@@ -51,7 +66,29 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true
+    sourcemap: true,
+    // Improve SEO performance
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router'],
+          vuestic: ['vuestic-ui'],
+          firebase: ['firebase/app', 'firebase/firestore', 'firebase/auth', 'firebase/storage']
+        }
+      }
+    },
+    // Improve performance
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
+    // Generate preload directives for main chunks
+    modulePreload: {
+      polyfill: true
+    }
   },
   //base: "/subdir/",
 })

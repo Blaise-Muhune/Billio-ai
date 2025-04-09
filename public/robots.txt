@@ -1,0 +1,11 @@
+# Allow all bots to index the site
+User-agent: *
+Allow: /
+
+# Disallow private areas
+Disallow: /profile-setup
+Disallow: /home
+Disallow: /analytics
+
+# Sitemap
+Sitemap: https://billoai.com/sitemap.xml 

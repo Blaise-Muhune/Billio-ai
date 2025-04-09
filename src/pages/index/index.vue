@@ -1,6 +1,7 @@
 <route>
 meta:
-  title: BilloAI - Smart Business Card Management
+  title: BilloAI - Smart Business Card Manager
+  description: Digitize your business cards with AI. Save time, stay organized, and never lose a contact again. Try BilloAI for free today.
 </route>
 
 <template lang="pug">
@@ -96,6 +97,21 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
               h3.text-xl.font-bold.text-gray-900.mb-3 {{ benefit.title }}
               p.text-gray-600 {{ benefit.description }}
 
+  // Testimonials Section
+  section.py-16.bg-white
+    .max-w-4xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
+      .text-center.mb-10
+        h2.text-2xl.font-bold.text-gray-900.mb-2 What people are saying
+      
+      // Simple circle-based testimonial layout
+      .grid.gap-8.max-w-3xl.mx-auto(class="grid-cols-1 sm:grid-cols-2 md:grid-cols-3")
+        // Testimonial items
+        .testimonial-card(v-for="testimonial in testimonials" :key="testimonial.name")
+          .flex.flex-col.items-center.text-center
+            .w-12.h-12.rounded-full.mb-3.flex.items-center.justify-center.text-white.font-medium.text-sm.bg-gradient-to-br.from-emerald-500.to-teal-600 {{ getInitials(testimonial.name) }}
+            p.text-sm.text-gray-700.mb-2 "{{ testimonial.quote }}"
+            .text-xs.font-medium.text-gray-500 {{ testimonial.name }}
+
   // CTA Section
   section.py-24.bg-gradient-to-br.from-emerald-500.to-teal-500.text-white
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
@@ -187,6 +203,42 @@ const benefits = [
     description: 'Built with security and scalability in mind for growing businesses.'
   }
 ];
+
+// Helper function to get initials from name
+function getInitials(name) {
+  return name.split(' ')
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase();
+}
+
+// Testimonials
+const testimonials = [
+  {
+    quote: "So much better than keeping business cards in a drawer. No more typing everything manually.",
+    name: "Zara"
+  },
+  {
+    quote: "I can finally find people I met at conferences months ago. Makes follow-ups way easier.",
+    name: "Theo"
+  },
+  {
+    quote: "Used to lose important contacts all the time. Not anymore.",
+    name: "Astrid"
+  },
+  {
+    quote: "The email templates are a huge timesaver. One less thing to think about.",
+    name: "Silas"
+  },
+  {
+    quote: "Helps me remember where I met someone. No more awkward follow-up conversations.",
+    name: "Fiona"
+  },
+  {
+    quote: "Been using it for 3 months. Can't imagine going back to the old way.",
+    name: "Kieran"
+  }
+];
 </script>
 
 <style scoped>
@@ -235,5 +287,13 @@ html {
 /* Ensure consistent button widths */
 .cta-button {
   min-width: 200px;
+}
+
+.testimonial-card {
+  transition: all 0.2s ease;
+}
+
+.testimonial-card:hover .rounded-full {
+  transform: scale(1.1);
 }
 </style>
