@@ -1,4 +1,5 @@
-import { Analytics } from '@vercel/analytics/vue';
+import { Analytics } from '@vercel/analytics/vue'
+
 <template lang="pug">
 .min-h-screen.bg-gray-50.flex.flex-col
   RouterView
