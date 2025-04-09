@@ -78,9 +78,11 @@ main.p-8.max-w-2xl.mx-auto(v-else)
         input(
           type="email"
           v-model="formData.email"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-          required
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-gray-50 cursor-not-allowed"
+          disabled
+          readonly
         )
+        p.text-xs.text-gray-500.mt-1 Your email is tied to your account and cannot be changed
 
       // Company
       .space-y-2
