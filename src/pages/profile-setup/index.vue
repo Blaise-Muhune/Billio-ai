@@ -1143,10 +1143,7 @@ async function saveProfile() {
       profileCompleted: true,
       updatedAt: new Date(),
       github: formData.value.github?.trim() || '',
-      visibility: {
-        ...formData.value.visibility,
-        customLinks: formData.value.visibility.customLinks
-      }
+      visibility: formData.value.visibility
     };
 
     // Save to Firestore

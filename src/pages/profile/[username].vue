@@ -283,17 +283,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Instagram
                     .text-sm.text-gray-600.truncate {{ profile.instagram }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('instagram')"
-                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    :title="profile.visibility?.instagram ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.instagram ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-gray-600"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('instagram')"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="profile.visibility?.instagram ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.instagram ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
               //- Facebook Link
               a(
@@ -310,17 +310,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Facebook
                     .text-sm.text-gray-600.truncate {{ profile.facebook }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('facebook')"
-                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    :title="profile.visibility?.facebook ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.facebook ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-gray-600"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('facebook')"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="profile.visibility?.facebook ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.facebook ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
               //- GitHub Link
               a(
@@ -337,17 +337,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 GitHub
                     .text-sm.text-gray-600.truncate {{ profile.github }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('github')"
-                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    :title="profile.visibility?.github ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.github ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-gray-600"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('github')"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="profile.visibility?.github ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.github ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
               //- Spotify Link
               a(
@@ -364,17 +364,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Spotify
                     .text-sm.text-gray-600.truncate {{ profile.spotify }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('spotify')"
-                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    :title="profile.visibility?.spotify ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.spotify ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-gray-600"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('spotify')"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="profile.visibility?.spotify ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.spotify ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
               //- SoundCloud Link
               a(
@@ -391,17 +391,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 SoundCloud
                     .text-sm.text-gray-600.truncate {{ profile.soundcloud }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('soundcloud')"
-                    class="p-1.5 rounded-lg hover:bg-[#FF3300]/10 transition-all duration-200"
-                    :title="profile.visibility?.soundcloud ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.soundcloud ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-[#FF3300]"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('soundcloud')"
+                      class="p-1.5 rounded-lg hover:bg-[#FF3300]/10 transition-all duration-200"
+                      :title="profile.visibility?.soundcloud ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.soundcloud ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-[#FF3300]"
+                      )
 
               //- YouTube Music Link
               a(
@@ -418,17 +418,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 YouTube Music
                     .text-sm.text-gray-600.truncate {{ profile.youtubeMusic }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('youtubeMusic')"
-                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    :title="profile.visibility?.youtubeMusic ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.youtubeMusic ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-gray-600"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('youtubeMusic')"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="profile.visibility?.youtubeMusic ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.youtubeMusic ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
               //- Apple Music
               a(
@@ -445,17 +445,17 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Apple Music
                     .text-sm.text-gray-600.truncate {{ profile.appleMusic }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('appleMusic')"
-                    class="p-1.5 rounded-lg hover:bg-[#FA2C55]/10 transition-all duration-200"
-                    :title="profile.visibility?.appleMusic ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.appleMusic ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-[#FA2C55]"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('appleMusic')"
+                      class="p-1.5 rounded-lg hover:bg-[#FA2C55]/10 transition-all duration-200"
+                      :title="profile.visibility?.appleMusic ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.appleMusic ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-[#FA2C55]"
+                      )
 
               //- Other Link
               a(
@@ -472,24 +472,24 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   .flex-1.min-w-0
                     .text-sm.font-medium.text-gray-900 Other Link
                     .text-sm.text-gray-600.truncate {{ profile.otherLink }}
-                  button.absolute.top-2.right-2(
-                    v-if="isOwner"
-                    @click.stop.prevent="toggleVisibility('otherLink')"
-                    class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    :title="profile.visibility?.otherLink ? 'Hide from public' : 'Show to public'"
-                  )
-                    VaIcon(
-                      :name="profile.visibility?.otherLink ? 'visibility' : 'visibility_off'"
-                      size="18px"
-                      class="text-gray-600"
+                    button.absolute.top-2.right-2(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('otherLink')"
+                      class="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                      :title="profile.visibility?.otherLink ? 'Hide from public' : 'Show to public'"
                     )
+                      VaIcon(
+                        :name="profile.visibility?.otherLink ? 'visibility' : 'visibility_off'"
+                        size="18px"
+                        class="text-gray-600"
+                      )
 
               //- Custom Links Section
               template(v-if="profile.customLinks && profile.customLinks.length > 0")
                 a(
                   v-for="(link, index) in profile.customLinks"
                   :key="index"
-                  v-if="isOwner || profile.visibility?.customLinks?.[index]"
+                  v-if="isOwner || profile.visibility?.customLinks?.[index] !== false"
                   :href="formatSocialLink(link.url)"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -849,22 +849,31 @@ function getCustomLinkVisibility(index) {
 }
 
 function toggleCustomLinkVisibility(index) {
-  if (!profile.value.visibility) {
-    profile.value.visibility = {};
-  }
-  if (!profile.value.visibility.customLinks) {
-    profile.value.visibility.customLinks = {};
-  }
-  profile.value.visibility.customLinks[index] = !getCustomLinkVisibility(index);
-  
-  // Update the profile in Firestore
-  const userRef = doc(db, 'users', user.value.uid);
-  updateDoc(userRef, {
-    'visibility.customLinks': profile.value.visibility.customLinks
-  }).catch(err => {
-    console.error('Error updating custom link visibility:', err);
+  try {
+    if (!isOwner.value) return;
+    
+    // Initialize visibility object if it doesn't exist
+    if (!profile.value.visibility) {
+      profile.value.visibility = {};
+    }
+    
+    // Initialize customLinks array in visibility if it doesn't exist
+    if (!profile.value.visibility.customLinks) {
+      profile.value.visibility.customLinks = {};
+    }
+    
+    // Toggle the visibility state
+    profile.value.visibility.customLinks[index] = !getCustomLinkVisibility(index);
+    
+    // Update the profile in Firestore with the complete visibility object
+    const userRef = doc(db, 'users', user.value.uid);
+    updateDoc(userRef, {
+      visibility: profile.value.visibility
+    });
+  } catch (err) {
+    console.error('Error toggling custom link visibility:', err);
     error.value = 'Failed to update visibility settings';
-  });
+  }
 }
 
 // Add this to the script section
