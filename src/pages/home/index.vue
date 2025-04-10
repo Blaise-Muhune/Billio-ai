@@ -201,21 +201,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               h3.text-xl.font-semibold.text-gray-900 Your Networking Hub
               span.text-sm.text-emerald-600.bg-emerald-50.px-3.py-1.rounded-lg.font-medium {{ businessCards.length }} cards
             .flex.flex-col.gap-4(class="sm:flex-row sm:items-center")
-              // Event Selector
-              .relative.flex.items-center.w-full(class="sm:w-auto")
-                select(
-                  v-model="selectedEventFilter"
-                  class="w-full bg-white text-gray-700 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm appearance-none pr-8 shadow-sm hover:border-gray-300 transition-all duration-200"
-                  :disabled="!user"
-                  @change="handleEventChange"
-                )
-                  option(value="null") All Events
-                  option(
-                    v-for="event in events"
-                    :key="event.id"
-                    :value="event.id"
-                  ) {{ event.name }}
-                VaIcon(name="expand_more" size="16px" class="text-gray-500 absolute right-3 pointer-events-none")
+              // Event Selector removed from here
               .flex.items-center.gap-2.w-full(class="sm:w-auto")
                 button(
                   class="flex-1 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300 sm:flex-initial"
@@ -256,10 +242,21 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           class="hidden"
           accept="image/*"
           @change="handleFileSelect"
+          multiple
+        )
+        
+        //- Hidden VCF Input
+        input(
+          type="file"
+          ref="vcfInput"
+          class="hidden"
+          accept=".vcf,.vcard"
+          @change="handleVcfSelect"
+          multiple
         )
 
-        //- Upload Area
-        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-if="!uploading")
+        //- Upload Area (Initial State)
+        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-if="!uploading && !selectedFiles.length")
           .border-2.border-dashed.border-emerald-200.rounded-xl.p-8.transition-all.duration-300.bg-emerald-50.bg-opacity-30(
             class="hover:border-emerald-400 hover:bg-emerald-50"
             @dragover.prevent
@@ -267,17 +264,165 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           )
             .flex.flex-col.items-center.justify-center.text-center
               VaIcon(name="upload" size="48px" class="text-emerald-400 mb-4")
-              h3.text-2xl.font-bold.text-gray-900.mb-2 Upload Business Cards
-              p.text-gray-600.mb-6 Drag and drop your business cards or click to browse
+              h3.text-2xl.font-bold.text-gray-900.mb-2 Upload Business Cards or Contacts
+              p.text-gray-600.mb-6 Drag and drop image files or contact files (.vcf)
+              .flex.flex-col.gap-3(class="sm:flex-row")
+                button(
+                  class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
+                  @click="handleUploadCard"
+                )
+                  VaIcon(name="file_upload" size="20px")
+                  span Browse Images
+                button(
+                  class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
+                  @click="handleImportContacts"
+                )
+                  VaIcon(name="contact_page" size="20px")
+                  span Import Contacts (.vcf)
+              p.text-gray-500.text-sm.mt-3 You can select multiple files
+
+        //- File Preview Area
+        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-if="!uploading && selectedFiles.length > 0")
+          .flex.flex-col
+            .flex.justify-between.items-center.mb-6
+              h3.text-xl.font-bold.text-gray-900 Selected Files ({{ selectedFiles.length }})
+              .flex.gap-3
+                button(
+                  class="px-4 py-2 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+                  @click="clearSelectedFiles"
+                ) 
+                  .flex.items-center.gap-1
+                    VaIcon(name="cancel" size="16px")
+                    span Cancel
+                button(
+                  class="px-5 py-2 text-sm bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg shadow-sm hover:shadow-md transition-all"
+                  @click="processSelectedFiles"
+                )
+                  .flex.items-center.gap-1
+                    VaIcon(name="check" size="16px")
+                    span Upload All
+            
+            //- Event Selection
+            .bg-gradient-to-r.from-emerald-50.to-teal-50.p-3.rounded-lg.mb-4.border.border-emerald-200
+              .flex.flex-col.sm_flex-row.items-center.gap-3
+                .flex.items-center.gap-2.min-w-max
+                  VaIcon(name="event" size="18px" class="text-emerald-500")
+                  span.text-sm.font-medium.text-gray-700 Assign to Event:
+                .flex-1.flex.flex-wrap.gap-2.items-center.w-full
+                  select(
+                    class="form-select rounded-lg border-emerald-200 py-1.5 px-2 text-sm flex-1 min-w-[200px] bg-white"
+                    v-model="selectedPreviewEvent"
+                  )
+                    option(value="") -- Select Event (Optional) --
+                    option(value="null") No Event
+                    option(
+                      v-for="event in events"
+                      :key="event.id"
+                      :value="event.id"
+                    ) {{ event.name }} ({{ formatDate(event.date) }})
+                  
+                  button(
+                    class="text-sm px-3 py-1.5 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-50 transition-all flex items-center gap-1 text-emerald-600"
+                    @click="handleCreateEvent"
+                  )
+                    VaIcon(name="add" size="14px")  
+                    span New Event
+
+          //- Preview grid
+          .grid.grid-cols-2.sm_grid-cols-3.md_grid-cols-4.lg_grid-cols-6.gap-3
+            .relative.flex.flex-col.border.border-gray-200.rounded-lg.overflow-hidden.shadow-sm(
+              v-for="(file, index) in selectedFiles" 
+              :key="index"
+            )
+              //- Image preview
+              .h-28.bg-gray-100.flex.items-center.justify-center.overflow-hidden
+                img(:src="previewUrls[index]" class="object-cover w-full h-full" alt="Preview")
+              
+              //- File info
+              .p-2
+                .text-xs.font-medium.text-gray-900.truncate(:title="file.name") {{ file.name }}
+                .text-xs.text-gray-500 {{ (file.size / 1024).toFixed(1) }} KB
+              
+              //- Remove button
               button(
-                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
-                @click="handleUploadCard"
+                class="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm border border-gray-200 hover:bg-gray-100 transition-all"
+                @click="removeFileFromSelection(index)"
+                title="Remove"
               )
-                VaIcon(name="file_upload" size="20px")
-                span Browse Files
+                VaIcon(name="close" size="14px" class="text-gray-700")
+
+        //- Contact Files Preview Area
+        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-if="!uploading && showContactPreview && selectedContactFiles.length > 0")
+          .flex.flex-col
+            .flex.justify-between.items-center.mb-6
+              h3.text-xl.font-bold.text-gray-900 Selected Contacts ({{ selectedContactFiles.length }})
+              .flex.gap-3
+                button(
+                  class="px-4 py-2 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+                  @click="clearSelectedContactFiles"
+                ) 
+                  .flex.items-center.gap-1
+                    VaIcon(name="cancel" size="16px")
+                    span Cancel
+                button(
+                  class="px-5 py-2 text-sm bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg shadow-sm hover:shadow-md transition-all"
+                  @click="processSelectedContactFiles"
+                )
+                  .flex.items-center.gap-1
+                    VaIcon(name="check" size="16px")
+                    span Upload All
+            
+            //- Event Selection
+            .bg-gradient-to-r.from-emerald-50.to-teal-50.p-3.rounded-lg.mb-4.border.border-emerald-200
+              .flex.flex-col.sm_flex-row.items-center.gap-3
+                .flex.items-center.gap-2.min-w-max
+                  VaIcon(name="event" size="18px" class="text-emerald-500")
+                  span.text-sm.font-medium.text-gray-700 Assign to Event:
+                .flex-1.flex.flex-wrap.gap-2.items-center.w-full
+                  select(
+                    class="form-select rounded-lg border-emerald-200 py-1.5 px-2 text-sm flex-1 min-w-[200px] bg-white"
+                    v-model="selectedPreviewEvent"
+                  )
+                    option(value="") -- Select Event (Optional) --
+                    option(value="null") No Event
+                    option(
+                      v-for="event in events"
+                      :key="event.id"
+                      :value="event.id"
+                    ) {{ event.name }} ({{ formatDate(event.date) }})
+                  
+                  button(
+                    class="text-sm px-3 py-1.5 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-50 transition-all flex items-center gap-1 text-emerald-600"
+                    @click="handleCreateEvent"
+                  )
+                    VaIcon(name="add" size="14px")  
+                    span New Event
+
+          //- Preview grid for contacts
+          .grid.grid-cols-2.sm_grid-cols-3.md_grid-cols-4.lg_grid-cols-6.gap-3
+            .relative.flex.flex-col.border.border-gray-200.rounded-lg.overflow-hidden.shadow-sm(
+              v-for="(fileInfo, index) in contactFilesInfo" 
+              :key="index"
+            )
+              //- Contact icon preview
+              .h-28.bg-gray-100.flex.items-center.justify-center.overflow-hidden
+                VaIcon(name="contact_page" size="48px" class="text-emerald-400")
+              
+              //- File info
+              .p-2
+                .text-xs.font-medium.text-gray-900.truncate(:title="fileInfo.fullName") {{ fileInfo.name }}
+                .text-xs.text-gray-500 {{ (fileInfo.size / 1024).toFixed(1) }} KB
+              
+              //- Remove button
+              button(
+                class="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm border border-gray-200 hover:bg-gray-100 transition-all"
+                @click="removeContactFileFromSelection(index)"
+                title="Remove"
+              )
+                VaIcon(name="close" size="14px" class="text-gray-700")
 
         //- Upload Progress
-        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-else)
+        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8.mb-8(v-else-if="uploading")
           .flex.flex-col.items-center.justify-center
             template(v-if="!error")
               template(v-if="successMessage")
@@ -303,7 +448,30 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   // Search Header
                   .flex.items-center.justify-between.mb-2
                     h3.text-lg.font-medium.text-gray-900 Search Business Cards
-                    span.text-sm.text-emerald-600.bg-emerald-50.px-3.py-1.rounded-lg.font-medium {{ sortedBusinessCards.length }} results
+                    .flex.items-center
+                      span.text-sm.text-emerald-600.bg-emerald-50.px-3.py-1.rounded-lg.font-medium {{ filteredCards.length }} results
+                      // Pagination removed from here
+                  
+                  // Event Filter
+                  .relative.flex.items-center.w-full.mb-3
+                    .flex.items-center.gap-2.mb-1
+                      VaIcon(name="event" size="16px" class="text-gray-500")
+                      span.text-sm.font-medium.text-gray-700 Filter by Event:
+                    select(
+                      v-model="selectedEventFilter"
+                      class="w-full bg-white text-gray-700 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm appearance-none pr-8 shadow-sm hover:border-gray-300 transition-all duration-200"
+                      :disabled="!user"
+                      @change="handleEventChange"
+                    )
+                      option(value="all") All Events
+                      option(value="null") No Event
+                      option(
+                        v-for="event in events"
+                        :key="event.id"
+                        :value="event.id"
+                      ) {{ event.name }}
+                    VaIcon(name="expand_more" size="16px" class="text-gray-500 absolute right-3 bottom-2.5 pointer-events-none")
+                  
                   // Enhanced Search Input
                   .relative.w-full.group
                     .absolute.inset-y-0.left-0.pl-4.flex.items-center.pointer-events-none
@@ -327,10 +495,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                       VaIcon(name="close" size="20px")
 
               // Cards Grid
-              .grid(
-                class="grid-cols-1 gap-8 mt-6"
-                class="md:grid-cols-2 md:gap-6"
-              )
+              div(id="cards-section")
                 // Empty State
                 .empty-state(
                   v-if="!user"
@@ -346,311 +511,223 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                     VaIcon(name="login" size="20px")
                     span.font-medium Sign In to Get Started
                 
-                .card-container(
-                  v-else
-                  v-for="card in sortedBusinessCards"
-                  :key="card.id"
-                  class="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] group"
-                  :style=`{
-                    backgroundColor: card.style?.backgroundColor || '#ffffff',
-                    color: getContrastColor(card.style?.backgroundColor || '#ffffff'),
-                    fontFamily: getFontFamily(card.style?.fontStyle),
-                  }`
+                // No cards message 
+                .empty-state(
+                  v-else-if="user && filteredCards.length === 0"
+                  class="col-span-full flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"
                 )
-                  // Top Action Bar with Glass Effect
-                  .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.flex-col.gap-3.border-b.border-gray-100(
-                    class="sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-3"
+                  VaIcon(name="search_off" size="48px" class="text-gray-400 mb-4")
+                  p.text-gray-500.text-center.mb-2 No business cards found
+                  p.text-sm.text-gray-400.text-center(v-if="searchQuery") 
+                    | No cards match your search criteria. Try different keywords.
+                  p.text-sm.text-gray-400.text-center(v-else) 
+                    | Upload your first business card to get started!
+                  button(
+                    v-if="searchQuery"
+                    class="mt-4 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
+                    @click="searchQuery = ''"
                   )
-                    .flex.items-center.gap-2.w-full(class="sm:w-auto")
-                      .relative.group.w-full(class="sm:w-auto")
-                        button(
-                          class="md:invisible md:group-hover:visible visible w-full bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-emerald-400 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md hover:border-emerald-500 sm:w-auto"
-                          @click="saveContact(card)"
-                        )
-                          VaIcon(name="person_add" size="18px")
-                          span.font-medium Save Contact
-                      .relative.group.w-full(class="sm:w-auto")
-                        button(
-                          class="md:invisible md:group-hover:visible visible w-full bg-transparent hover:bg-white text-gray-700 border border-gray-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:shadow-sm hover:border-gray-300"
-                          @click.stop="confirmGenerateEmail(card)"
-                          :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
-                        )
-                          VaIcon(name="smart_toy" size="16px")
-                          span AI message
-
-                  // Card Content with Modern Layout
-                  .flex-1.flex.flex-col.gap-8.p-8(class="sm:p-10")
-                    // Name and Title Section
-                    .space-y-3
-                      h3.text-2xl(
-                        class="sm:text-3xl font-bold tracking-tight"
-                        :style="{ color: card.style?.primaryColor || '#1f2937' }"
-                      ) {{ card.name }}
-                      p.text-lg(
-                        class="sm:text-xl"
-                        :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                      ) {{ card.title }}
-
-                    // Contact Info with Modern Grid
-                    .grid.gap-4(class="grid-cols-1 sm:grid-cols-2")
-                      // Emails
-                      .relative.flex.items-center.gap-3(
-                        v-if="card.emails?.length > 0"
-                        class="col-span-full sm:col-span-1"
+                    VaIcon(name="clear" size="20px")
+                    span.font-medium Clear Search
+                  button(
+                    v-else
+                    class="mt-4 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+                    @click="handleUploadCard"
+                  )
+                    VaIcon(name="upload" size="20px")
+                    span.font-medium Upload Card
+                
+                // Cards grid with pagination
+                div(v-else)
+                  .grid(
+                    class="grid-cols-1 gap-8 mt-6"
+                    class="md:grid-cols-2 md:gap-6"
+                  )
+                    .card-container(
+                      v-for="card in paginatedCards"
+                      :key="card.id"
+                      class="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] group"
+                      :style=`{
+                        backgroundColor: card.style?.backgroundColor || '#ffffff',
+                        color: getContrastColor(card.style?.backgroundColor || '#ffffff'),
+                        fontFamily: getFontFamily(card.style?.fontStyle),
+                      }`
+                    )
+                      // Top Action Bar with Glass Effect
+                      .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.flex-col.gap-3.border-b.border-gray-100(
+                        class="sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-3"
                       )
-                        VaIcon(name="email" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
-                        .flex.flex-col.w-full
-                          .flex.items-center.justify-between.w-full
-                            a.text-base.truncate(
-                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                              :href="'mailto:' + card.emails[0]"
-                              class="hover:underline"
-                            ) {{ card.emails[0] }}
-                            button.p-1.rounded-lg.transition-colors(
-                              v-if="card.emails.length > 1"
-                              @click="toggleContactDropdown('email', card.id)"
-                              class="hover:bg-black/5"
+                        .flex.items-center.gap-2.w-full(class="sm:w-auto")
+                          .relative.group.w-full(class="sm:w-auto")
+                            button(
+                              class="md:invisible md:group-hover:visible visible w-full bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-emerald-400 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md hover:border-emerald-500 sm:w-auto"
+                              @click="saveContact(card)"
                             )
-                              VaIcon(name="expand_more" size="18px" class="text-gray-400")
-                          
-                          // Dropdown (using HTML-like syntax instead of Pug's dot notation)
-                          div(
-                            v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id"
-                            class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
-                          )
-                            div(v-for="(email, idx) in card.emails.slice(1)")
-                              div(class="py-1")
-                                a(
-                                  :href="'mailto:' + email"
-                                  class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
-                                ) {{ email }}
+                              VaIcon(name="person_add" size="18px")
+                              span.font-medium Save Contact
+                          .relative.group.w-full(class="sm:w-auto")
+                            button(
+                              class="md:invisible md:group-hover:visible visible w-full bg-transparent hover:bg-white text-gray-700 border border-gray-200 transition-all duration-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:shadow-sm hover:border-gray-300"
+                              @click.stop="confirmGenerateEmail(card)"
+                              :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
+                            )
+                              VaIcon(name="smart_toy" size="16px")
+                              span AI message
 
-                      // Phone Numbers
-                      .relative.flex.items-center.gap-3(
-                        v-if="card.phones?.length > 0"
-                        class="col-span-full sm:col-span-1"
-                      )
-                        VaIcon(name="phone" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
-                        .flex.flex-col.w-full
-                          .flex.items-center.justify-between.w-full
-                            a.text-base.truncate(
-                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                              :href="'tel:' + card.phones[0]"
-                              class="hover:underline"
-                            ) {{ card.phones[0] }}
-                            button.p-1.rounded-lg.transition-colors(
-                              v-if="card.phones.length > 1"
-                              @click="toggleContactDropdown('phone', card.id)"
-                              class="hover:bg-black/5"
-                            )
-                              VaIcon(name="expand_more" size="18px" class="text-gray-400")
-                          
-                          // Dropdown
-                          div(
-                            v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id"
-                            class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                      // Card Content with Modern Layout
+                      .flex-1.flex.flex-col.gap-8.p-8(class="sm:p-10")
+                        // Name and Title Section
+                        .space-y-3
+                          h3.text-2xl(
+                            class="sm:text-3xl font-bold tracking-tight"
+                            :style="{ color: card.style?.primaryColor || '#1f2937' }"
+                          ) {{ card.name }}
+                          p.text-lg(
+                            class="sm:text-xl"
+                            :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                          ) {{ card.title }}
+                        
+                        // Contact Info with Modern Grid
+                        .grid.gap-4(class="grid-cols-1 sm:grid-cols-2")
+                          // Emails
+                          .relative.flex.items-center.gap-3(
+                            v-if="card.emails?.length > 0"
+                            class="col-span-full sm:col-span-1"
                           )
-                            div(v-for="(phone, idx) in card.phones.slice(1)")
-                              div(class="py-1")
-                                a(
-                                  :href="'tel:' + phone"
-                                  class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
-                                ) {{ phone }}
+                            VaIcon(name="email" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                            .flex.flex-col.w-full
+                              .flex.items-center.justify-between.w-full
+                                a.text-base.truncate(
+                                  :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                                  :href="'mailto:' + card.emails[0]"
+                                  class="hover:underline"
+                                ) {{ card.emails[0] }}
+                                button.p-1.rounded-lg.transition-colors(
+                                  v-if="card.emails.length > 1"
+                                  @click="toggleContactDropdown('email', card.id)"
+                                  class="hover:bg-black/5"
+                                )
+                                  VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                              
+                              // Dropdown (using HTML-like syntax instead of Pug's dot notation)
+                              div(
+                                v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id"
+                                class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                              )
+                                div(v-for="(email, idx) in card.emails.slice(1)")
+                                  div(class="py-1")
+                                    a(
+                                      :href="'mailto:' + email"
+                                      class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
+                                    ) {{ email }}
 
-                      // Websites
-                      .relative.flex.items-center.gap-3(
-                        v-if="card.websites?.length > 0"
-                        class="col-span-full"
-                      )
-                        VaIcon(name="language" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
-                        .flex.flex-col.w-full
-                          .flex.items-center.justify-between.w-full
-                            a.text-base.truncate(
-                              :style="{ color: card.style?.secondaryColor || '#4B5563' }"
-                              :href="formatWebsiteUrl(card.websites[0])"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              class="hover:underline"
-                            ) {{ card.websites[0] }}
-                            button.p-1.rounded-lg.transition-colors(
-                              v-if="card.websites.length > 1"
-                              @click="toggleContactDropdown('website', card.id)"
-                              class="hover:bg-black/5"
-                            )
-                              VaIcon(name="expand_more" size="18px" class="text-gray-400")
-                          
-                          // Dropdown
-                          div(
-                            v-if="expandedContact.type === 'website' && expandedContact.cardId === card.id"
-                            class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                          // Phone Numbers
+                          .relative.flex.items-center.gap-3(
+                            v-if="card.phones?.length > 0"
+                            class="col-span-full sm:col-span-1"
                           )
-                            div(v-for="(website, idx) in card.websites.slice(1)")
-                              div(class="py-1")
-                                a(
-                                  :href="formatWebsiteUrl(website)"
+                            VaIcon(name="phone" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                            .flex.flex-col.w-full
+                              .flex.items-center.justify-between.w-full
+                                a.text-base.truncate(
+                                  :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                                  :href="'tel:' + card.phones[0]"
+                                  class="hover:underline"
+                                ) {{ card.phones[0] }}
+                                button.p-1.rounded-lg.transition-colors(
+                                  v-if="card.phones.length > 1"
+                                  @click="toggleContactDropdown('phone', card.id)"
+                                  class="hover:bg-black/5"
+                                )
+                                  VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                              
+                              // Dropdown
+                              div(
+                                v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id"
+                                class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                              )
+                                div(v-for="(phone, idx) in card.phones.slice(1)")
+                                  div(class="py-1")
+                                    a(
+                                      :href="'tel:' + phone"
+                                      class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
+                                    ) {{ phone }}
+
+                          // Websites
+                          .relative.flex.items-center.gap-3(
+                            v-if="card.websites?.length > 0"
+                            class="col-span-full"
+                          )
+                            VaIcon(name="language" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                            .flex.flex-col.w-full
+                              .flex.items-center.justify-between.w-full
+                                a.text-base.truncate(
+                                  :style="{ color: card.style?.secondaryColor || '#4B5563' }"
+                                  :href="formatWebsiteUrl(card.websites[0])"
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
-                                ) {{ website }}
+                                  class="hover:underline"
+                                ) {{ card.websites[0] }}
+                                button.p-1.rounded-lg.transition-colors(
+                                  v-if="card.websites.length > 1"
+                                  @click="toggleContactDropdown('website', card.id)"
+                                  class="hover:bg-black/5"
+                                )
+                                  VaIcon(name="expand_more" size="18px" class="text-gray-400")
+                              
+                              // Dropdown
+                              div(
+                                v-if="expandedContact.type === 'website' && expandedContact.cardId === card.id"
+                                class="bg-white shadow-lg rounded-lg p-2 z-10 mt-1 w-full absolute top-full left-0"
+                              )
+                                div(v-for="(website, idx) in card.websites.slice(1)")
+                                  div(class="py-1")
+                                    a(
+                                      :href="formatWebsiteUrl(website)"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      class="block px-3 py-2 rounded-lg text-gray-700 text-sm hover:bg-gray-100 transition-colors"
+                                    ) {{ website }}
+                          
+                          // Company with Icon
+                          .flex.items-center.gap-3.col-span-full(v-if="card.company")
+                            VaIcon(name="business" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
+                            span.text-base.truncate(:style="{ color: card.style?.secondaryColor || '#4B5563' }") {{ card.company }}
 
-                      // Company with Icon
-                      .flex.items-center.gap-3.col-span-full(v-if="card.company")
-                        VaIcon(name="business" size="18px" :style="{ color: card.style?.secondaryColor || '#4B5563' }")
-                        span.text-base.truncate(:style="{ color: card.style?.secondaryColor || '#4B5563' }") {{ card.company }}
-
-                    // Event Tag with Modern Design (Now Clickable)
-                    .mt-auto.pt-6
-                      button.w-full(
-                        @click="openMoveToEventModal(card)"
-                        class="group transition-all duration-200"
-                      )
-                        .inline-flex.items-center.gap-2.px-4.py-2.rounded-full.text-base.shadow-sm.w-full.justify-center.transition-all.duration-200(
-                          :class=`[
-                            card.eventId ? 'bg-emerald-100 text-emerald-800 group-hover:bg-emerald-200' : 'bg-gray-100 text-gray-800 group-hover:bg-gray-200'
-                          ]`
-                        )
-                          VaIcon(name="event" size="16px" :class="card.eventId ? 'text-emerald-600' : 'text-gray-600'")
-                          span {{ getEventName(card.eventId) || 'Add to Event' }}
-                          VaIcon(
-                            name="edit"
-                            size="14px"
-                            :class="card.eventId ? 'text-emerald-600 opacity-0 group-hover:opacity-100' : 'text-gray-600 opacity-0 group-hover:opacity-100'"
-                            class="ml-1 transition-opacity duration-200"
+                        // Event Tag with Modern Design (Now Clickable)
+                        .mt-auto.pt-6
+                          button.w-full(
+                            @click="openMoveToEventModal(card)"
+                            class="group transition-all duration-200"
                           )
+                            .inline-flex.items-center.gap-2.px-4.py-2.rounded-full.text-base.shadow-sm.w-full.justify-center.transition-all.duration-200(
+                              :class=`[
+                                card.eventId ? 'bg-emerald-100 text-emerald-800 group-hover:bg-emerald-200' : 'bg-gray-100 text-gray-800 group-hover:bg-gray-200'
+                              ]`
+                            )
+                              VaIcon(name="event" size="16px" :class="card.eventId ? 'text-emerald-600' : 'text-gray-600'")
+                              span {{ getEventName(card.eventId) || 'Add to Event' }}
+                              VaIcon(
+                                name="edit"
+                                size="14px"
+                                :class="card.eventId ? 'text-emerald-600 opacity-0 group-hover:opacity-100' : 'text-gray-600 opacity-0 group-hover:opacity-100'"
+                                class="ml-1 transition-opacity duration-200"
+                              )
 
-                  // Bottom Action Bar with Glass Effect
-                  .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.items-center.justify-end.gap-2.border-t.border-gray-100
-                    .relative.group
-                      button(
-                        class="md:invisible md:group-hover:visible visible p-2 text-gray-400 hover:text-emerald-600 transition-all duration-200 rounded-full hover:bg-emerald-50 border border-gray-200 hover:border-emerald-200"
-                        @click.stop="openEditCardModal(card)"
-                      )
-                        VaIcon(name="edit" size="20px")
-                        span(class="font-medium ml-1") Edit
-
-      // Edit Card Modal
-      VaModal(
-        v-model="showEditCardModal"
-        :hide-default-actions="true"
-        class="rounded-2xl"
-      )
-        .p-8
-          h3.text-2xl.font-bold.mb-6 Edit Business Card
-          .space-y-6
-            // Name and Title Section
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Name
-              input(
-                v-model="editCardData.name"
-                type="text"
-                placeholder="Enter name"
-                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-              )
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Title
-              input(
-                v-model="editCardData.title"
-                type="text"
-                placeholder="Enter title"
-                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-              )
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Company
-              input(
-                v-model="editCardData.company"
-                type="text"
-                placeholder="Enter company"
-                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-              )
-
-            // Contact Information
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Email Addresses
-              .space-y-2
-                .flex.items-center.gap-2(v-for="(email, index) in editCardData.emails" :key="index")
-                  input(
-                    v-model="editCardData.emails[index]"
-                    type="email"
-                    placeholder="Enter email"
-                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-                  )
-                  button(
-                    @click="removeEmail(index)"
-                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
-                  )
-                    VaIcon(name="remove_circle" size="20px")
-              button(
-                @click="addEmail"
-                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
-              )
-                VaIcon(name="add_circle" size="16px")
-                span Add Email
-
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Phone Numbers
-              .space-y-2
-                .flex.items-center.gap-2(v-for="(phone, index) in editCardData.phones" :key="index")
-                  input(
-                    v-model="editCardData.phones[index]"
-                    type="tel"
-                    placeholder="Enter phone"
-                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-                  )
-                  button(
-                    @click="removePhone(index)"
-                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
-                  )
-                    VaIcon(name="remove_circle" size="20px")
-              button(
-                @click="addPhone"
-                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
-              )
-                VaIcon(name="add_circle" size="16px")
-                span Add Phone
-
-            .form-group
-              label.block.text-sm.font-medium.text-gray-700.mb-1 Websites
-              .space-y-2
-                .flex.items-center.gap-2(v-for="(website, index) in editCardData.websites" :key="index")
-                  input(
-                    v-model="editCardData.websites[index]"
-                    type="url"
-                    placeholder="Enter website"
-                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-                  )
-                  button(
-                    @click="removeWebsite(index)"
-                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
-                  )
-                    VaIcon(name="remove_circle" size="20px")
-              button(
-                @click="addWebsite"
-                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
-              )
-                VaIcon(name="add_circle" size="16px")
-                span Add Website
-
-          // Edit Card Modal Actions
-          .flex.items-center.justify-between.gap-4.mt-8
-            button(
-              class="bg-red-50 text-red-600 hover:bg-red-100 px-6 py-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
-              @click="confirmDeleteCard(editCardData)"
-            )
-              VaIcon(name="delete" size="18px")
-              span
-            .flex.items-center.gap-4
-              button(
-                class="bg-gray-100 text-gray-700 px-6 py-6 rounded-xl hover:bg-gray-200 transition-colors duration-200"
-                @click="showEditCardModal = false"
-              ) Cancel
-              button(
-                class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-6 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-                @click="saveCardChanges"
-                :disabled="saving"
-              )
-                .loading-spinner.w-4.h-4.border-2(v-if="saving")
-                VaIcon(v-else name="save" size="16px")
-                span(class="font-medium") {{ saving ? 'Saving...' : '' }}
+                      // Bottom Action Bar with Glass Effect
+                      .bg-white.bg-opacity-90.backdrop-blur-md.px-6.py-4.flex.items-center.justify-end.gap-2.border-t.border-gray-100
+                        .relative.group
+                          button(
+                            class="md:invisible md:group-hover:visible visible p-2 text-gray-400 hover:text-emerald-600 transition-all duration-200 rounded-full hover:bg-emerald-50 border border-gray-200 hover:border-emerald-200"
+                            @click.stop="openEditCardModal(card)"
+                          )
+                            VaIcon(name="edit" size="20px")
+                        .relative.group
+                          button(
+                            class="md:invisible md:group-hover:visible visible p-2 text-gray-400 hover:text-red-600 transition-all duration-200 rounded-full hover:bg-red-50 border border-gray-200 hover:border-red-200"
+                            @click.stop="confirmDeleteCard(card.id)"
+                          )
+                            VaIcon(name="delete" size="20px")
 
         // Stats Grid (Moved to bottom)
         
@@ -875,12 +952,33 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           .space-y-4
             .form-group
               label.block.text-sm.font-medium.text-gray-700.mb-1 Select Event
-              select(
-                v-model="selectedEventForMove"
-                class="w-full border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
-              )
-                option(value="") No Event
-                option(v-for="event in events" :key="event.id" :value="event.id") {{ event.name }}
+              .flex.flex-wrap.items-center.gap-2
+                select(
+                  v-model="selectedEventForMove"
+                  class="flex-1 border border-gray-200 rounded-xl px-6 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                )
+                  option(value="") No Event
+                  option(
+                    v-for="event in events"
+                    :key="event.id"
+                    :value="event.id"
+                  ) {{ event.name }} {{ event.date ? `(${formatDate(event.date)})` : '' }}
+                button(
+                  @click="openCreateEventFromModal"
+                  class="px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all flex items-center gap-1 text-gray-700"
+                  title="Create New Event"
+                )
+                  VaIcon(name="add" size="18px")
+                  span Create New
+              
+            // Display selected card info
+            .bg-gray-50.rounded-xl.p-4.mt-3(v-if="selectedCardForMove")
+              .flex.items-center.gap-3
+                VaIcon(name="contact_page" size="24px" class="text-emerald-600")
+                .flex.flex-col
+                  .font-medium.text-gray-900 {{ selectedCardForMove.name }}
+                  .text-sm.text-gray-600 {{ selectedCardForMove.company || selectedCardForMove.title || 'Contact' }}
+          
           .flex.justify-end.gap-4.mt-8
             button(
               class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
@@ -1034,6 +1132,145 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
         @close="hidePlanLimitModal"
       )
 
+      // Edit Card Modal
+      VaModal(
+        v-model="showEditCardModal"
+        :hide-default-actions="true"
+        class="rounded-2xl z-50"
+      )
+        .p-8
+          h3.text-2xl.font-bold.mb-6 Edit Business Card
+          .space-y-6
+            // Name and Title Section
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Name
+              input(
+                v-model="editCardData.name"
+                type="text"
+                placeholder="Enter name"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Title
+              input(
+                v-model="editCardData.title"
+                type="text"
+                placeholder="Enter title"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Company
+              input(
+                v-model="editCardData.company"
+                type="text"
+                placeholder="Enter company"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
+            
+            // Event Selection
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Event
+              .flex.flex-wrap.items-center.gap-2
+                select(
+                  v-model="editCardData.eventId"
+                  class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                )
+                  option(value="") No Event
+                  option(
+                    v-for="event in events"
+                    :key="event.id"
+                    :value="event.id"
+                  ) {{ event.name }} {{ event.date ? `(${formatDate(event.date)})` : '' }}
+                button(
+                  @click="handleCreateEvent"
+                  class="px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-all flex items-center gap-1 text-gray-700"
+                  title="Create New Event"
+                )
+                  VaIcon(name="add" size="18px")
+                  span.sm_block.hidden New Event
+
+            // Contact Information
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Email Addresses
+              .space-y-2
+                .flex.items-center.gap-2(v-for="(email, index) in editCardData.emails" :key="index")
+                  input(
+                    v-model="editCardData.emails[index]"
+                    type="email"
+                    placeholder="Enter email"
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                  )
+                  button(
+                    @click="removeEmail(index)"
+                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                  )
+                    VaIcon(name="remove_circle" size="20px")
+              button(
+                @click="addEmail"
+                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
+              )
+                VaIcon(name="add_circle" size="16px")
+                span Add Email
+                
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Phone Numbers
+              .space-y-2
+                .flex.items-center.gap-2(v-for="(phone, index) in editCardData.phones" :key="index")
+                  input(
+                    v-model="editCardData.phones[index]"
+                    type="tel"
+                    placeholder="Enter phone"
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                  )
+                  button(
+                    @click="removePhone(index)"
+                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                  )
+                    VaIcon(name="remove_circle" size="20px")
+              button(
+                @click="addPhone"
+                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
+              )
+                VaIcon(name="add_circle" size="16px")
+                span Add Phone
+                
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 Websites
+              .space-y-2
+                .flex.items-center.gap-2(v-for="(website, index) in editCardData.websites" :key="index")
+                  input(
+                    v-model="editCardData.websites[index]"
+                    type="url"
+                    placeholder="Enter website"
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+                  )
+                  button(
+                    @click="removeWebsite(index)"
+                    class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                  )
+                    VaIcon(name="remove_circle" size="20px")
+              button(
+                @click="addWebsite"
+                class="mt-2 text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm"
+              )
+                VaIcon(name="add_circle" size="16px")
+                span Add Website
+                
+          // Action buttons
+          .flex.justify-end.gap-4.mt-8
+            button(
+              class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
+              @click="showEditCardModal = false"
+            ) Cancel
+            button(
+              class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+              @click="saveCardChanges"
+              :disabled="saving"
+            )
+              .loading-spinner.w-4.h-4.border-2(v-if="saving")
+              VaIcon(v-else name="save" size="16px")
+              span(class="font-medium") {{ saving ? 'Saving...' : 'Save Changes' }}
+
     // Login Prompt Modal
     VaModal(
       v-model="showLoginPrompt"
@@ -1057,6 +1294,65 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
           )
             VaIcon(name="login" size="16px")
             span(class="font-medium") Sign In
+
+      // Pagination controls
+      .flex.justify-center.items-center.gap-2.mt-8.pb-4(v-if="totalPages > 1")
+        button(
+          class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          @click="prevPage"
+          :disabled="currentPage === 1"
+          aria-label="Previous page"
+        )
+          VaIcon(name="chevron_left" size="20px" class="text-gray-700")
+        
+        // Page numbers
+        template(v-if="totalPages <= 7")
+          button(
+            v-for="page in totalPages"
+            :key="page"
+            @click="goToPage(page)"
+            class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+            :class="currentPage === page ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+          ) {{ page }}
+        
+        // Truncated page numbers for many pages
+        template(v-else)
+          // First page
+          button(
+            @click="goToPage(1)"
+            class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+            :class="currentPage === 1 ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+          ) 1
+          
+          // Ellipsis if needed before middle pages
+          .text-gray-400(v-if="currentPage > 3") ...
+          
+          // Middle pages
+          template(v-for="page in totalPages" :key="page")
+            button(
+              v-if="page !== 1 && page !== totalPages && (page === currentPage || page === currentPage - 1 || page === currentPage + 1)"
+              @click="goToPage(page)"
+              class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+              :class="currentPage === page ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+            ) {{ page }}
+          
+          // Ellipsis if needed after middle pages
+          .text-gray-400(v-if="currentPage < totalPages - 2") ...
+          
+          // Last page
+          button(
+            @click="goToPage(totalPages)"
+            class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+            :class="currentPage === totalPages ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+          ) {{ totalPages }}
+        
+        button(
+          class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          @click="nextPage"
+          :disabled="currentPage === totalPages"
+          aria-label="Next page"
+        )
+          VaIcon(name="chevron_right" size="20px" class="text-gray-700")
 </template>
 
 <script setup>
@@ -1070,6 +1366,8 @@ import { storage } from '../../config/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import QrcodeVue from 'qrcode.vue';
 import PlanLimitModal from '../../components/PlanLimitModal.vue';
+// Import formatDate from dateUtils
+import { formatDate } from '../../utils/dateUtils';
 
 const router = useRouter();
 const user = ref(null);
@@ -1078,11 +1376,11 @@ const uploading = ref(false);
 const processingStatus = ref('');
 const error = ref('');
 const fileInput = ref(null);
-const selectedEventFilter = ref('null');
+const selectedEventFilter = ref('all');
 const showEmailModal = ref(false);
 const emailDraft = ref('');
 const showDraftsModal = ref(false);
-const emailDrafts = ref([]);
+const emailDrafts = ref({});
 const cardDrafts = ref({});
 const generatingDraft = ref(null);
 const loadingDrafts = ref({});
@@ -1119,7 +1417,7 @@ const copiedDrafts = ref({});
 const eventNameError = ref('');
 const searchQuery = ref('');
 
-const STORAGE_KEY = 'selectedEvent';
+const STORAGE_KEY = 'selected_event_filter';
 
 // Add successMessage ref
 const successMessage = ref('');
@@ -1133,9 +1431,53 @@ const editCardData = ref({
   company: '',
   emails: [],
   phones: [],
-  websites: []
+  websites: [],
+  eventId: null
 });
 const saving = ref(false);
+
+const showDeleteConfirm = ref(false);
+const deletingCardId = ref(null);
+const confirmTextVisible = ref(false);
+const selectedFiles = ref([]);
+const previewUrls = ref([]);
+const selectedPreviewEvent = ref('');
+// Add new refs for contact files
+const selectedContactFiles = ref([]);
+const contactFilesInfo = ref([]);
+const showContactPreview = ref(false);
+// Variable to store callback when creating an event from card
+let eventCreationCallback = null;
+
+// Pagination
+const cardsPerPage = 8;
+const currentPage = ref(1);
+const totalPages = computed(() => Math.ceil(filteredCards.value.length / cardsPerPage));
+const paginatedCards = computed(() => {
+  const startIndex = (currentPage.value - 1) * cardsPerPage;
+  const endIndex = startIndex + cardsPerPage;
+  return filteredCards.value.slice(startIndex, endIndex);
+});
+
+function goToPage(page) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    // Scroll to the top of the cards section
+    document.getElementById('cards-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    goToPage(currentPage.value + 1);
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    goToPage(currentPage.value - 1);
+  }
+}
 
 // Add these functions after other functions
 function openEditCardModal(card) {
@@ -1146,7 +1488,8 @@ function openEditCardModal(card) {
     company: card.company || '',
     emails: [...(card.emails || [])],
     phones: [...(card.phones || [])],
-    websites: [...(card.websites || [])]
+    websites: [...(card.websites || [])],
+    eventId: card.eventId
   };
   showEditCardModal.value = true;
 }
@@ -1185,7 +1528,8 @@ async function saveCardChanges() {
       ...editCardData.value,
       emails: editCardData.value.emails.filter(email => email.trim()),
       phones: editCardData.value.phones.filter(phone => phone.trim()),
-      websites: editCardData.value.websites.filter(website => website.trim())
+      websites: editCardData.value.websites.filter(website => website.trim()),
+      eventId: editCardData.value.eventId || null
     };
 
     await businessCardService.updateCard(updatedCard);
@@ -1213,15 +1557,14 @@ onMounted(() => {
   const unsubscribe = authService.onAuthStateChanged((currentUser) => {
     user.value = currentUser;
     if (currentUser) {
+      // Load saved event selection or default to 'all'
+      const savedEvent = localStorage.getItem(STORAGE_KEY);
+      selectedEventFilter.value = savedEvent || 'all';
+      
       loadCards();
       loadEvents();
       // Check premium status
       checkPremiumStatus();
-      // Load saved event selection
-      const savedEvent = localStorage.getItem(STORAGE_KEY);
-      if (savedEvent) {
-        selectedEventFilter.value = savedEvent;
-      }
     }
   });
 
@@ -1242,7 +1585,15 @@ async function signOut() {
 
 async function loadCards() {
   try {
-    businessCards.value = await businessCardService.getCards(selectedEventFilter.value === 'null' ? null : selectedEventFilter.value);
+    // If selectedEventFilter is 'all', pass null to get all cards
+    // If it's 'null', pass null to get only cards with no event
+    // Otherwise pass the event ID
+    const filterValue = 
+      selectedEventFilter.value === 'all' ? null : 
+      selectedEventFilter.value === 'null' ? null :
+      selectedEventFilter.value;
+    
+    businessCards.value = await businessCardService.getCards(filterValue);
     // Initialize expandedDrafts for each card
     businessCards.value.forEach(card => {
       expandedDrafts.value[card.id] = false;
@@ -1260,50 +1611,151 @@ async function loadCards() {
 async function handleFileSelect(event) {
   const files = event.target.files;
   if (files.length > 0) {
-    await uploadFile(files[0]);
+    // Preview files instead of uploading immediately
+    previewSelectedFiles(files);
   }
 }
 
 async function handleDrop(event) {
   const files = event.dataTransfer.files;
   if (files.length > 0) {
-    await uploadFile(files[0]);
+    // Separate image files and VCF files
+    const imageFiles = [];
+    const vcfFiles = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        imageFiles.push(file);
+      } else if (file.name.endsWith('.vcf') || file.name.endsWith('.vcard') || file.type === 'text/vcard') {
+        vcfFiles.push(file);
+      }
+    }
+    
+    // Handle image files
+    if (imageFiles.length > 0) {
+      previewSelectedFiles(imageFiles);
+    }
+    
+    // Handle VCF files - Modified to use preview instead of direct upload
+    if (vcfFiles.length > 0) {
+      previewSelectedContactFiles(vcfFiles);
+    }
+    
+    // Show error if no valid files found
+    if (imageFiles.length === 0 && vcfFiles.length === 0) {
+      error.value = 'Please upload only image or VCF files';
+    }
   }
 }
 
-async function uploadFile(file) {
-  if (!file.type.startsWith('image/')) {
-    error.value = 'Please upload an image file';
-    // Clear the file input even for invalid file type
-    if (fileInput.value) {
-      fileInput.value.value = '';
+function previewSelectedFiles(files) {
+  // Clear existing selection
+  selectedFiles.value = [];
+  previewUrls.value = [];
+  
+  // Process image files
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    // Already verified as image in handleDrop, but double check
+    if (file.type.startsWith('image/')) {
+      // Create preview URLs
+      const url = URL.createObjectURL(file);
+      previewUrls.value.push(url);
+      selectedFiles.value.push(file);
     }
-    return;
   }
+}
 
+function previewSelectedContactFiles(files) {
+  // Clear existing selection
+  selectedContactFiles.value = [];
+  contactFilesInfo.value = [];
+  
+  // Process VCF files
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    // Extract filename without extension for display
+    const fileName = file.name.replace(/\.(vcf|vcard)$/i, '');
+    
+    contactFilesInfo.value.push({
+      name: fileName,
+      size: file.size,
+      fullName: file.name
+    });
+    selectedContactFiles.value.push(file);
+  }
+  
+  // Show the contact preview section
+  showContactPreview.value = true;
+}
+
+async function processSelectedFiles() {
+  if (selectedFiles.value.length === 0) return;
+  
+  // Use the selected event from preview if available, otherwise use the global filter
+  const eventId = selectedPreviewEvent.value || selectedEvent.value || null;
+  
+  await uploadFiles(selectedFiles.value, eventId);
+  // Clear the selection after upload (successful or not)
+  clearSelectedFiles();
+}
+
+function removeFileFromSelection(index) {
+  // Release the URL to prevent memory leaks
+  URL.revokeObjectURL(previewUrls.value[index]);
+  
+  // Remove the file from the arrays
+  selectedFiles.value.splice(index, 1);
+  previewUrls.value.splice(index, 1);
+  
+  // If no files left, reset the file input
+  if (selectedFiles.value.length === 0 && fileInput.value) {
+    fileInput.value.value = '';
+  }
+}
+
+function clearSelectedFiles() {
+  // Release all URLs to prevent memory leaks
+  previewUrls.value.forEach(url => URL.revokeObjectURL(url));
+  
+  // Clear arrays
+  selectedFiles.value = [];
+  previewUrls.value = [];
+  
+  // Reset file input
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+}
+
+async function uploadFiles(files, eventId = null) {
+  // No need to check file types again, already done in preview
   uploading.value = true;
   error.value = '';
   successMessage.value = '';
-  processingStatus.value = 'Starting upload...';
+  processingStatus.value = `Preparing to upload ${files.length} business card${files.length > 1 ? 's' : ''}...`;
 
   try {
-    const card = await businessCardService.uploadCard(
-      file, 
-      selectedEvent.value || null,
+    const result = await businessCardService.uploadMultipleCards(
+      files, 
+      eventId,
       (status) => {
         processingStatus.value = status;
       }
     );
-    businessCards.value.unshift(card);
-    // Initialize expandedDrafts for the new card
-    expandedDrafts.value[card.id] = false;
-    // Set success message
-    successMessage.value = card.message;
     
-    // Clear the file input
-    if (fileInput.value) {
-      fileInput.value.value = '';
+    // Add all new cards to the beginning of the list
+    if (result.success && result.success.length > 0) {
+      result.success.forEach(card => {
+        businessCards.value.unshift(card);
+        // Initialize expandedDrafts for each new card
+        expandedDrafts.value[card.id] = false;
+      });
     }
+    
+    // Set success message
+    successMessage.value = result.message;
     
     // Auto-hide success message and reset states after 5 seconds
     setTimeout(() => {
@@ -1312,13 +1764,8 @@ async function uploadFile(file) {
       processingStatus.value = '';
     }, 5000);
   } catch (err) {
-    error.value = err.message || 'Error uploading business card';
+    error.value = err.message || 'Error uploading business cards';
     console.error(err);
-    
-    // Clear the file input even on error
-    if (fileInput.value) {
-      fileInput.value.value = '';
-    }
     
     // Auto-hide error and reset states after 5 seconds
     setTimeout(() => {
@@ -1327,6 +1774,11 @@ async function uploadFile(file) {
       processingStatus.value = '';
     }, 5000);
   }
+}
+
+async function uploadFile(file) {
+  const fileArray = [file];
+  await uploadFiles(fileArray);
 }
 
 async function generateEmailDraft(card) {
@@ -1509,56 +1961,45 @@ async function loadEvents() {
 }
 
 async function createEvent() {
+  if (!newEventName.value.trim()) {
+    eventNameError.value = 'Event name is required';
+    return;
+  }
+
   try {
-    error.value = '';
     eventNameError.value = '';
-    
-    if (!newEventName.value.trim()) {
-      eventNameError.value = 'Event name is required';
-      return;
-    }
-
-    // Check for duplicate event names (case insensitive)
-    const isDuplicate = events.value.some(
-      event => event.name.toLowerCase() === newEventName.value.trim().toLowerCase()
-    );
-
-    if (isDuplicate) {
-      eventNameError.value = 'An event with this name already exists';
-      return;
-    }
-
-    const event = await businessCardService.createEvent({
+    // Create event object
+    const eventData = {
       name: newEventName.value.trim(),
-      date: newEventDate.value || null,
-      location: newEventLocation.value?.trim() || null
-    });
+      date: newEventDate.value,
+      location: newEventLocation.value,
+    };
+
+    const newEvent = await businessCardService.createEvent(eventData);
     
-    // Add the new event to the list
-    events.value.unshift(event);
+    // Add to events list
+    events.value.unshift(newEvent);
     
-    // Set the new event as selected
-    selectedEventFilter.value = event.id;
-    
-    // Reset form and close modal
-    showCreateEventModal.value = false;
+    // Clear form
     newEventName.value = '';
     newEventDate.value = '';
     newEventLocation.value = '';
     
-    // Reload cards to ensure everything is in sync
-    await loadCards();
+    // Close modal
+    showCreateEventModal.value = false;
     
-    if(import.meta.env.VITE_APP_ENV === 'development') {
-      console.log('Event created successfully:', event);
+    // If there's a callback from creating an event within card modal, execute it
+    if (typeof eventCreationCallback === 'function') {
+      eventCreationCallback(newEvent.id);
+      eventCreationCallback = null;
     }
+    
   } catch (err) {
     console.error('Error creating event:', err);
     if (err.type === 'PLAN_LIMIT') {
       showPlanLimitError(err.message);
-      showCreateEventModal.value = false;
     } else {
-      error.value = 'Error creating event: ' + err.message;
+      eventNameError.value = 'Error creating event';
     }
   }
 }
@@ -1572,6 +2013,31 @@ function openMoveToEventModal(card) {
   selectedCardForMove.value = card;
   selectedEventForMove.value = card.eventId || '';
   showMoveToEventModal.value = true;
+}
+
+function openCreateEventFromModal() {
+  // Store the current state to return to after creating event
+  const cardToMove = selectedCardForMove.value;
+  
+  // Hide the current modal and show create event modal
+  showMoveToEventModal.value = false;
+  
+  // Clear event creation form
+  newEventName.value = '';
+  newEventDate.value = '';
+  newEventLocation.value = '';
+  
+  // Show create event modal
+  showCreateEventModal.value = true;
+  
+  // Add a callback to return to the move modal with the new event selected
+  eventCreationCallback = (newEventId) => {
+    if (newEventId) {
+      selectedCardForMove.value = cardToMove;
+      selectedEventForMove.value = newEventId;
+      showMoveToEventModal.value = true;
+    }
+  };
 }
 
 async function moveCardToEvent() {
@@ -1616,7 +2082,7 @@ function openDraftsListModal(card) {
 
 function handleEventChange() {
   // Save the selection to localStorage
-  if (selectedEventFilter.value && selectedEventFilter.value !== 'null') {
+  if (selectedEventFilter.value) {
     localStorage.setItem(STORAGE_KEY, selectedEventFilter.value);
   } else {
     localStorage.removeItem(STORAGE_KEY);
@@ -1773,28 +2239,7 @@ function saveContact(card) {
 
 // Add this computed property after the other computed properties
 const sortedBusinessCards = computed(() => {
-  let filtered = [...businessCards.value];
-  
-  // Apply search filter if there's a query
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(card => {
-      // Get event name for the card
-      const eventName = getEventName(card.eventId)?.toLowerCase() || '';
-      
-      return (
-        card.name?.toLowerCase().includes(query) ||
-        card.company?.toLowerCase().includes(query) ||
-        card.emails?.some(email => email.toLowerCase().includes(query)) ||
-        card.phones?.some(phone => phone.includes(query)) ||
-        card.title?.toLowerCase().includes(query) ||
-        eventName.includes(query)
-      );
-    });
-  }
-  
-  // Sort by creation date
-  return filtered.sort((a, b) => {
+  return filteredCards.value.sort((a, b) => {
     const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
     const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
     return dateB - dateA;
@@ -2206,6 +2651,161 @@ async function addToAppleWallet() {
     console.error('Error adding to Apple Wallet:', err);
     error.value = 'Failed to add to Apple Wallet';
   }
+}
+
+// Filter cards by search and event
+const filteredCards = computed(() => {
+  let filtered = businessCards.value;
+  
+  // Apply event filter
+  if (selectedEventFilter.value === 'all') {
+    // Show all cards (no event filtering)
+    filtered = filtered;
+  } else if (selectedEventFilter.value && selectedEventFilter.value !== 'null') {
+    // Filter by specific event
+    filtered = filtered.filter(card => card.eventId === selectedEventFilter.value);
+  } else if (selectedEventFilter.value === 'null') {
+    // Filter cards with no event
+    filtered = filtered.filter(card => !card.eventId);
+  }
+  
+  // Apply search filter
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    filtered = filtered.filter(card => 
+      (card.name && card.name.toLowerCase().includes(query)) ||
+      (card.company && card.company.toLowerCase().includes(query)) ||
+      (card.title && card.title.toLowerCase().includes(query)) ||
+      (card.emails && card.emails.some(email => email.toLowerCase().includes(query))) ||
+      (card.phones && card.phones.some(phone => phone.includes(query)))
+    );
+  }
+  
+  return filtered;
+});
+
+// Add watchers to reset pagination when filters change
+watch([searchQuery, selectedEventFilter], () => {
+  currentPage.value = 1;
+});
+
+// Add these refs after other refs
+const vcfInput = ref(null);
+const selectedVcfFiles = ref([]);
+
+// Add this function to handle importing contacts
+function handleImportContacts() {
+  // Trigger click event on the vcf input
+  vcfInput.value.click();
+}
+
+async function handleVcfSelect(event) {
+  const files = event.target.files;
+  if (files.length > 0) {
+    // Preview VCF files instead of uploading immediately
+    previewSelectedContactFiles(files);
+    // Reset input
+    event.target.value = '';
+  }
+}
+
+async function importVcfFiles(files, eventId = null) {
+  uploading.value = true;
+  error.value = '';
+  successMessage.value = '';
+  processingStatus.value = `Importing ${files.length} contact${files.length > 1 ? 's' : ''}...`;
+
+  try {
+    // Use the selected event from filter if available
+    const eventId = selectedEventFilter.value === 'all' || selectedEventFilter.value === 'null' ? null : selectedEventFilter.value;
+    
+    const results = [];
+    const errors = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        processingStatus.value = `Importing contact ${i + 1} of ${files.length}: ${file.name}`;
+        
+        // Import the contact using the businessCardService
+        const result = await businessCardService.importVCard(file, eventId);
+        
+        // Add to results
+        results.push(result);
+        
+        // Add to business cards
+        businessCards.value.unshift(result);
+        
+        // Initialize expandedDrafts for this card
+        expandedDrafts.value[result.id] = false;
+      } catch (err) {
+        console.error(`Error importing contact ${i + 1} (${file.name}):`, err);
+        errors.push({
+          fileName: file.name,
+          error: err.message || 'Unknown error'
+        });
+      }
+    }
+
+    // Set success message
+    successMessage.value = `Successfully imported ${results.length} of ${files.length} contacts.${errors.length > 0 ? ` Failed to import ${errors.length} contacts.` : ''}`;
+    
+    // Reload cards after import
+    await loadCards();
+    
+    // Auto-hide success message and reset states after 5 seconds
+    setTimeout(() => {
+      uploading.value = false;
+      successMessage.value = '';
+      processingStatus.value = '';
+    }, 5000);
+  } catch (err) {
+    error.value = err.message || 'Error importing contacts';
+    console.error(err);
+    
+    // Auto-hide error and reset states after 5 seconds
+    setTimeout(() => {
+      uploading.value = false;
+      error.value = '';
+      processingStatus.value = '';
+    }, 5000);
+  }
+}
+
+function removeContactFileFromSelection(index) {
+  // Remove the file from the arrays
+  selectedContactFiles.value.splice(index, 1);
+  contactFilesInfo.value.splice(index, 1);
+  
+  // If no files left, hide the preview and reset
+  if (selectedContactFiles.value.length === 0) {
+    clearSelectedContactFiles();
+  }
+}
+
+function clearSelectedContactFiles() {
+  // Clear arrays
+  selectedContactFiles.value = [];
+  contactFilesInfo.value = [];
+  
+  // Hide preview
+  showContactPreview.value = false;
+  
+  // Reset file input if needed
+  if (vcfInput.value) {
+    vcfInput.value.value = '';
+  }
+}
+
+async function processSelectedContactFiles() {
+  if (selectedContactFiles.value.length === 0) return;
+  
+  // Use the selected event from preview if available, otherwise use the global filter
+  const eventId = selectedPreviewEvent.value || selectedEvent.value || null;
+  
+  await importVcfFiles(selectedContactFiles.value, eventId);
+  // Clear the selection after upload
+  clearSelectedContactFiles();
 }
 </script>
 

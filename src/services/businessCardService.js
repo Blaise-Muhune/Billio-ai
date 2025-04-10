@@ -695,6 +695,7 @@ return a json object with the following fields:
         emails: cardData.emails,
         phones: cardData.phones,
         websites: cardData.websites,
+        eventId: cardData.eventId || null,
         updatedAt: serverTimestamp()
       };
 
@@ -709,5 +710,374 @@ return a json object with the following fields:
       console.error('Error updating business card:', error);
       throw error;
     }
+  },
+
+  async uploadMultipleCards(files, eventId = null, onStatusUpdate = null) {
+    try {
+      if (!storage || !db) {
+        throw new Error('Firebase not initialized');
+      }
+
+      const user = authService.getCurrentUser();
+      if (!user) {
+        throw new Error('User must be logged in to upload cards');
+      }
+
+      // Check if there are files to process
+      if (!files || files.length === 0) {
+        throw new Error('No files selected for upload');
+      }
+
+      // Check usage limits before proceeding
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // Create user document if it doesn't exist
+        await setDoc(userRef, {
+          email: user.email,
+          displayName: user.displayName,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          plan: 'FREE',
+          limits: SUBSCRIPTION_PLANS.FREE.limits
+        });
+      }
+
+      const userData = userDoc.exists() ? userDoc.data() : { limits: SUBSCRIPTION_PLANS.FREE.limits };
+      const userLimits = userData.limits || SUBSCRIPTION_PLANS.FREE.limits;
+
+      // Get or create usage stats
+      const usageRef = doc(db, 'usage_stats', user.uid);
+      const usageDoc = await getDoc(usageRef);
+      
+      if (!usageDoc.exists()) {
+        // Create usage stats document if it doesn't exist
+        await setDoc(usageRef, {
+          cards: 0,
+          events: 0,
+          draftsPerCard: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+
+      const currentUsage = usageDoc.exists() ? usageDoc.data() : { cards: 0 };
+
+      // Check if adding these files would exceed the limit
+      if (currentUsage.cards + files.length > userLimits.maxCards) {
+        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} business cards. You can upload ${userLimits.maxCards - currentUsage.cards} more cards. Please upgrade your plan to add more.`);
+      }
+
+      if (onStatusUpdate) onStatusUpdate(`Processing ${files.length} business cards...`);
+
+      // Process each file in sequence
+      const results = [];
+      const errors = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          if (onStatusUpdate) onStatusUpdate(`Processing card ${i + 1} of ${files.length}: ${file.name}`);
+          
+          // Use the existing uploadCard method to process each file
+          const result = await this.uploadCard(file, eventId, (status) => {
+            if (onStatusUpdate) onStatusUpdate(`Card ${i + 1} of ${files.length}: ${status}`);
+          });
+          
+          results.push(result);
+        } catch (error) {
+          console.error(`Error processing card ${i + 1} (${file.name}):`, error);
+          errors.push({
+            fileName: file.name,
+            error: error.message || 'Unknown error'
+          });
+        }
+      }
+
+      if (onStatusUpdate) onStatusUpdate(`Completed processing ${results.length} of ${files.length} cards successfully`);
+
+      return {
+        success: results,
+        errors,
+        message: `Successfully processed ${results.length} of ${files.length} business cards.${errors.length > 0 ? ` Failed to process ${errors.length} cards.` : ''}`
+      };
+    } catch (error) {
+      console.error('Error uploading multiple business cards:', error);
+      
+      if (error.code === 'permission-denied') {
+        throw new Error('You do not have permission to upload cards. Please make sure you are logged in.');
+      }
+      throw error;
+    }
+  },
+
+  async importVCard(file, eventId = null) {
+    try {
+      if (!db) {
+        throw new Error('Firebase not initialized');
+      }
+
+      const user = authService.getCurrentUser();
+      if (!user) {
+        throw new Error('User must be logged in to import contacts');
+      }
+
+      // Check usage limits before proceeding
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // Create user document if it doesn't exist
+        await setDoc(userRef, {
+          email: user.email,
+          displayName: user.displayName,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          plan: 'FREE',
+          limits: SUBSCRIPTION_PLANS.FREE.limits
+        });
+      }
+
+      const userData = userDoc.exists() ? userDoc.data() : { limits: SUBSCRIPTION_PLANS.FREE.limits };
+      const userLimits = userData.limits || SUBSCRIPTION_PLANS.FREE.limits;
+
+      // Get or create usage stats
+      const usageRef = doc(db, 'usage_stats', user.uid);
+      const usageDoc = await getDoc(usageRef);
+      
+      if (!usageDoc.exists()) {
+        // Create usage stats document if it doesn't exist
+        await setDoc(usageRef, {
+          cards: 0,
+          events: 0,
+          draftsPerCard: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+
+      const currentUsage = usageDoc.exists() ? usageDoc.data() : { cards: 0 };
+
+      if (currentUsage.cards >= userLimits.maxCards) {
+        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} business cards. Please upgrade your plan to add more cards.`);
+      }
+
+      // Read the vCard file content
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const vcardData = e.target.result;
+            
+            // Split the file content into individual vCard blocks
+            const vcardBlocks = vcardData.split(/BEGIN:VCARD/i).filter(block => block.trim());
+            
+            // If no valid vCard blocks found, reject
+            if (vcardBlocks.length === 0) {
+              reject(new Error('No valid vCard data found in file'));
+              return;
+            }
+            
+            // Process only the first vCard in the file
+            // (If we need to support multiple cards in future, we can modify this)
+            const firstBlock = 'BEGIN:VCARD' + vcardBlocks[0];
+            
+            // Basic parsing of vCard data
+            const lines = firstBlock.split(/\r\n|\r|\n/);
+            const cardInfo = {
+              name: '',
+              company: '',
+              title: '',
+              emails: [],
+              phones: [],
+              websites: [],
+              address: ''
+            };
+            
+            // Parse vCard fields
+            let currentLine = '';
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              
+              // Handle folded lines (RFC 2425)
+              if (line.match(/^\s/) && currentLine) {
+                currentLine += line.trim();
+                continue;
+              } else {
+                if (currentLine) {
+                  processVCardLine(currentLine, cardInfo);
+                }
+                currentLine = line;
+              }
+            }
+            // Process the last line
+            if (currentLine) {
+              processVCardLine(currentLine, cardInfo);
+            }
+            
+            // Validate that we got at least a name
+            if (!cardInfo.name) {
+              cardInfo.name = "Imported Contact";
+            }
+            
+            // Create default styling for imported contacts
+            const style = {
+              backgroundColor: '#ffffff',
+              primaryColor: '#1f2937',
+              secondaryColor: '#4B5563',
+              fontStyle: 'modern',
+              layoutStyle: 'minimal',
+              contrastInfo: 'Primary text contrast ratio: 10:1, Secondary text contrast ratio: 7:1',
+              designNotes: 'Imported contact with default styling'
+            };
+            
+            // Save to Firestore with user ID and style information
+            const cardData = {
+              ...cardInfo,
+              style,
+              eventId,
+              userId: user.uid,
+              createdAt: new Date(),
+              importedContact: true
+            };
+
+            // Create the card document
+            const docRef = await addDoc(collection(db, 'business-cards'), cardData);
+
+            // Update usage stats
+            try {
+              await updateDoc(usageRef, {
+                cards: (currentUsage.cards || 0) + 1,
+                updatedAt: new Date()
+              });
+            } catch (usageError) {
+              console.error('Error updating usage stats:', usageError);
+              // Continue with the card creation even if usage stats update fails
+            }
+
+            // Return success data
+            resolve({ 
+              id: docRef.id, 
+              ...cardData,
+              message: `Successfully imported contact for ${cardData.name}!`
+            });
+          } catch (error) {
+            console.error('Error parsing vCard:', error);
+            reject(error);
+          }
+        };
+        reader.onerror = (error) => {
+          console.error('Error reading file:', error);
+          reject(new Error('Error reading vCard file'));
+        };
+        reader.readAsText(file);
+      });
+    } catch (error) {
+      console.error('Error importing vCard:', error);
+      throw error;
+    }
   }
-}; 
+};
+
+// Helper function to process a vCard line
+function processVCardLine(line, cardInfo) {
+  if (!line || line.startsWith('BEGIN:') || line.startsWith('END:') || line.startsWith('VERSION:')) {
+    return;
+  }
+  
+  const [fullKey, value] = line.split(':', 2);
+  if (!fullKey || !value) return;
+  
+  // Split the key and parameters
+  const [key] = fullKey.split(';');
+  const keyUpper = key.toUpperCase();
+  
+  // Helper function to process and add a valid URL
+  const addValidUrl = (url) => {
+    const urlValue = url.trim();
+    // Only add non-empty URLs and filter out incomplete URLs like just "https" or "http"
+    if (urlValue && 
+        urlValue !== 'http://' && 
+        urlValue !== 'https://' && 
+        urlValue !== 'http' && 
+        urlValue !== 'https' && 
+        urlValue !== 'www') {
+      // Ensure URL has a proper protocol and domain
+      let formattedUrl = urlValue;
+      
+      if (formattedUrl.startsWith('www.')) {
+        formattedUrl = `https://${formattedUrl}`;
+      } else if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+        formattedUrl = `https://${formattedUrl}`;
+      }
+      
+      // Basic validation - URL should at least have a domain after protocol
+      try {
+        const urlObj = new URL(formattedUrl);
+        // Only add if it has a proper domain
+        if (urlObj.hostname && urlObj.hostname.includes('.')) {
+          // Avoid duplicates
+          if (!cardInfo.websites.includes(formattedUrl)) {
+            cardInfo.websites.push(formattedUrl);
+          }
+        }
+      } catch (e) {
+        // Invalid URL, don't add it
+        console.log(`Skipping invalid URL: ${formattedUrl}`);
+      }
+    }
+  };
+  
+  switch (keyUpper) {
+    case 'FN':
+      cardInfo.name = value.trim();
+      break;
+    case 'N':
+      // If we don't have a name yet, construct it from N
+      if (!cardInfo.name) {
+        const parts = value.split(';');
+        // Reverse the parts to get "First Last" instead of "Last;First"
+        cardInfo.name = [parts[1], parts[0]].filter(Boolean).join(' ').trim();
+      }
+      break;
+    case 'ORG':
+      cardInfo.company = value.split(';')[0].trim();
+      break;
+    case 'TITLE':
+      cardInfo.title = value.trim();
+      break;
+    case 'EMAIL':
+      if (value.trim()) cardInfo.emails.push(value.trim());
+      break;
+    case 'TEL':
+      if (value.trim()) cardInfo.phones.push(value.trim());
+      break;
+    // Handle various URL-related properties
+    case 'URL':
+    case 'X-URL':
+    case 'WORK-URL':
+    case 'HOME-URL':
+      addValidUrl(value);
+      break;
+    // Handle social profiles that might contain URLs
+    case 'X-SOCIALPROFILE':
+    case 'IMPP':
+      // Some social profiles might be encoded differently, try to extract URLs
+      if (value.includes('http')) {
+        const urlMatch = value.match(/(https?:\/\/[^\s]+)/);
+        if (urlMatch) {
+          addValidUrl(urlMatch[1]);
+        }
+      }
+      break;
+    case 'ADR':
+      const adrParts = value.split(';');
+      // Typically, ADR format is: PO Box;Extended Address;Street;City;Region;Postal Code;Country
+      const addressParts = adrParts.slice(2).filter(Boolean);
+      if (addressParts.length) {
+        cardInfo.address = addressParts.join(', ').trim();
+      }
+      break;
+  }
+} 
