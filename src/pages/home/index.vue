@@ -279,6 +279,13 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 )
                   VaIcon(name="contact_page" size="20px")
                   span Import Contacts (.vcf)
+                button(
+                  v-if="isContactPickerAvailable"
+                  class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
+                  @click="handleContactPicker"
+                )
+                  VaIcon(name="person_search" size="20px")
+                  span Select from Phone Contacts
               p.text-gray-500.text-sm.mt-3 You can select multiple files
 
         //- File Preview Area
@@ -1568,6 +1575,9 @@ onMounted(() => {
     }
   });
 
+  // Check if the Contact Picker API is available
+  checkContactPickerAvailability();
+
   // Cleanup subscription
   return () => unsubscribe();
 });
@@ -2806,6 +2816,75 @@ async function processSelectedContactFiles() {
   await importVcfFiles(selectedContactFiles.value, eventId);
   // Clear the selection after upload
   clearSelectedContactFiles();
+}
+
+// Add after other refs
+const isContactPickerAvailable = ref(false);
+
+// Add these functions after other functions
+function checkContactPickerAvailability() {
+  // Check if the browser supports the Contact Picker API
+  if ('contacts' in navigator && 'ContactsManager' in window) {
+    isContactPickerAvailable.value = true;
+  }
+}
+
+async function handleContactPicker() {
+  try {
+    // Request contacts from the device's contact picker
+    const contacts = await navigator.contacts.select(
+      ['name', 'email', 'tel', 'address', 'icon', 'organization', 'title'],
+      { multiple: true }
+    );
+    
+    if (contacts.length === 0) {
+      // User canceled or didn't select any contacts
+      return;
+    }
+    
+    // Convert native contacts to vCard format
+    const vCardFiles = contacts.map(contact => createVCardFromContact(contact));
+    
+    // Preview the contacts as if they were uploaded
+    previewSelectedContactFiles(vCardFiles);
+  } catch (err) {
+    console.error('Error accessing contacts:', err);
+    // Show error message
+    error.value = 'Unable to access contacts. Please try importing from .vcf file instead.';
+  }
+}
+
+function createVCardFromContact(contact) {
+  // Extract contact details
+  const name = contact.name?.[0] || 'Unknown';
+  const emails = contact.email || [];
+  const phones = contact.tel || [];
+  const addresses = contact.address || [];
+  const org = contact.organization?.[0] || '';
+  const title = contact.title?.[0] || '';
+  
+  // Create vCard content
+  const vCard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${name}`,
+    name ? `N:${name.split(' ').reverse().join(';')}` : '',
+    title ? `TITLE:${title}` : '',
+    org ? `ORG:${org}` : '',
+    ...emails.map(email => `EMAIL;type=INTERNET:${email}`),
+    ...phones.map(phone => `TEL;type=WORK:${phone}`),
+    ...addresses.map(addr => `ADR;type=WORK:;;${addr}`),
+    'END:VCARD'
+  ].filter(Boolean).join('\n');
+
+  // Create a name for the file based on the contact's name
+  const fileName = `${name.replace(/[^a-zA-Z0-9]/g, '_')}.vcf`;
+  
+  // Create a Blob from the vCard string
+  const blob = new Blob([vCard], { type: 'text/vcard' });
+  
+  // Create a File object from the Blob
+  return new File([blob], fileName, { type: 'text/vcard' });
 }
 </script>
 
