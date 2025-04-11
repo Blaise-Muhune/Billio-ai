@@ -281,11 +281,11 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   span Import Contacts (.vcf)
                 button(
                   v-if="isMobileDevice"
-                  class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
+                  class="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-md"
                   @click="handleMobileContacts"
                 )
-                  VaIcon(name="smartphone" size="20px")
-                  span Select from Phone Contacts
+                  VaIcon(name="perm_contact_calendar" size="20px")
+                  span Access Phone Contacts
               p.text-gray-500.text-sm.mt-3 You can select multiple files
 
         //- File Preview Area
@@ -2892,21 +2892,133 @@ function createVCardFromContact(contact) {
 }
 
 function handleMobileContacts() {
-  // If the Contact Picker API is available, use it
-  if (isContactPickerAvailable.value) {
+  // Try modern Contact Picker API first (Chrome on Android)
+  if ('contacts' in navigator && 'ContactsManager' in window) {
     handleContactPicker();
-  } else {
-    // Otherwise, use the standard file input approach for importing contacts
-    // but optimized for mobile with different text
-    handleImportContacts();
-    // Show a helpful message for mobile users
-    setTimeout(() => {
-      alert("To select contacts from your phone:\n\n" +
-            "• iOS: Tap 'Browse', then select 'Contacts' if available\n" + 
-            "• Android: Choose 'Documents', then find your contacts or export them first from the Contacts app\n\n" +
-            "You may need to allow access to your contacts when prompted.");
-    }, 500);
+    return;
   }
+  
+  // Try older Android contacts API if available
+  if (navigator.contacts && typeof navigator.contacts.find === 'function') {
+    try {
+      // Create options object safely
+      let options;
+      if (typeof ContactFindOptions === 'function') {
+        options = new ContactFindOptions();
+        options.multiple = true;
+        options.hasPhoneNumber = true;
+      } else {
+        // Fallback if ContactFindOptions is not defined
+        options = {
+          multiple: true,
+          hasPhoneNumber: true,
+          filter: ''
+        };
+      }
+      
+      navigator.contacts.find(
+        ['displayName', 'name', 'phoneNumbers', 'emails', 'organizations'], 
+        (contacts) => {
+          if (contacts && contacts.length > 0) {
+            // Convert native contacts to vCard format
+            const vCardFiles = contacts.map(contact => createLegacyVCardFromContact(contact));
+            
+            // Preview the contacts as if they were uploaded
+            previewSelectedContactFiles(vCardFiles);
+          } else {
+            // No contacts found or user denied permission
+            handleImportContacts();
+            alert("No contacts were found or permissions were denied. You can manually export contacts from your Contacts app.");
+          }
+        },
+        (error) => {
+          console.error('Error accessing contacts:', error);
+          // Fall back to file input
+          handleImportContacts();
+          alert("Couldn't access your contacts. Please try exporting contacts manually from your Contacts app.");
+        },
+        options
+      );
+      return;
+    } catch (err) {
+      console.error('Error with legacy contacts API:', err);
+      // Continue to fallback
+    }
+  }
+  
+  // If no direct API access is available, use the file input approach
+  handleImportContacts();
+  
+  // Show a helpful message for mobile users
+  setTimeout(() => {
+    alert("To select contacts from your phone:\n\n" +
+          "• iOS: Tap 'Browse', then select 'Contacts' if available\n" + 
+          "• Android: Choose 'Documents', then find your contacts or export them first from the Contacts app\n\n" +
+          "You may need to allow access to your contacts when prompted.");
+  }, 500);
+}
+
+function createLegacyVCardFromContact(contact) {
+  // Extract contact details from Cordova Contacts format
+  let name = 'Unknown';
+  if (contact.displayName) {
+    name = contact.displayName;
+  } else if (contact.name && contact.name.formatted) {
+    name = contact.name.formatted;
+  } else if (contact.name) {
+    const parts = [];
+    if (contact.name.givenName) parts.push(contact.name.givenName);
+    if (contact.name.familyName) parts.push(contact.name.familyName);
+    if (parts.length > 0) name = parts.join(' ');
+  }
+  
+  // Extract emails
+  const emails = [];
+  if (contact.emails && contact.emails.length) {
+    contact.emails.forEach(email => {
+      if (email.value) emails.push(email.value);
+    });
+  }
+  
+  // Extract phone numbers
+  const phones = [];
+  if (contact.phoneNumbers && contact.phoneNumbers.length) {
+    contact.phoneNumbers.forEach(phone => {
+      if (phone.value) phones.push(phone.value);
+    });
+  }
+  
+  // Extract organization/title
+  let organization = '';
+  let title = '';
+  if (contact.organizations && contact.organizations.length) {
+    const org = contact.organizations[0];
+    if (org.name) organization = org.name;
+    if (org.title) title = org.title;
+  }
+  
+  // Create vCard content
+  const vCard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${name}`,
+    // For N field, try to split name into components or just use as is
+    `N:${contact.name?.familyName || ''};${contact.name?.givenName || ''};${contact.name?.middleName || ''};${contact.name?.honorificPrefix || ''};${contact.name?.honorificSuffix || ''}`,
+    title ? `TITLE:${title}` : '',
+    organization ? `ORG:${organization}` : '',
+    ...emails.map(email => `EMAIL;type=INTERNET:${email}`),
+    ...phones.map(phone => `TEL;type=WORK:${phone}`),
+    'END:VCARD'
+  ].filter(Boolean).join('\n');
+
+  // Create a name for the file based on the contact's name
+  const fileName = `${name.replace(/[^a-zA-Z0-9]/g, '_')}.vcf`;
+  
+  // Create a Blob from the vCard string
+  const blob = new Blob([vCard], { type: 'text/vcard' });
+  
+  // Create a File object from the Blob
+  return new File([blob], fileName, { type: 'text/vcard' });
 }
 </script>
 
