@@ -280,11 +280,11 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   VaIcon(name="contact_page" size="20px")
                   span Import Contacts (.vcf)
                 button(
-                  v-if="isContactPickerAvailable"
+                  v-if="isMobileDevice"
                   class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
-                  @click="handleContactPicker"
+                  @click="handleMobileContacts"
                 )
-                  VaIcon(name="person_search" size="20px")
+                  VaIcon(name="smartphone" size="20px")
                   span Select from Phone Contacts
               p.text-gray-500.text-sm.mt-3 You can select multiple files
 
@@ -2820,6 +2820,7 @@ async function processSelectedContactFiles() {
 
 // Add after other refs
 const isContactPickerAvailable = ref(false);
+const isMobileDevice = ref(false);
 
 // Add these functions after other functions
 function checkContactPickerAvailability() {
@@ -2827,6 +2828,9 @@ function checkContactPickerAvailability() {
   if ('contacts' in navigator && 'ContactsManager' in window) {
     isContactPickerAvailable.value = true;
   }
+  
+  // Check if this is a mobile device
+  isMobileDevice.value = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 async function handleContactPicker() {
@@ -2885,6 +2889,24 @@ function createVCardFromContact(contact) {
   
   // Create a File object from the Blob
   return new File([blob], fileName, { type: 'text/vcard' });
+}
+
+function handleMobileContacts() {
+  // If the Contact Picker API is available, use it
+  if (isContactPickerAvailable.value) {
+    handleContactPicker();
+  } else {
+    // Otherwise, use the standard file input approach for importing contacts
+    // but optimized for mobile with different text
+    handleImportContacts();
+    // Show a helpful message for mobile users
+    setTimeout(() => {
+      alert("To select contacts from your phone:\n\n" +
+            "• iOS: Tap 'Browse', then select 'Contacts' if available\n" + 
+            "• Android: Choose 'Documents', then find your contacts or export them first from the Contacts app\n\n" +
+            "You may need to allow access to your contacts when prompted.");
+    }, 500);
+  }
 }
 </script>
 
