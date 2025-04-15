@@ -450,7 +450,6 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                     h3.text-lg.font-medium.text-gray-900 Search Business Cards
                     .flex.items-center
                       span.text-sm.text-emerald-600.bg-emerald-50.px-3.py-1.rounded-lg.font-medium {{ filteredCards.length }} results
-                      // Pagination removed from here
                   
                   // Event Filter
                   .relative.flex.items-center.w-full.mb-3
@@ -493,6 +492,70 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                       class="text-gray-400 hover:text-gray-600 transition-colors duration-200"
                     )
                       VaIcon(name="close" size="20px")
+
+                  // Pagination Controls - Moved to top
+                  .flex.items-center.justify-center.gap-2.mt-4(v-if="filteredCards.length > cardsPerPage")
+                    // Previous Page Button
+                    button(
+                      class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      @click="prevPage"
+                      :disabled="currentPage === 1"
+                      aria-label="Previous page"
+                    )
+                      VaIcon(name="chevron_left" size="20px" class="text-gray-700")
+                    
+                    // Page Numbers
+                    template(v-if="totalPages <= 7")
+                      button(
+                        v-for="page in totalPages"
+                        :key="page"
+                        @click="goToPage(page)"
+                        class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+                        :class="currentPage === page ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+                      ) {{ page }}
+                    
+                    template(v-else)
+                      // First page
+                      button(
+                        @click="goToPage(1)"
+                        class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+                        :class="currentPage === 1 ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+                      ) 1
+                      
+                      // Ellipsis if needed before middle pages
+                      .text-gray-400(v-if="currentPage > 3") ...
+                      
+                      // Middle pages
+                      template(v-for="page in totalPages" :key="page")
+                        button(
+                          v-if="page !== 1 && page !== totalPages && (page === currentPage || page === currentPage - 1 || page === currentPage + 1)"
+                          @click="goToPage(page)"
+                          class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+                          :class="currentPage === page ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+                        ) {{ page }}
+                      
+                      // Ellipsis if needed after middle pages
+                      .text-gray-400(v-if="currentPage < totalPages - 2") ...
+                      
+                      // Last page
+                      button(
+                        @click="goToPage(totalPages)"
+                        class="w-10 h-10 flex items-center justify-center rounded-lg transition-all"
+                        :class="currentPage === totalPages ? 'bg-emerald-500 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-700'"
+                      ) {{ totalPages }}
+                    
+                    // Next Page Button
+                    button(
+                      class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      @click="nextPage"
+                      :disabled="currentPage === totalPages"
+                      aria-label="Next page"
+                    )
+                      VaIcon(name="chevron_right" size="20px" class="text-gray-700")
+                    
+                    // Page indicator
+                    .text-sm.text-gray-600.ml-4
+                      | Page {{ currentPage }} of {{ totalPages }}
 
               // Cards Grid
               div(id="cards-section")
@@ -539,6 +602,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 
                 // Cards grid with pagination
                 div(v-else)
+                  // Cards Grid
                   .grid(
                     class="grid-cols-1 gap-8 mt-6"
                     class="md:grid-cols-2 md:gap-6"
@@ -1452,11 +1516,16 @@ let eventCreationCallback = null;
 // Pagination
 const cardsPerPage = 8;
 const currentPage = ref(1);
-const totalPages = computed(() => Math.ceil(filteredCards.value.length / cardsPerPage));
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredCards.value.length / cardsPerPage)));
 const paginatedCards = computed(() => {
   const startIndex = (currentPage.value - 1) * cardsPerPage;
   const endIndex = startIndex + cardsPerPage;
   return filteredCards.value.slice(startIndex, endIndex);
+});
+
+// Update page when filters change
+watch([searchQuery, selectedEventFilter], () => {
+  currentPage.value = 1;
 });
 
 function goToPage(page) {
