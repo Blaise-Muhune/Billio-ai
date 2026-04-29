@@ -54,12 +54,21 @@ main.p-6.max-w-2xl.mx-auto.font-sans(v-else class="sm:p-8")
       // Profile Picture
       .flex.flex-col.items-center.gap-4(v-show="profileStep === 1")
         .relative.group
-          .w-32.h-32.rounded-full.overflow-hidden.ring-4.ring-emerald-100.shadow-lg
+          .w-32.h-32.rounded-full.overflow-hidden.ring-4.ring-emerald-100.shadow-lg.bg-gradient-to-br.from-emerald-800.to-teal-950.flex.items-center.justify-center
             img(
-              :src="profileImage || user?.photoURL || '/default-avatar.png'"
+              v-if="showSetupAvatarPhoto"
+              :src="setupAvatarSrc"
               class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
               alt="Profile picture"
+              referrerpolicy="no-referrer"
+              @error="setupAvatarBroken = true"
             )
+            span(
+              v-else
+              class="text-2xl font-bold text-white select-none"
+              role="img"
+              :aria-label="'Profile initials: ' + setupAvatarInitials"
+            ) {{ setupAvatarInitials }}
           button(
             type="button"
             class="absolute bottom-0 right-0 bg-emerald-500 text-white p-2 rounded-full hover:bg-emerald-600 transition-colors duration-200 shadow-lg transform translate-y-0 group-hover:-translate-y-1"
@@ -101,6 +110,25 @@ main.p-6.max-w-2xl.mx-auto.font-sans(v-else class="sm:p-8")
           readonly
         )
         p.text-xs.text-slate-600.mt-1 Your email is tied to your account and cannot be changed.
+
+      //- Optional vanity URL (stored as publicProfileSlug on user doc)
+      .space-y-2(v-show="profileStep === 1")
+        label.block.text-sm.font-medium.text-slate-700 Public profile link (optional)
+        p.text-xs.text-slate-600.leading-relaxed
+          span.font-mono.text-slate-800 {{ profileLinkPreviewOrigin }}
+          span.text-slate-500 /profile/
+          span.font-mono.font-semibold.text-emerald-800 {{ profileLinkSuffixPreview }}
+        input.billo-input(
+          type="text"
+          inputmode="text"
+          autocapitalize="none"
+          autocomplete="off"
+          spellcheck="false"
+          v-model="formData.publicProfileSlug"
+          placeholder="e.g. blaise-muhune"
+          maxlength="40"
+        )
+        p.text-xs.text-slate-500 3–32 characters: lowercase letters, numbers, and hyphens only. Leave blank to keep your long ID link (both always work).
 
       // Company
       .space-y-2(v-show="profileStep === 1")
@@ -746,7 +774,14 @@ main.p-6.max-w-2xl.mx-auto.font-sans(v-else class="sm:p-8")
 <script setup>
 import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { collection, query, where, getDocs, limit, deleteField } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import { authService } from '../../services/authService';
+import {
+  buildProfileShareUrl,
+  normalizePublicProfileSlug,
+  displayNameInitials
+} from '../../utils/publicProfileSlug';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { businessCardService } from '../../services/businessCardService';
 import { paymentService } from '../../services/paymentService';
@@ -770,6 +805,7 @@ const showQR = ref(false);
 const copiedLink = ref(false);
 const imageError = ref('');
 const imageFile = ref(null);
+const setupAvatarBroken = ref(false);
 
 const profileStep = ref(1);
 
@@ -839,6 +875,7 @@ const formData = ref({
   youtubeMusic: '',
   appleMusic: '',
   otherLink: '',
+  publicProfileSlug: '',
   customLinks: [],
   visibility: {
     nameTitle: true,
@@ -861,6 +898,27 @@ const formData = ref({
     otherLink: true,
     customLinks: {}
   }
+});
+
+const setupAvatarSrc = computed(() => profileImage.value || user.value?.photoURL || '');
+const showSetupAvatarPhoto = computed(() => !!setupAvatarSrc.value && !setupAvatarBroken.value);
+const setupAvatarInitials = computed(() =>
+  displayNameInitials(formData.value.displayName || user.value?.displayName)
+);
+
+watch([() => profileImage.value, () => user.value?.photoURL], () => {
+  setupAvatarBroken.value = false;
+});
+
+const profileLinkPreviewOrigin = computed(() =>
+  typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+);
+
+const profileLinkSuffixPreview = computed(() => {
+  if (!user.value?.uid) return '…';
+  const n = normalizePublicProfileSlug(formData.value.publicProfileSlug || '');
+  if (n) return n;
+  return user.value.uid;
 });
 
 function getCompanyFromEmail(email) {
@@ -1085,6 +1143,7 @@ onMounted(async () => {
       youtubeMusic: '',
       appleMusic: '',
       otherLink: '',
+      publicProfileSlug: '',
       customLinks: [],
       visibility: {
         nameTitle: true,
@@ -1177,6 +1236,16 @@ async function handleImageSelect(event) {
   }
 }
 
+async function isPublicSlugAvailable(slug, uid) {
+  const snap = await getDocs(
+    query(collection(db, 'users'), where('publicProfileSlug', '==', slug), limit(5))
+  );
+  for (const d of snap.docs) {
+    if (d.id !== uid) return false;
+  }
+  return true;
+}
+
 async function saveProfile() {
   try {
     saving.value = true;
@@ -1186,6 +1255,20 @@ async function saveProfile() {
     if (!formData.value.displayName?.trim()) {
       error.value = 'Full Name is required';
       return;
+    }
+
+    const slugNorm = normalizePublicProfileSlug(formData.value.publicProfileSlug || '');
+    if ((formData.value.publicProfileSlug || '').trim() && !slugNorm) {
+      error.value =
+        'Public link must be 3–32 characters (letters, numbers, hyphens only) and cannot be a reserved word.';
+      return;
+    }
+    if (slugNorm) {
+      const available = await isPublicSlugAvailable(slugNorm, user.value.uid);
+      if (!available) {
+        error.value = 'That public link is already taken. Try another.';
+        return;
+      }
     }
 
     // Upload profile image if selected
@@ -1241,7 +1324,10 @@ async function saveProfile() {
       profileCompleted: true,
       updatedAt: new Date(),
       github: formData.value.github?.trim() || '',
-      visibility: formData.value.visibility
+      visibility: formData.value.visibility,
+      ...(slugNorm
+        ? { publicProfileSlug: slugNorm }
+        : { publicProfileSlug: deleteField() })
     };
 
     // Save to Firestore
@@ -1257,10 +1343,9 @@ async function saveProfile() {
   }
 }
 
-// Compute profile URL
 const profileUrl = computed(() => {
   if (!user.value?.uid) return '';
-  return `${window.location.origin}/profile/${user.value.uid}`;
+  return buildProfileShareUrl(user.value.uid, formData.value.publicProfileSlug);
 });
 
 // Copy profile URL to clipboard

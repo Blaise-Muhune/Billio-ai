@@ -30,15 +30,23 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
         .relative.bg-gradient-to-r.from-emerald-500.to-teal-500.px-6.pt-12.pb-24(class="sm:px-8")
           .absolute.inset-0.bg-black.opacity-10
           .relative.z-10.flex.flex-col.items-center
-            //- Profile Image Container
+            //- Profile image (initials fallback when missing or broken — no dead /default-avatar.png)
             .relative.mb-4.group
-              div(class="w-32 h-32 rounded-2xl overflow-hidden shadow-lg border-4 border-white transition-transform duration-200 group-hover:scale-105")
+              div(class="w-32 h-32 rounded-2xl overflow-hidden shadow-lg border-4 border-white transition-transform duration-200 group-hover:scale-105 bg-gradient-to-br from-emerald-900 to-teal-950 flex items-center justify-center")
                 img(
-                  :src="profile?.photoURL || '/default-avatar.png'"
-                  class="w-full h-full object-cover"
+                  v-if="showProfilePhoto"
+                  :src="profile.photoURL"
+                  class="w-full h-full object-cover min-h-full min-w-full"
                   alt="Profile picture"
-                  @error="handleImageError"
+                  referrerpolicy="no-referrer"
+                  @error="onProfileAvatarError"
                 )
+                span(
+                  v-else
+                  class="text-3xl font-bold text-white/95 tracking-tight select-none"
+                  role="img"
+                  :aria-label="'Profile initials: ' + profileInitials"
+                ) {{ profileInitials }}
               //- Verified Badge
               .absolute(
                 class="-bottom-2 -right-2 bg-white text-emerald-500 p-1.5 rounded-xl shadow-lg"
@@ -564,12 +572,22 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authService } from '../../services/authService';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  limit,
+  doc,
+  getDoc,
+  updateDoc
+} from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { paymentService } from '../../services/paymentService';
+import { displayNameInitials } from '../../utils/publicProfileSlug';
 
 const route = useRoute();
 const router = useRouter();
@@ -578,10 +596,27 @@ const profile = ref(null);
 const loading = ref(true);
 const error = ref('');
 const showUpgradePrompt = ref(false);
+const profileAvatarBroken = ref(false);
 
-// Add isOwner computed property
+const profileInitials = computed(() => displayNameInitials(profile.value?.displayName));
+const showProfilePhoto = computed(
+  () => !!(profile.value?.photoURL && !profileAvatarBroken.value)
+);
+
+watch(
+  () => [profile.value?.id, profile.value?.photoURL],
+  () => {
+    profileAvatarBroken.value = false;
+  }
+);
+
+function onProfileAvatarError() {
+  profileAvatarBroken.value = true;
+}
+
+// Owner = logged-in user matches profile document id (works for /profile/:uid and /profile/:slug)
 const isOwner = computed(() => {
-  return user.value?.uid === route.params.username;
+  return !!(user.value?.uid && profile.value?.id && user.value.uid === profile.value.id);
 });
 
 // Add toggleVisibility function
@@ -690,22 +725,36 @@ async function loadProfile() {
     loading.value = true;
     error.value = '';
     
-    // Get UID from route params
-    const uid = route.params.username;
-    
-    // Get user profile directly by UID
-    const userRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userRef);
-    
-    if (!userDoc.exists()) {
+    const param = String(route.params.username || '').trim();
+    if (!param) {
       error.value = 'Profile not found';
       return;
     }
-    
+
+    const byId = await getDoc(doc(db, 'users', param));
+    let userDoc = byId;
+
+    if (!byId.exists()) {
+      const slug = param.toLowerCase();
+      const slugSnap = await getDocs(
+        query(collection(db, 'users'), where('publicProfileSlug', '==', slug), limit(1))
+      );
+      if (slugSnap.empty) {
+        error.value = 'Profile not found';
+        return;
+      }
+      userDoc = slugSnap.docs[0];
+    }
+
     profile.value = {
       id: userDoc.id,
       ...userDoc.data()
     };
+
+    // Prefer readable URL when visitor used legacy /profile/{uid} link
+    if (profile.value.publicProfileSlug && param === profile.value.id) {
+      await router.replace(`/profile/${profile.value.publicProfileSlug}`);
+    }
 
     // Ensure visibility object exists
     if (!profile.value.visibility) {
@@ -734,8 +783,8 @@ async function loadProfile() {
 // Save contact as vCard
 async function saveContact() {
   try {
-    // Get the profile image URL
-    const photoUrl = profile.value?.photoURL || '/default-avatar.png';
+    const photoUrl =
+      profile.value?.photoURL && !profileAvatarBroken.value ? profile.value.photoURL : '';
     
     // Create vCard content
     const vCard = [
@@ -748,7 +797,7 @@ async function saveContact() {
       profile.value.email ? `EMAIL;type=INTERNET:${profile.value.email}` : '',
       profile.value.phone ? `TEL;type=WORK:${profile.value.phone}` : '',
       hasAddress.value ? `ADR;type=WORK:;;${formattedAddress.value}` : '',
-      `PHOTO;VALUE=URL:${photoUrl}`,
+      photoUrl ? `PHOTO;VALUE=URL:${photoUrl}` : '',
       profile.value.linkedin ? `URL;type=LinkedIn:${formatSocialLink(profile.value.linkedin, 'linkedin')}` : '',
       profile.value.twitter ? `URL;type=Twitter:${formatSocialLink(profile.value.twitter, 'twitter')}` : '',
       profile.value.instagram ? `URL;type=Instagram:${formatSocialLink(profile.value.instagram, 'instagram')}` : '',
@@ -833,22 +882,21 @@ function toggleCustomLinkVisibility(index) {
   }
 }
 
-// Add this to the script section
-function handleImageError(e) {
-  // If image fails to load, fallback to default avatar
-  e.target.src = '/default-avatar.png';
-}
-
 // Initialize
 onMounted(async () => {
-  // Check if user is logged in
   authService.onAuthStateChanged((newUser) => {
     user.value = newUser;
   });
-  
-  // Load profile data
+
   await loadProfile();
 });
+
+watch(
+  () => route.params.username,
+  () => {
+    loadProfile();
+  }
+);
 
 // Add isPremium ref and check in script section
 const isPremium = ref(false);

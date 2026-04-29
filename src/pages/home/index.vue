@@ -37,7 +37,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
               a(
                 v-if="user"
                 class="flex items-center gap-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
-                :href="`/profile/${user.uid}`"
+                :href="profileUrl"
                 target="_blank"
               )
                 VaIcon(name="person" size="18px")
@@ -143,7 +143,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   //- Public Profile
                   a(
                     v-if="user"
-                    :href="`/profile/${user.uid}`"
+                    :href="profileUrl"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
                     @click="showMobileMenu = false"
                     target="_blank"
@@ -1444,6 +1444,7 @@ import QrcodeVue from 'qrcode.vue';
 import PlanLimitModal from '../../components/PlanLimitModal.vue';
 // Import formatDate from dateUtils
 import { formatDate } from '../../utils/dateUtils';
+import { buildProfileShareUrl } from '../../utils/publicProfileSlug';
 
 const router = useRouter();
 const user = ref(null);
@@ -1492,6 +1493,17 @@ const copiedEmailDraft = ref(false);
 const copiedDrafts = ref({});
 const eventNameError = ref('');
 const searchQuery = ref('');
+const firestoreProfileSlug = ref('');
+
+async function refreshFirestoreProfileSlug() {
+  firestoreProfileSlug.value = '';
+  try {
+    const p = await authService.getUserProfile();
+    firestoreProfileSlug.value = (p && p.publicProfileSlug) || '';
+  } catch {
+    firestoreProfileSlug.value = '';
+  }
+}
 
 const STORAGE_KEY = 'selected_event_filter';
 
@@ -1641,7 +1653,8 @@ onMounted(() => {
       // Load saved event selection or default to 'all'
       const savedEvent = localStorage.getItem(STORAGE_KEY);
       selectedEventFilter.value = savedEvent || 'all';
-      
+
+      refreshFirestoreProfileSlug();
       loadCards();
       loadEvents();
       // Check premium status
@@ -2331,10 +2344,9 @@ function toggleUserMenu() {
   showUserMenu.value = !showUserMenu.value;
 }
 
-// Compute profile URL
 const profileUrl = computed(() => {
   if (!user.value?.uid) return '';
-  return `${window.location.origin}/profile/${user.value.uid}`;
+  return buildProfileShareUrl(user.value.uid, firestoreProfileSlug.value);
 });
 
 // Copy profile URL to clipboard
@@ -2524,11 +2536,11 @@ async function downloadBusinessCard() {
     }
     
     // Website/portfolio (if available)
-    const profileUrl = `${window.location.origin}/profile/${user.value?.uid || 'username'}`;
+    const cardShareUrl = profileUrl.value || `${window.location.origin}/profile/username`;
     ctx.fillStyle = '#0f766e'; // teal-700
     ctx.fillRect(textX - 24, contactY + (2 * lineHeight) - 14, 18, 14);
     ctx.fillStyle = '#475569'; // slate-600
-    ctx.fillText(profileUrl, textX, contactY + (2 * lineHeight));
+    ctx.fillText(cardShareUrl, textX, contactY + (2 * lineHeight));
     
     // Footer with tagline
     ctx.font = '16px Inter, system-ui, sans-serif';
