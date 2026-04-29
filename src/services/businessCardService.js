@@ -487,6 +487,38 @@ return a json object with the following fields:
     }
   },
 
+  /** All AI email drafts for the signed-in user (newest first). Used by the contacts dashboard. */
+  async getEmailDraftsForUser() {
+    try {
+      if (!db) {
+        throw new Error('Firebase not initialized');
+      }
+
+      const user = authService.getCurrentUser();
+      if (!user) {
+        throw new Error('User must be logged in to view drafts');
+      }
+
+      const q = query(
+        collection(db, 'email-drafts'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
+    } catch (error) {
+      console.error('Error getting email drafts for user:', error);
+      if (error.code === 'permission-denied') {
+        throw new Error('You do not have permission to view drafts.');
+      }
+      throw error;
+    }
+  },
+
   async getEvents() {
     try {
       if (!db) {

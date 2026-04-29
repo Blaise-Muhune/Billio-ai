@@ -4,7 +4,7 @@ meta:
 </route>
 
 <template lang="pug">
-main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50")
+main.billo-app-bg.font-sans
   .max-w-2xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-8")
     //- Loading State
     .flex.justify-center.items-center(class="min-h-[60vh]" v-if="loading")
@@ -13,8 +13,8 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     //- Error State
     .text-center.py-12(v-else-if="error")
       VaIcon(name="error" size="48px" class="text-red-500 mx-auto mb-4")
-      h2.text-2xl.font-bold.text-gray-900.mb-2 {{ error }}
-      p.text-gray-600.mb-6 We couldn't find this profile. It might have been removed or is no longer available.
+      h2.mb-2.text-2xl.font-bold.text-slate-900 {{ error }}
+      p.mb-6.text-slate-600 We couldn't find this profile. It might have been removed or is no longer available.
       button(
         class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 mx-auto"
         @click="router.push('/home')"
@@ -25,7 +25,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     //- Profile Content
     .mt-8(v-else-if="profile")
       //- Profile Header Card
-      .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.overflow-hidden
+      .billo-card-elevated.billo-motion.overflow-hidden
         //- Profile Header with Image
         .relative.bg-gradient-to-r.from-emerald-500.to-teal-500.px-6.pt-12.pb-24(class="sm:px-8")
           .absolute.inset-0.bg-black.opacity-10
@@ -531,7 +531,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     VaModal(
       v-model="showUpgradePrompt"
       :hide-default-actions="true"
-      class="rounded-2xl z-50"
+      class="billio-modal modal-container rounded-2xl z-[100]"
     )
       .p-8
         h3.text-2xl.font-bold.mb-6 Upgrade to Premium

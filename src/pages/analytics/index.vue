@@ -5,12 +5,12 @@ meta:
 </route>
 
 <template lang="pug">
-main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50")
-  .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-8")
+main.billo-app-bg.font-sans
+  .max-w-7xl.mx-auto.py-8(class="px-4 sm:px-6 lg:px-8")
     //- Header Section
     .mb-8
-      h1.text-3xl.font-bold.text-gray-900.mb-2 Analytics Dashboard
-      p.text-gray-600 Track your networking insights and business card performance
+      h1.mb-2.text-3xl.font-bold.tracking-tight.text-slate-900 Analytics Dashboard
+      p.text-slate-600 Track your networking insights and business card performance
 
     //- Loading State
     .flex.justify-center.items-center(class="min-h-[400px]" v-if="loading")
@@ -19,88 +19,88 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
     //- Error State
     .text-center.py-12(v-else-if="error")
       VaIcon(name="error" size="48px" class="text-red-500 mx-auto mb-4")
-      h2.text-2xl.font-bold.text-gray-900.mb-2 {{ error }}
-      p.text-gray-600 Unable to load analytics data. Please try again later.
+      h2.mb-2.text-2xl.font-bold.text-slate-900 {{ error }}
+      p.text-slate-600 Unable to load analytics data. Please try again later.
 
     //- Analytics Content
     .space-y-8(v-else)
       //- Overview Cards
       .grid.gap-6(class="grid-cols-1 md:grid-cols-2 lg:grid-cols-4")
         //- Total Business Cards
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6
-          .flex.items-start.justify-between.mb-4
+        .billo-card-elevated.billo-motion.p-6
+          .mb-4.flex.items-start.justify-between
             .flex.items-center.gap-3
-              .bg-emerald-100.p-2.rounded-lg
+              .rounded-lg.bg-emerald-100.p-2
                 VaIcon(name="credit_card" size="24px" class="text-emerald-600")
-              .text-sm.text-gray-600 Total Cards
-          .text-3xl.font-bold.text-gray-900.mb-2 {{ stats.totalCards }}
-          .text-sm.text-gray-500 From {{ stats.totalUsers }} users
+              .text-sm.text-slate-600 Total Cards
+          .mb-2.text-3xl.font-bold.text-slate-900 {{ stats.totalCards }}
+          .text-sm.text-slate-500 From {{ stats.totalUsers }} users
 
         //- Card Scans
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6(v-if="stats.cardScanStats.total > 0")
-          .flex.items-start.justify-between.mb-4
+        .billo-card-elevated.billo-motion.p-6(v-if="stats.cardScanStats.total > 0")
+          .mb-4.flex.items-start.justify-between
             .flex.items-center.gap-3
-              .bg-blue-100.p-2.rounded-lg
+              .rounded-lg.bg-blue-100.p-2
                 VaIcon(name="qr_code_scanner" size="24px" class="text-blue-600")
-              .text-sm.text-gray-600 Card Scans
-          .text-3xl.font-bold.text-gray-900.mb-2 {{ stats.cardScanStats.total }}
-          .text-sm.text-gray-500 {{ stats.cardScanStats.thisMonth }} this month
+              .text-sm.text-slate-600 Card Scans
+          .mb-2.text-3xl.font-bold.text-slate-900 {{ stats.cardScanStats.total }}
+          .text-sm.text-slate-500 {{ stats.cardScanStats.thisMonth }} this month
 
         //- Profile Completion
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6
-          .flex.items-start.justify-between.mb-4
+        .billo-card-elevated.billo-motion.p-6
+          .mb-4.flex.items-start.justify-between
             .flex.items-center.gap-3
-              .bg-purple-100.p-2.rounded-lg
+              .rounded-lg.bg-purple-100.p-2
                 VaIcon(name="person" size="24px" class="text-purple-600")
-              .text-sm.text-gray-600 Profile Completion
-          .text-3xl.font-bold.text-gray-900.mb-2 {{ stats.profileCompletionRate }}%
-          .text-sm.text-gray-500 Average completion rate
+              .text-sm.text-slate-600 Profile Completion
+          .mb-2.text-3xl.font-bold.text-slate-900 {{ stats.profileCompletionRate }}%
+          .text-sm.text-slate-500 Average completion rate
 
         //- Events Overview
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6
-          .flex.items-start.justify-between.mb-4
+        .billo-card-elevated.billo-motion.p-6
+          .mb-4.flex.items-start.justify-between
             .flex.items-center.gap-3
-              .bg-amber-100.p-2.rounded-lg
+              .rounded-lg.bg-amber-100.p-2
                 VaIcon(name="event" size="24px" class="text-amber-600")
-              .text-sm.text-gray-600 Events Overview
-          .text-3xl.font-bold.text-gray-900.mb-2 {{ stats.upcomingEventsCount }}
-          .text-sm.text-gray-500 Upcoming ({{ stats.pastEventsCount }} past)
+              .text-sm.text-slate-600 Events Overview
+          .mb-2.text-3xl.font-bold.text-slate-900 {{ stats.upcomingEventsCount }}
+          .text-sm.text-slate-500 Upcoming ({{ stats.pastEventsCount }} past)
 
       //- Charts Section
       .grid.gap-6(class="grid-cols-1 lg:grid-cols-2")
         //- Card Creation Timeline
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6(v-if="cardTimelineData.labels.length > 0")
-          h3.text-lg.font-semibold.text-gray-900.mb-6 Card Creation Timeline
+        .billo-card-elevated.billo-motion.p-6(v-if="cardTimelineData.labels.length > 0")
+          h3.mb-6.text-lg.font-semibold.text-slate-900 Card Creation Timeline
           .h-64.relative
             canvas(ref="cardTimelineChart")
 
         //- Event Distribution
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6(v-if="eventDistributionData.labels.length > 0")
-          h3.text-lg.font-semibold.text-gray-900.mb-6 Event Distribution
+        .billo-card-elevated.billo-motion.p-6(v-if="eventDistributionData.labels.length > 0")
+          h3.mb-6.text-lg.font-semibold.text-slate-900 Event Distribution
           .h-64.relative
             canvas(ref="eventDistributionChart")
 
       //- Additional Insights
       .grid.gap-6(class="grid-cols-1 lg:grid-cols-2")
         //- Event Categories
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6(v-if="stats.eventCategories.length > 0")
-          h3.text-lg.font-semibold.text-gray-900.mb-6 Event Categories
+        .billo-card-elevated.billo-motion.p-6(v-if="stats.eventCategories.length > 0")
+          h3.mb-6.text-lg.font-semibold.text-slate-900 Event Categories
           .space-y-4
             .flex.items-center.justify-between(v-for="category in stats.eventCategories" :key="category.category")
               .flex.items-center.gap-3
-                VaIcon(name="category" size="20px" class="text-gray-400")
-                span.text-gray-700 {{ category.category }}
-              .text-sm.font-medium.text-gray-900 {{ category.count }} events
+                VaIcon(name="category" size="20px" class="text-slate-400")
+                span.text-slate-700 {{ category.category }}
+              .text-sm.font-medium.text-slate-900 {{ category.count }} events
 
         //- Popular Locations
-        .bg-white.rounded-xl.shadow-sm.border.border-gray-100.p-6(v-if="stats.eventLocations.length > 0")
-          h3.text-lg.font-semibold.text-gray-900.mb-6 Top Event Locations
+        .billo-card-elevated.billo-motion.p-6(v-if="stats.eventLocations.length > 0")
+          h3.mb-6.text-lg.font-semibold.text-slate-900 Top Event Locations
           .space-y-4
             .flex.items-center.justify-between(v-for="location in stats.eventLocations" :key="location.location")
               .flex.items-center.gap-3
-                VaIcon(name="location_on" size="20px" class="text-gray-400")
-                span.text-gray-700 {{ location.location }}
-              .text-sm.font-medium.text-gray-900 {{ location.count }} events
+                VaIcon(name="location_on" size="20px" class="text-slate-400")
+                span.text-slate-700 {{ location.location }}
+              .text-sm.font-medium.text-slate-900 {{ location.count }} events
 
 </template>
 

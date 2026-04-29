@@ -5,7 +5,7 @@ meta:
 </route>
 
 <template lang="pug">
-main.font-sans(class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50")
+main.font-sans.billo-app-bg
   // Hero Section
   section.relative.overflow-hidden.flex.items-center.justify-center.min-h-screen
     .max-w-3xl.mx-auto.px-4.w-full.text-center
@@ -50,13 +50,13 @@ main.font-sans(class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-
       .grid.gap-8.max-w-6xl.mx-auto(class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3")
         // Feature Cards
         .feature-card(v-for="feature in features" :key="feature.title")
-          .bg-gradient-to-br.from-white.to-gray-50.rounded-2xl.p-8.shadow-lg.border.border-gray-100.h-full.transform.transition-all.duration-300.flex.flex-col.items-center.text-center(
-          class="hover:-translate-y-1 hover:shadow-xl"
-        )
-            .bg-emerald-100.w-16.h-16.rounded-xl.flex.items-center.justify-center.mb-6
+          .billo-card-elevated.billo-motion.flex.h-full.transform.flex-col.items-center.p-8.text-center(
+            class="duration-300 hover:-translate-y-1 hover:shadow-xl"
+          )
+            .mb-6.flex.h-16.w-16.items-center.justify-center.rounded-xl.bg-emerald-100
               VaIcon(:name="feature.icon" size="32px" class="text-emerald-600")
-            h3.text-2xl.font-bold.text-gray-900.mb-4 {{ feature.title }}
-            p.text-slate-600.text-base.leading-relaxed {{ feature.description }}
+            h3.mb-4.text-2xl.font-bold.text-slate-900 {{ feature.title }}
+            p.text-base.leading-relaxed.text-slate-600 {{ feature.description }}
 
   // How It Works Section
   section.py-24.bg-gradient-to-br.from-emerald-50.to-teal-50
@@ -68,14 +68,14 @@ main.font-sans(class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-
       .grid.gap-8.max-w-5xl.mx-auto(class="grid-cols-1 md:grid-cols-3")
         // Step Cards
         .step-card(v-for="(step, index) in steps" :key="step.title")
-          .bg-white.rounded-2xl.p-8.shadow-lg.border.border-gray-100.h-full.relative.flex.flex-col.items-center.text-center
-            .absolute.top-4.right-4.text-5xl.font-bold(
+          .billo-card-elevated.billo-motion.relative.flex.h-full.flex-col.items-center.p-8.text-center
+            .absolute.right-4.top-4.text-5xl.font-bold(
               class="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent opacity-10"
             ) {{ index + 1 }}
-            .bg-emerald-100.w-12.h-12.rounded-xl.flex.items-center.justify-center.mb-6
+            .mb-6.flex.h-12.w-12.items-center.justify-center.rounded-xl.bg-emerald-100
               VaIcon(:name="step.icon" size="24px" class="text-emerald-600")
-            h3.text-xl.font-bold.text-gray-900.mb-4 {{ step.title }}
-            p.text-slate-600.leading-relaxed {{ step.description }}
+            h3.mb-4.text-xl.font-bold.text-slate-900 {{ step.title }}
+            p.leading-relaxed.text-slate-600 {{ step.description }}
 
   // Benefits Section
   section.py-24.bg-white
@@ -88,8 +88,8 @@ main.font-sans(class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-
       .grid.gap-8.max-w-5xl.mx-auto(class="grid-cols-1 md:grid-cols-2")
         // Benefit Cards
         .benefit-card(v-for="benefit in benefits" :key="benefit.title")
-          .flex.items-start.gap-6.p-8.rounded-2xl.border.border-slate-100.bg-slate-50/50.transition-all.duration-billo.ease-billo-out(
-            class="hover:bg-white hover:shadow-billo-sm hover:border-emerald-100"
+          .flex.items-start.gap-6.p-8.rounded-2xl.border.border-slate-100.transition-all.duration-billo.ease-billo-out(
+            class="bg-slate-50/50 hover:border-emerald-100 hover:bg-white hover:shadow-billo-sm"
           )
             .bg-emerald-100.p-4.rounded-xl.flex-shrink-0
               VaIcon(:name="benefit.icon" size="24px" class="text-emerald-600")
@@ -104,7 +104,7 @@ main.font-sans(class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-
         h2.font-display.text-3xl.font-bold.text-slate-900.mb-3 What you get on day one
         p.text-lg.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Honest outcomes—not a drawer of cardstock, not another “I’ll add them to LinkedIn eventually.”
       .grid.gap-6(class="sm:grid-cols-3")
-        .rounded-2xl.border.border-slate-200.bg-white.p-6.text-left.shadow-billo-sm(
+        .billo-card-elevated.billo-motion.p-6.text-left(
           v-for="pillar in trustPillars"
           :key="pillar.title"
         )

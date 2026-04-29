@@ -17,8 +17,32 @@ import { SUBSCRIPTION_PLANS } from '../config/stripe';
 const auth = getAuth();
 const googleProvider = new GoogleAuthProvider();
 
-// Keep track of auth state observers
-let unsubscribeAuthObserver = null;
+// Multicast auth: many components call onAuthStateChanged; only one Firebase listener.
+const authStateCallbacks = new Set();
+let firebaseAuthUnsubscribe = null;
+let lastAuthPayload = Symbol('authInitial');
+let hasEmittedAuthState = false;
+
+function notifyAuthSubscribers(payload) {
+  lastAuthPayload = payload;
+  hasEmittedAuthState = true;
+  authStateCallbacks.forEach((cb) => {
+    try {
+      cb(payload);
+    } catch (e) {
+      console.error('onAuthStateChanged subscriber error', e);
+    }
+  });
+}
+
+function teardownFirebaseAuthListenerIfIdle() {
+  if (authStateCallbacks.size === 0 && firebaseAuthUnsubscribe) {
+    firebaseAuthUnsubscribe();
+    firebaseAuthUnsubscribe = null;
+    hasEmittedAuthState = false;
+    lastAuthPayload = Symbol('authInitial');
+  }
+}
 
 // Get user roles
 async function getUserRoles(uid) {
@@ -49,27 +73,43 @@ async function hasAnalyticsAccess(uid) {
   }
 }
 
-// Subscribe to auth state changes with enhanced user data
+// Subscribe to auth state changes with enhanced user data (safe for multiple subscribers)
 function onAuthStateChanged(callback) {
-  if (unsubscribeAuthObserver) {
-    unsubscribeAuthObserver();
+  if (typeof callback !== 'function') {
+    return () => {};
   }
-  
-  unsubscribeAuthObserver = firebaseOnAuthStateChanged(auth, async (user) => {
-    if (user) {
-      const roles = await getUserRoles(user.uid);
-      const hasAnalytics = await hasAnalyticsAccess(user.uid);
-      callback({
-        ...user,
-        roles,
-        isAdmin: hasAnalytics
-      });
-    } else {
-      callback(null);
-    }
-  });
-  
-  return unsubscribeAuthObserver;
+
+  if (!firebaseAuthUnsubscribe) {
+    firebaseAuthUnsubscribe = firebaseOnAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const roles = await getUserRoles(user.uid);
+        const hasAnalytics = await hasAnalyticsAccess(user.uid);
+        notifyAuthSubscribers({
+          ...user,
+          roles,
+          isAdmin: hasAnalytics
+        });
+      } else {
+        notifyAuthSubscribers(null);
+      }
+    });
+  }
+
+  authStateCallbacks.add(callback);
+
+  if (hasEmittedAuthState) {
+    const snapshot = lastAuthPayload;
+    queueMicrotask(() => {
+      if (authStateCallbacks.has(callback)) {
+        callback(snapshot);
+      }
+    });
+  }
+
+  return () => {
+    authStateCallbacks.delete(callback);
+    teardownFirebaseAuthListenerIfIdle();
+  };
 }
 
 export const authService = {

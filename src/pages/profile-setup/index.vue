@@ -10,8 +10,8 @@ meta:
   .loading-spinner
 
 //- Main Content
-main.p-6.max-w-2xl.mx-auto.font-sans(v-else class="sm:p-8")
-  .billo-card-elevated.p-6(class="sm:p-8")
+main.billo-app-bg.mx-auto.max-w-2xl.p-6.font-sans(v-else class="sm:p-8")
+  .billo-panel-premium.billo-motion.p-6(class="sm:p-8")
     .text-center.mb-8
       p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-2 BilloAI profile
       h1.font-display.text-3xl.font-bold.text-slate-900(class="sm:text-4xl") {{ isEditing ? 'Edit your profile' : 'Build your public profile' }}

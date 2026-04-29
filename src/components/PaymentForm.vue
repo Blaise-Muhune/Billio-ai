@@ -1,13 +1,17 @@
 <template>
   <div class="payment-form">
-    <div v-if="error" class="error-message text-red-600 mb-4">
+    <div
+      v-if="error"
+      class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+      role="alert"
+    >
       {{ error }}
     </div>
     <div id="payment-element" ref="paymentElement"></div>
     <button
       @click="handleSubmit"
       :disabled="loading"
-      class="w-full mt-4 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-colors duration-200 flex items-center justify-center"
+      class="mt-4 flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:from-emerald-500 hover:to-teal-500 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
     >
       <div v-if="loading" class="loading-spinner w-4 h-4 border-2 mr-2"></div>
       <span>{{ loading ? 'Processing...' : 'Pay Now' }}</span>

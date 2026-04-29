@@ -5,7 +5,7 @@ meta:
 </route>
 
 <template lang="pug">
-main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40")
+main.billo-app-bg.font-sans
   .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-12")
     //- Dismissible checkout / flow messages (replaces blocking alert())
     Transition(name="sub-fade")
@@ -25,7 +25,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-eme
     .flex.justify-end.mb-8
       button(
         @click="router.push('/home')"
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-all duration-200 border border-gray-200 shadow-sm hover:shadow"
+        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow"
       )
         VaIcon(name="home" size="20px")
         span.font-medium Return Home
@@ -33,7 +33,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-eme
     .text-center.mb-12
       h1.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 Choose your plan
       p.text-lg.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Pick a tier that matches how many cards, events, and AI drafts you use—limits stay in sync everywhere on this page.
-      p.text-sm.text-gray-500.mt-4.max-w-2xl.mx-auto
+      p.mx-auto.mt-4.max-w-2xl.text-sm.text-slate-500
         | If a renewal payment fails, Stripe may retry; you may lose premium access until billing succeeds. You can update your card in the customer portal when available.
 
     //- Billing Toggle (Monthly/Yearly)
@@ -111,53 +111,53 @@ main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-eme
             ) {{ planCtaLabel(plan) }}
 
     //- At-a-glance comparison
-    .mt-14.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6(class="sm:p-8")
-      h2.text-2xl.font-bold.text-gray-900.mb-2 Compare plans
-      p.text-sm.text-gray-500.mb-6 Limits apply per billing period for cards and events. AI drafts are per card.
+    .billo-panel-premium.billo-motion.mt-14.p-6(class="sm:p-8")
+      h2.mb-2.text-2xl.font-bold.text-slate-900 Compare plans
+      p.mb-6.text-sm.text-slate-500 Limits apply per billing period for cards and events. AI drafts are per card.
       .overflow-x-auto
         table.w-full.text-sm.text-left.border-collapse.min-w-full
           thead
-            tr.bg-gray-50.text-gray-700
-              th.font-semibold.p-3.border.border-gray-200 Feature
-              th.font-semibold.p-3.border.border-gray-200.text-center Free
-              th.font-semibold.p-3.border.border-gray-200.text-center Basic
-              th.font-semibold.p-3.border.border-gray-200.text-center Pro
-          tbody.text-gray-800
+            tr.bg-slate-50.text-slate-700
+              th.border.border-slate-200.p-3.font-semibold Feature
+              th.border.border-slate-200.p-3.text-center.font-semibold Free
+              th.border.border-slate-200.p-3.text-center.font-semibold Basic
+              th.border.border-slate-200.p-3.text-center.font-semibold Pro
+          tbody.text-slate-800
             tr.bg-white
-              td.p-3.border.border-gray-200 Business cards (max)
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxCards }}
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxCards }}
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxCards }}
-            tr.bg-gray-50
-              td.p-3.border.border-gray-200 Events (max)
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxEvents }}
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxEvents }}
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxEvents }}
+              td.border.border-slate-200.p-3 Business cards (max)
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxCards }}
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxCards }}
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxCards }}
+            tr.bg-slate-50
+              td.border.border-slate-200.p-3 Events (max)
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxEvents }}
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxEvents }}
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxEvents }}
             tr.bg-white
-              td.p-3.border.border-gray-200 AI email drafts per card
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxDraftsPerCard }}
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxDraftsPerCard }}
-              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxDraftsPerCard }}
-            tr.bg-gray-50
-              td.p-3.border.border-gray-200 Custom profile links & icons
-              td.p-3.border.border-gray-200.text-center —
-              td.p-3.border.border-gray-200.text-center.text-emerald-700.font-medium Included
-              td.p-3.border.border-gray-200.text-center.text-emerald-700.font-medium Included
+              td.border.border-slate-200.p-3 AI email drafts per card
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxDraftsPerCard }}
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxDraftsPerCard }}
+              td.border.border-slate-200.p-3.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxDraftsPerCard }}
+            tr.bg-slate-50
+              td.border.border-slate-200.p-3 Custom profile links & icons
+              td.border.border-slate-200.p-3.text-center —
+              td.border.border-slate-200.p-3.text-center.font-medium.text-emerald-700 Included
+              td.border.border-slate-200.p-3.text-center.font-medium.text-emerald-700 Included
 
     //- Usage Stats
-    .mt-12.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8
-      .flex.flex-col.gap-4.mb-8(class="md:flex-row md:items-center md:justify-between")
+    .billo-panel-premium.billo-motion.mt-12.p-6(class="sm:p-8")
+      .mb-8.flex.flex-col.gap-4(class="md:flex-row md:items-center md:justify-between")
         .flex.flex-wrap.items-center.gap-3
-          h2.text-2xl.font-bold.text-gray-900 Current Usage
-          .inline-flex.items-center.px-3.py-1.rounded-lg.text-sm.font-medium(
-            :class="{ 'bg-gray-100 text-gray-700': currentPlan === 'FREE', 'bg-blue-100 text-blue-800': currentPlan === 'BASIC', 'bg-emerald-100 text-emerald-800': currentPlan === 'PRO' }"
+          h2.text-2xl.font-bold.text-slate-900 Current Usage
+          .inline-flex.items-center.rounded-lg.px-3.py-1.text-sm.font-medium(
+            :class="{ 'bg-slate-100 text-slate-700': currentPlan === 'FREE', 'bg-blue-100 text-blue-800': currentPlan === 'BASIC', 'bg-emerald-100 text-emerald-800': currentPlan === 'PRO' }"
           )
             span {{ currentPlan }}
             span.mx-1(v-if="currentPlan !== 'FREE'") •
             span(v-if="currentPlan !== 'FREE'") {{ userBillingCycle === 'yearly' ? 'Yearly' : 'Monthly' }}
         .flex.items-center.gap-2.text-sm
-          VaIcon(name="info" size="16px" class="text-gray-400")
-          span.text-gray-500 Usage resets monthly
+          VaIcon(name="info" size="16px" class="text-slate-400")
+          span.text-slate-500 Usage resets monthly
       
       //- Display subscription end date notice for canceled subscriptions
       .p-4.mb-6.bg-amber-50.rounded-xl.border.border-amber-200(v-if="subscriptionStatus === 'canceled' && subscriptionEndDate")
@@ -238,7 +238,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-eme
     VaModal(
       v-model="showCancelModal"
       :hide-default-actions="true"
-      class="rounded-2xl"
+      class="billio-modal modal-container rounded-2xl z-[100]"
     )
       .p-8
         //- Header with warning icon
@@ -308,7 +308,7 @@ main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-eme
     VaModal(
       v-model="showSuccessModal"
       :hide-default-actions="true"
-      class="rounded-2xl"
+      class="billio-modal modal-container rounded-2xl z-[100]"
     )
       div(class="p-8")
         //- Header with success animation

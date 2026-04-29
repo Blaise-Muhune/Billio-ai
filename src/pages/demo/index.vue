@@ -4,23 +4,27 @@ meta:
 </route>
 
 <template lang="pug">
-main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50")
+main.billo-app-bg.font-sans
   // Hero Section
-  .relative.overflow-hidden.bg-white
-    .max-w-7xl.mx-auto.px-4.sm_px-6.lg_px-8.py-16
+  .relative.overflow-hidden.border-b.backdrop-blur-md(
+    class="border-slate-200/70 bg-white/80"
+  )
+    .max-w-7xl.mx-auto.py-16(class="px-4 sm:px-6 lg:px-8")
       .text-center
-        h1.text-4xl.font-bold.tracking-tight.text-gray-900.sm_text-5xl.md_text-6xl
-          span.block.xl_inline See How 
-          span.block.text-emerald-600.xl_inline BilloAI Works
-        p.mt-3.max-w-md.mx-auto.text-base.text-gray-500.sm_text-lg.md_text-xl.md_mt-5.md_max-w-3xl
+        h1.text-4xl.font-bold.tracking-tight.text-slate-900(class="sm:text-5xl md:text-6xl")
+          span.block(class="xl:inline") See How 
+          span.block.text-emerald-600(class="xl:inline") BilloAI Works
+        p.mx-auto.mt-3.max-w-md.text-base.text-slate-600(class="sm:text-lg md:mt-5 md:max-w-3xl md:text-xl")
           | Transform your business card management and networking experience with our intelligent AI-powered platform.
 
   // Main Content
-  .max-w-7xl.mx-auto.px-4.sm_px-6.lg_px-8.py-12
+  .max-w-7xl.mx-auto.py-12(class="px-4 sm:px-6 lg:px-8")
     // Quick Start Video
     .mb-16
-      h2.text-3xl.font-bold.text-gray-900.mb-8 Quick Start Guide
-      .aspect-w-16.aspect-h-9.rounded-2xl.overflow-hidden.shadow-xl.border.border-gray-100
+      h2.mb-8.text-3xl.font-bold.text-slate-900 Quick Start Guide
+      .aspect-w-16.aspect-h-9.overflow-hidden.rounded-2xl.border.shadow-xl(
+        class="billo-card-elevated border-slate-200/90"
+      )
         iframe(
           src="https://www.youtube.com/embed/your-video-id"
           frameborder="0"
@@ -30,47 +34,53 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
 
     // Key Features
     .mb-16
-      h2.text-3xl.font-bold.text-gray-900.mb-8 Key Features
+      h2.mb-8.text-3xl.font-bold.text-slate-900 Key Features
       .grid.gap-8(class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3")
         // Feature Card 1
-        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6.transition-all.duration-300.hover_shadow-xl
-          .flex.items-center.gap-4.mb-4
-            .bg-emerald-100.p-3.rounded-xl
+        .billo-card-elevated.billo-motion.p-6.transition-all.duration-300(class="hover:-translate-y-0.5 hover:shadow-xl")
+          .mb-4.flex.items-center.gap-4
+            .rounded-xl.bg-emerald-100.p-3
               VaIcon(name="qr_code_scanner" size="24px" class="text-emerald-600")
-            h3.text-xl.font-bold.text-gray-900 Smart Card Scanning
-          p.text-gray-600 Instantly digitize business cards with advanced AI recognition technology.
-          .mt-4.rounded-lg.shadow-md.w-full.bg-gradient-to-br.from-gray-100.to-gray-200.aspect-video.flex.items-center.justify-center
+            h3.text-xl.font-bold.text-slate-900 Smart Card Scanning
+          p.text-slate-600 Instantly digitize business cards with advanced AI recognition technology.
+          .mt-4.flex.aspect-video.w-full.items-center.justify-center.rounded-xl.border.shadow-inner(
+            class="border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-200"
+          )
             .flex.flex-col.items-center.gap-2
               VaIcon(name="photo_camera" size="48px" class="text-emerald-500")
-              span.text-sm.text-gray-600 Card Scanning Preview
+              span.text-sm.text-slate-600 Card Scanning Preview
 
         // Feature Card 2
-        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6.transition-all.duration-300.hover_shadow-xl
-          .flex.items-center.gap-4.mb-4
-            .bg-emerald-100.p-3.rounded-xl
+        .billo-card-elevated.billo-motion.p-6.transition-all.duration-300(class="hover:-translate-y-0.5 hover:shadow-xl")
+          .mb-4.flex.items-center.gap-4
+            .rounded-xl.bg-emerald-100.p-3
               VaIcon(name="smart_toy" size="24px" class="text-emerald-600")
-            h3.text-xl.font-bold.text-gray-900 AI Message Generation
-          p.text-gray-600 Generate personalized follow-up messages with our AI assistant.
-          .mt-4.rounded-lg.shadow-md.w-full.bg-gradient-to-br.from-gray-100.to-gray-200.aspect-video.flex.items-center.justify-center
+            h3.text-xl.font-bold.text-slate-900 AI Message Generation
+          p.text-slate-600 Generate personalized follow-up messages with our AI assistant.
+          .mt-4.flex.aspect-video.w-full.items-center.justify-center.rounded-xl.border.shadow-inner(
+            class="border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-200"
+          )
             .flex.flex-col.items-center.gap-2
               VaIcon(name="chat" size="48px" class="text-emerald-500")
-              span.text-sm.text-gray-600 AI Message Preview
+              span.text-sm.text-slate-600 AI Message Preview
 
         // Feature Card 3
-        .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6.transition-all.duration-300.hover_shadow-xl
-          .flex.items-center.gap-4.mb-4
-            .bg-emerald-100.p-3.rounded-xl
+        .billo-card-elevated.billo-motion.p-6.transition-all.duration-300(class="hover:-translate-y-0.5 hover:shadow-xl")
+          .mb-4.flex.items-center.gap-4
+            .rounded-xl.bg-emerald-100.p-3
               VaIcon(name="event" size="24px" class="text-emerald-600")
-            h3.text-xl.font-bold.text-gray-900 Event Organization
-          p.text-gray-600 Organize contacts by events and manage your networking efficiently.
-          .mt-4.rounded-lg.shadow-md.w-full.bg-gradient-to-br.from-gray-100.to-gray-200.aspect-video.flex.items-center.justify-center
+            h3.text-xl.font-bold.text-slate-900 Event Organization
+          p.text-slate-600 Organize contacts by events and manage your networking efficiently.
+          .mt-4.flex.aspect-video.w-full.items-center.justify-center.rounded-xl.border.shadow-inner(
+            class="border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-200"
+          )
             .flex.flex-col.items-center.gap-2
               VaIcon(name="folder" size="48px" class="text-emerald-500")
-              span.text-sm.text-gray-600 Event Organization Preview
+              span.text-sm.text-slate-600 Event Organization Preview
 
     // How It Works
     .mb-16
-      h2.text-3xl.font-bold.text-gray-900.mb-8 How It Works
+      h2.mb-8.text-3xl.font-bold.text-slate-900 How It Works
       .space-y-12
         // Step 1
         .flex.flex-col.items-center.gap-8(class="md:flex-row")
@@ -78,13 +88,15 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             .flex.items-center.gap-4
               .bg-emerald-100.p-2.rounded-full
                 span.text-emerald-600.font-bold 1
-              h3.text-xl.font-bold.text-gray-900 Upload Business Cards
-            p.text-gray-600.ml-12 Simply drag and drop your business cards or use your camera to scan them. Our AI will automatically extract all important information.
+              h3.text-xl.font-bold.text-slate-900 Upload Business Cards
+            p.ml-12.text-slate-600 Simply drag and drop your business cards or use your camera to scan them. Our AI will automatically extract all important information.
           .flex-1
-            .rounded-xl.shadow-lg.border.border-gray-100.bg-gradient-to-br.from-gray-100.to-gray-200.aspect-video.flex.items-center.justify-center
+            .flex.aspect-video.items-center.justify-center.rounded-xl.border.shadow-md(
+              class="border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-200"
+            )
               .flex.flex-col.items-center.gap-2
                 VaIcon(name="upload_file" size="48px" class="text-emerald-500")
-                span.text-sm.text-gray-600 Upload Interface Preview
+                span.text-sm.text-slate-600 Upload Interface Preview
 
         // Step 2
         .flex.flex-col.items-center.gap-8(class="md:flex-row-reverse")
@@ -92,13 +104,15 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             .flex.items-center.gap-4
               .bg-emerald-100.p-2.rounded-full
                 span.text-emerald-600.font-bold 2
-              h3.text-xl.font-bold.text-gray-900 Organize & Categorize
-            p.text-gray-600.ml-12 Group your contacts by events, generate AI-powered follow-up messages, and manage your network effectively.
+              h3.text-xl.font-bold.text-slate-900 Organize & Categorize
+            p.ml-12.text-slate-600 Group your contacts by events, generate AI-powered follow-up messages, and manage your network effectively.
           .flex-1
-            .rounded-xl.shadow-lg.border.border-gray-100.bg-gradient-to-br.from-gray-100.to-gray-200.aspect-video.flex.items-center.justify-center
+            .flex.aspect-video.items-center.justify-center.rounded-xl.border.shadow-md(
+              class="border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-200"
+            )
               .flex.flex-col.items-center.gap-2
                 VaIcon(name="category" size="48px" class="text-emerald-500")
-                span.text-sm.text-gray-600 Organization Interface Preview
+                span.text-sm.text-slate-600 Organization Interface Preview
 
         // Step 3
         .flex.flex-col.items-center.gap-8(class="md:flex-row")
@@ -106,28 +120,30 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             .flex.items-center.gap-4
               .bg-emerald-100.p-2.rounded-full
                 span.text-emerald-600.font-bold 3
-              h3.text-xl.font-bold.text-gray-900 Connect & Follow Up
-            p.text-gray-600.ml-12 Use our AI to generate personalized messages, save contacts to your phone, and maintain your professional relationships.
+              h3.text-xl.font-bold.text-slate-900 Connect & Follow Up
+            p.ml-12.text-slate-600 Use our AI to generate personalized messages, save contacts to your phone, and maintain your professional relationships.
           .flex-1
-            .rounded-xl.shadow-lg.border.border-gray-100.bg-gradient-to-br.from-gray-100.to-gray-200.aspect-video.flex.items-center.justify-center
+            .flex.aspect-video.items-center.justify-center.rounded-xl.border.shadow-md(
+              class="border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-200"
+            )
               .flex.flex-col.items-center.gap-2
                 VaIcon(name="connect_without_contact" size="48px" class="text-emerald-500")
-                span.text-sm.text-gray-600 Follow-up Interface Preview
+                span.text-sm.text-slate-600 Follow-up Interface Preview
 
     // Call to Action
-    .bg-white.rounded-2xl.shadow-lg.border.border-emerald-100.p-8.text-center
-      h2.text-2xl.font-bold.text-gray-900.mb-4 Ready to Get Started?
-      p.text-gray-600.mb-6 Join thousands of professionals who are already using BilloAI to manage their networks more effectively.
-      .flex.justify-center.gap-4
+    .billo-panel-premium.billo-motion.p-8.text-center
+      h2.mb-4.text-2xl.font-bold.text-slate-900 Ready to Get Started?
+      p.mb-6.text-slate-600 Join thousands of professionals who are already using BilloAI to manage their networks more effectively.
+      .flex.flex-col.items-center.justify-center.gap-3(class="sm:flex-row sm:gap-4")
         router-link(
           to="/auth"
-          class="bg-emerald-500 text-white hover:bg-emerald-600 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:from-emerald-500 hover:to-teal-500 hover:shadow-lg sm:w-auto"
         )
           VaIcon(name="login" size="18px")
           span Sign Up Now
         router-link(
           to="/subscription"
-          class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 transition-all duration-200 px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm hover:border-gray-300"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 sm:w-auto"
         )
           VaIcon(name="diamond" size="18px")
           span View Plans

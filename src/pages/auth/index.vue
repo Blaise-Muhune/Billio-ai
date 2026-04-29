@@ -4,18 +4,17 @@ meta:
 </route>
 
 <template lang="pug">
-.min-h-screen.flex.items-center.justify-center.bg-gradient-to-br.from-slate-50.via-emerald-50.to-teal-50.py-12.px-4.font-sans(class="sm:px-6 lg:px-8")
+.billo-app-bg.flex.items-center.justify-center.py-12.px-4.font-sans(class="sm:px-6 lg:px-8")
   .max-w-md.w-full
     // Header
     .text-center.mb-10
-      .mx-auto.mb-5(class="h-12 w-40")
-        Logo(classes="block h-full w-full")
-      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-2 BilloAI
+      .mx-auto.mb-6.flex.justify-center
+        Logo(classes="block")
       h2.font-display.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 Welcome back
       p.text-base.text-slate-600.leading-relaxed {{ isSignUp ? 'Create your account to get started.' : 'Sign in to scan, organize, and share your business cards.' }}
     
     // Main Card
-    .billo-card-elevated.p-8.space-y-6
+    .billo-panel-premium.billo-motion.p-8.space-y-6
       // Success Alert for Email Verification
       transition(
         enter-active-class="transition ease-out duration-300"
@@ -104,30 +103,28 @@ meta:
       form.space-y-6(@submit.prevent="isSignUp ? handleSignUp() : handleSignIn()")
         // Email Input
         .space-y-2
-          label.block.text-sm.font-medium.text-gray-700(for="email") Email address
-          .relative.rounded-md.shadow-sm
-            input#email.appearance-none.block.w-full.px-4.py-3.border.border-gray-300.rounded-lg.placeholder-gray-400.focus_outline-none.focus_ring-2.focus_ring-emerald-500.focus_border-emerald-500(
-              v-model="email"
-              name="email"
-              type="email"
-              required
-              placeholder="you@example.com"
-              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': showFieldError }"
-            )
+          label.block.text-sm.font-medium.text-slate-700(for="email") Email address
+          input#email.billo-input(
+            v-model="email"
+            name="email"
+            type="email"
+            required
+            placeholder="you@example.com"
+            :class="{ '!border-red-300 focus:!border-red-500 focus:!ring-red-500': showFieldError }"
+          )
         
         // Password Input
         .space-y-2
-          label.block.text-sm.font-medium.text-gray-700(for="password") Password
-          .relative.rounded-md.shadow-sm
-            input#password.appearance-none.block.w-full.px-4.py-3.border.border-gray-300.rounded-lg.placeholder-gray-400.focus_outline-none.focus_ring-2.focus_ring-emerald-500.focus_border-emerald-500(
-              v-model="password"
-              name="password"
-              type="password"
-              required
-              placeholder="••••••••"
-              :minlength="isSignUp ? 6 : undefined"
-              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': showFieldError }"
-            )
+          label.block.text-sm.font-medium.text-slate-700(for="password") Password
+          input#password.billo-input(
+            v-model="password"
+            name="password"
+            type="password"
+            required
+            placeholder="••••••••"
+            :minlength="isSignUp ? 6 : undefined"
+            :class="{ '!border-red-300 focus:!border-red-500 focus:!ring-red-500': showFieldError }"
+          )
 
         // Auth Actions
         .flex.items-center.justify-between
@@ -136,7 +133,7 @@ meta:
               type="checkbox"
               v-model="rememberMe"
             )
-            label.ml-2.block.text-sm.text-gray-700(for="remember-me") Remember me
+            label.ml-2.block.text-sm.text-slate-700(for="remember-me") Remember me
           
           .text-sm(v-if="!isSignUp")
             a.font-medium.text-emerald-600.hover_text-emerald-700.transition-colors(
@@ -145,7 +142,8 @@ meta:
             ) Forgot password?
 
         // Submit Button
-        button.relative.w-full.flex.justify-center.py-3.px-4.border.border-transparent.text-sm.font-medium.rounded-lg.text-white.bg-gradient-to-r.from-emerald-500.to-teal-600.hover_from-emerald-600.hover_to-teal-700.focus_outline-none.focus_ring-2.focus_ring-offset-2.focus_ring-emerald-500.transition-all.duration-150.ease-in-out(
+        button.relative.flex.w-full.justify-center.rounded-xl.border.border-transparent.bg-gradient-to-r.from-emerald-600.to-teal-600.px-4.py-3.text-sm.font-semibold.text-white.shadow-md.transition-all.duration-150.ease-in-out.focus_outline-none.focus_ring-2.focus_ring-emerald-500.focus_ring-offset-2(
+          class="hover:from-emerald-500 hover:to-teal-500 hover:shadow-lg"
           type="submit"
           :disabled="loading"
         )
@@ -169,12 +167,13 @@ meta:
         // Divider
         .relative.my-6
           .absolute.inset-0.flex.items-center
-            .w-full.border-t.border-gray-200
+            .w-full.border-t.border-slate-200
           .relative.flex.justify-center.text-sm
-            span.px-2.bg-white.text-gray-500 Or continue with
+            span.bg-white.px-2.text-slate-500 Or continue with
 
         // Google Sign In Button
-        button.w-full.flex.items-center.justify-center.px-4.py-3.border.border-gray-300.rounded-lg.shadow-sm.bg-white.text-sm.font-medium.text-gray-700.hover_bg-gray-50.focus_outline-none.focus_ring-2.focus_ring-offset-2.focus_ring-emerald-500.transition-colors(
+        button.flex.w-full.items-center.justify-center.rounded-xl.border.border-slate-200.bg-white.px-4.py-3.text-sm.font-semibold.text-slate-700.shadow-sm.transition-colors.focus_outline-none.focus_ring-2.focus_ring-emerald-500.focus_ring-offset-2(
+          class="hover:bg-slate-50"
           type="button"
           @click="handleGoogleSignIn"
           :disabled="loading"
@@ -187,7 +186,7 @@ meta:
 
         // Toggle Sign In/Up
         .text-sm.text-center.mt-6
-          span.text-gray-600 {{ isSignUp ? 'Already have an account?' : 'Need an account?' }}
+          span.text-slate-600 {{ isSignUp ? 'Already have an account?' : 'Need an account?' }}
           a.font-medium.text-emerald-600.hover_text-emerald-700.transition-colors.ml-1(
             href="#"
             @click.prevent="isSignUp = !isSignUp"
