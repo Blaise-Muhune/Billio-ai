@@ -265,35 +265,60 @@ export const authService = {
 
   // Handle authentication errors
   handleAuthError(error) {
-    let message = 'An error occurred during authentication';
+    let message = 'Something went wrong signing you in. Please try again.';
 
     switch (error.code) {
-      case 'auth/user-not-found':
-        message = 'No account found with this email address';
-        break;
+      case 'auth/invalid-credential':
       case 'auth/wrong-password':
-        message = 'Invalid password';
+        message =
+          'That email and password do not match. Try again, use “Forgot password”, or sign in with Google if you created the account that way.';
+        break;
+      case 'auth/user-not-found':
+        message = 'No account found with this email. Sign up first, or check for a typo.';
         break;
       case 'auth/invalid-email':
-        message = 'Invalid email address';
+        message = 'That email address does not look valid.';
         break;
       case 'auth/email-already-in-use':
-        message = 'An account already exists with this email address';
+        message = 'An account already exists with this email. Sign in instead.';
         break;
       case 'auth/weak-password':
-        message = 'Password should be at least 6 characters';
+        message = 'Password should be at least 6 characters.';
         break;
       case 'auth/popup-closed-by-user':
-        message = 'Sign in was cancelled';
+        message = 'Sign-in was cancelled.';
+        break;
+      case 'auth/popup-blocked':
+        message = 'Your browser blocked the sign-in popup. Allow popups for this site or try again.';
         break;
       case 'auth/network-request-failed':
-        message = 'Network error. Please check your internet connection';
+        message = 'Network error. Check your connection and try again.';
         break;
       case 'auth/too-many-requests':
-        message = 'Too many attempts. Please try again later';
+        message = 'Too many attempts. Wait a few minutes, then try again.';
+        break;
+      case 'auth/auth-domain-config-required':
+        message =
+          'Firebase auth domain is not set up for this URL. In Firebase Console → Authentication → Settings, add this site to “Authorized domains”, and confirm VITE_FIREBASE_AUTH_DOMAIN in your .env matches your project (usually your-project.firebaseapp.com).';
+        break;
+      case 'auth/operation-not-allowed':
+        message = 'This sign-in method is disabled in the Firebase project. Ask the admin to enable Email/Password or Google.';
+        break;
+      case 'auth/account-exists-with-different-credential':
+        message = 'An account already exists with this email using a different sign-in method. Try “Sign in with Google” or reset your password.';
+        break;
+      case 'auth/user-disabled':
+        message = 'This account has been disabled. Contact support.';
+        break;
+      case 'auth/invalid-api-key':
+        message = 'App configuration error (invalid API key). Check Firebase web config in your environment variables.';
         break;
       default:
-        message = error.message || message;
+        if (error.message && !String(error.message).startsWith('Firebase:')) {
+          message = error.message;
+        } else if (error.code) {
+          message = `Sign-in error (${error.code}). Check Firebase settings and try again.`;
+        }
     }
 
     return new Error(message);

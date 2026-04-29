@@ -1,6 +1,7 @@
 <route>
 meta:
-  title: BilloAI - Smart Business Card Manager
+  title: BilloAI — Your cards & follow-ups
+  requiresAuth: true
 </route>
 
 <template lang="pug">
@@ -577,28 +578,39 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                 // No cards message 
                 .empty-state(
                   v-else-if="user && filteredCards.length === 0"
-                  class="col-span-full flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"
+                  class="col-span-full flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 max-w-2xl mx-auto"
                 )
                   VaIcon(name="search_off" size="48px" class="text-gray-400 mb-4")
-                  p.text-gray-500.text-center.mb-2 No business cards found
-                  p.text-sm.text-gray-400.text-center(v-if="searchQuery") 
-                    | No cards match your search criteria. Try different keywords.
-                  p.text-sm.text-gray-400.text-center(v-else) 
-                    | Upload your first business card to get started!
+                  p.text-gray-700.text-center.text-lg.font-semibold.mb-1 No business cards yet
+                  p.text-sm.text-gray-500.text-center(v-if="searchQuery") 
+                    | No cards match your search. Try different keywords or clear the search.
+                  template(v-else)
+                    p.text-sm.text-gray-500.text-center.mb-6.max-w-md
+                      | Add a photo of a card — we’ll pull the details so you can save contacts and follow up fast.
+                    ol.text-sm.text-gray-600.text-left.max-w-md.space-y-3.mb-8.list-decimal.pl-5
+                      li
+                        span.font-medium.text-gray-800 Upload
+                        |  a clear photo (desk or hand is fine).
+                      li
+                        span.font-medium.text-gray-800 Review
+                        |  the scanned fields and fix anything that looks off.
+                      li
+                        span.font-medium.text-gray-800 Save
+                        |  to contacts or draft a short follow-up from the card.
                   button(
                     v-if="searchQuery"
-                    class="mt-4 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
+                    class="mt-2 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
                     @click="searchQuery = ''"
                   )
                     VaIcon(name="clear" size="20px")
                     span.font-medium Clear Search
                   button(
                     v-else
-                    class="mt-4 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+                    class="mt-2 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
                     @click="handleUploadCard"
                   )
                     VaIcon(name="upload" size="20px")
-                    span.font-medium Upload Card
+                    span.font-medium Upload your first card
                 
                 // Cards grid with pagination
                 div(v-else)
@@ -2461,7 +2473,7 @@ async function downloadBusinessCard() {
     ctx.fillStyle = '#10b981'; // emerald-500
     ctx.font = 'bold 20px Inter, system-ui, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText('billoAI', canvas.width - 60, 60);
+    ctx.fillText('BilloAI', canvas.width - 60, 60);
     
     // Add name and title on the left side
     const textX = 80; // Left aligned text starting point

@@ -1,18 +1,53 @@
-@import "https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,400;1,700&display=swap";
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Sans:wght@500;600;700&display=swap');
 @import "https://fonts.googleapis.com/icon?family=Material+Icons";
+
+@import './styles/design-tokens.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-slate-50 text-slate-900;
+  }
+
+  h1,
+  .billo-type-display {
+    font-family: 'Instrument Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-emerald-500 text-white rounded px-4 py-2 hover:bg-emerald-600 transition-colors;
+    @apply rounded-xl px-4 py-2.5 font-medium text-white shadow-sm transition-all duration-billo ease-billo-out;
+    background-color: var(--billo-primary);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--billo-primary-hover);
+    box-shadow: var(--billo-shadow-md);
+  }
+
+  .billo-input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm transition-all duration-billo ease-billo-out placeholder:text-slate-400;
+  }
+
+  .billo-input:focus {
+    @apply border-emerald-400 ring-2 ring-emerald-500/25 outline-none;
+  }
+
+  .billo-card-elevated {
+    border-radius: var(--billo-radius-2xl);
+    background: var(--billo-elevated);
+    box-shadow: var(--billo-shadow-lg);
+    border: 1px solid rgb(226 232 240 / 0.95);
   }
 }

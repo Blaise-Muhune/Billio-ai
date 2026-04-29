@@ -1,5 +1,5 @@
 const DEFAULT_PAGE_TITLE = 'BilloAI'
-const DEFAULT_PAGE_DESCRIPTION = 'Digitize your business cards with AI. Save time, stay organized, and never lose a contact again. Try BilloAI for free today.'
+const DEFAULT_PAGE_DESCRIPTION = 'Scan cards into contacts, share a live profile + QR, and draft follow-ups—networking without retyping or spreadsheet limbo.'
 // Base Vue config
 import { createApp } from 'vue'
 import App from './App.vue'
@@ -17,6 +17,9 @@ const app = createApp(App)
 // Vue Router with unplugin-vue-router config
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes, handleHotUpdate } from 'vue-router/auto-routes'
+import { authService } from './services/authService'
+import { getFirebaseUserWhenReady } from './utils/authReady'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
@@ -24,26 +27,74 @@ const router = createRouter({
 if(import.meta.hot) {
   handleHotUpdate(router)
 }
-router.beforeEach((to)=> {
-  // Update page title for SEO
+
+function applyRouteMeta(to) {
   document.title = to?.meta?.title ? to.meta.title : DEFAULT_PAGE_TITLE
-  
-  // Update meta description for SEO
+
   const metaDescription = document.querySelector('meta[name="description"]')
   if (metaDescription) {
     metaDescription.setAttribute('content', to?.meta?.description || DEFAULT_PAGE_DESCRIPTION)
   }
-  
-  // Update Open Graph and Twitter meta tags
+
   const ogTitle = document.querySelector('meta[property="og:title"]')
   const twitterTitle = document.querySelector('meta[name="twitter:title"]')
   if (ogTitle) ogTitle.setAttribute('content', to?.meta?.title || DEFAULT_PAGE_TITLE)
   if (twitterTitle) twitterTitle.setAttribute('content', to?.meta?.title || DEFAULT_PAGE_TITLE)
-  
+
   const ogDescription = document.querySelector('meta[property="og:description"]')
   const twitterDescription = document.querySelector('meta[name="twitter:description"]')
   if (ogDescription) ogDescription.setAttribute('content', to?.meta?.description || DEFAULT_PAGE_DESCRIPTION)
   if (twitterDescription) twitterDescription.setAttribute('content', to?.meta?.description || DEFAULT_PAGE_DESCRIPTION)
+}
+
+router.beforeEach(async (to, from, next) => {
+  applyRouteMeta(to)
+
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
+  const requiresGuest = to.matched.some((r) => r.meta.requiresGuest)
+
+  let user = null
+  try {
+    user = await getFirebaseUserWhenReady()
+  } catch (e) {
+    console.error('Auth initialization error:', e)
+  }
+
+  if (requiresAuth && !user) {
+    next({ path: '/auth', query: { redirect: to.fullPath } })
+    return
+  }
+
+  if (requiresGuest && user) {
+    try {
+      const profile = await authService.getUserProfile()
+      next(profile?.profileCompleted ? '/home' : '/profile-setup')
+    } catch {
+      next('/home')
+    }
+    return
+  }
+
+  const allowIncompleteProfile =
+    to.path === '/profile-setup' ||
+    to.path === '/auth' ||
+    to.path === '/privacy-policy' ||
+    to.path === '/demo' ||
+    /^\/profile\/[^/]+$/.test(to.path)
+
+  if (user && !allowIncompleteProfile) {
+    try {
+      const profile = await authService.getUserProfile()
+      if (!profile?.profileCompleted) {
+        next({ path: '/profile-setup' })
+        return
+      }
+    } catch (e) {
+      console.error('Profile gate error:', e)
+    }
+  }
+
+  next()
 })
 app.use(router)
 

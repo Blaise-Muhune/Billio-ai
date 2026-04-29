@@ -14,6 +14,17 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+if (import.meta.env.DEV) {
+  if (!firebaseConfig.authDomain) {
+    console.warn(
+      '[BilloAI] VITE_FIREBASE_AUTH_DOMAIN is missing. Auth will fail until you set it (e.g. your-project.firebaseapp.com) and restart the dev server.',
+    )
+  }
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    console.warn('[BilloAI] Firebase web config looks incomplete. Check your .env VITE_FIREBASE_* variables.')
+  }
+}
+
 // Initialize Firebase
 let app;
 let db;

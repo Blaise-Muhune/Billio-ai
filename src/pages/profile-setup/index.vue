@@ -1,6 +1,7 @@
 <route>
 meta:
   title: BilloAI - Complete Your Profile
+  requiresAuth: true
 </route>
 
 <template lang="pug">
@@ -9,19 +10,38 @@ meta:
   .loading-spinner
 
 //- Main Content
-main.p-8.max-w-2xl.mx-auto(v-else)
-  .bg-white.rounded-xl.shadow-lg.p-6
+main.p-6.max-w-2xl.mx-auto.font-sans(v-else class="sm:p-8")
+  .billo-card-elevated.p-6(class="sm:p-8")
     .text-center.mb-8
-      h1.text-3xl.font-bold.text-emerald-600 {{ isEditing ? 'Edit Profile' : 'Complete Your Profile' }}
-      p.text-gray-600.mt-2 {{ isEditing ? 'Update your information' : "Let's get to know you better" }}
+      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-2 BilloAI profile
+      h1.font-display.text-3xl.font-bold.text-slate-900(class="sm:text-4xl") {{ isEditing ? 'Edit your profile' : 'Build your public profile' }}
+      p.text-slate-600.mt-3.text-base.max-w-md.mx-auto.leading-relaxed {{ isEditing ? 'Update what visitors see on your card link.' : 'Four quick steps — only name is required. Everything else is optional.' }}
+
+    //- Step indicator
+    nav.mb-10(aria-label="Profile setup steps")
+      ol.flex.flex-col.gap-2(class="sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3")
+        li(v-for="step in profileSteps" :key="step.id" class="flex-1 min-w-0 sm:flex-none sm:w-44")
+          button.w-full.text-left.rounded-2xl.border.px-4.py-3.transition-all.duration-billo.ease-billo-out(
+            type="button"
+            @click="goToProfileStep(step.id)"
+            class="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+            :class="profileStep === step.id ? 'border-emerald-400 bg-emerald-50/90 shadow-billo-sm ring-1 ring-emerald-200/60' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'"
+          )
+            .flex.items-center.gap-3
+              span.flex.h-9.w-9.shrink-0.items-center.justify-center.rounded-xl.text-sm.font-bold(
+                :class="profileStep >= step.id ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'"
+              ) {{ step.id }}
+              .min-w-0
+                p.text-sm.font-semibold.text-slate-900.truncate {{ step.title }}
+                p.text-xs.text-slate-600.truncate {{ step.hint }}
     
     //- Error Message (if any)
-    .bg-red-50.text-red-600.p-4.rounded-lg.mb-6(v-if="error")
-      .flex.items-center.gap-2
-        VaIcon(name="error" size="20px")
-        span {{ error }}
+    .bg-red-50.text-red-700.p-4.rounded-xl.mb-6.border.border-red-100(v-if="error" role="alert")
+      .flex.items-start.gap-2
+        VaIcon(name="error" size="20px" class="shrink-0 mt-0.5")
+        span.text-sm.leading-relaxed {{ error }}
     
-    form(@submit.prevent="saveProfile").space-y-6
+    form(@submit.prevent="handleProfileStepSubmit").space-y-6
       //- Hidden file input for icon uploads
       input(
         type="file"
@@ -32,7 +52,7 @@ main.p-8.max-w-2xl.mx-auto(v-else)
       )
 
       // Profile Picture
-      .flex.flex-col.items-center.gap-4
+      .flex.flex-col.items-center.gap-4(v-show="profileStep === 1")
         .relative.group
           .w-32.h-32.rounded-full.overflow-hidden.ring-4.ring-emerald-100.shadow-lg
             img(
@@ -59,33 +79,31 @@ main.p-8.max-w-2xl.mx-auto(v-else)
           span.text-red-500 {{ imageError }}
 
       // Name
-      .space-y-2
+      .space-y-2(v-show="profileStep === 1")
         label.block.text-sm.font-medium.text-gray-700
           | Full Name
           span.text-red-500.ml-1 *
-        input(
+        input.billo-input(
           type="text"
           v-model="formData.displayName"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           required
         )
 
       // Email
-      .space-y-2
+      .space-y-2(v-show="profileStep === 1")
         label.block.text-sm.font-medium.text-gray-700
           | Email
           span.text-red-500.ml-1 *
-        input(
+        input.billo-input.bg-slate-50.cursor-not-allowed(
           type="email"
           v-model="formData.email"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-gray-50 cursor-not-allowed"
           disabled
           readonly
         )
-        p.text-xs.text-gray-500.mt-1 Your email is tied to your account and cannot be changed
+        p.text-xs.text-slate-600.mt-1 Your email is tied to your account and cannot be changed.
 
       // Company
-      .space-y-2
+      .space-y-2(v-show="profileStep === 1")
         .flex.items-center.gap-2.justify-between
           .flex.items-center.gap-2
             .w-5.h-5.flex.items-center.justify-center
@@ -104,14 +122,13 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               size="20px"
               class="text-gray-600"
             )
-        input(
+        input.billo-input(
           type="text"
           v-model="formData.company"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
         )
 
       // Title
-      .space-y-2
+      .space-y-2(v-show="profileStep === 1")
         .flex.items-center.gap-2.justify-between
           .flex.items-center.gap-2
             .w-5.h-5.flex.items-center.justify-center
@@ -130,14 +147,34 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               size="20px"
               class="text-gray-600"
             )
-        input(
+        input.billo-input(
           type="text"
           v-model="formData.title"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
         )
 
+      //- Step 2 — visibility + contact
+      .flex.flex-col.gap-3.mb-2.p-4.bg-slate-50.rounded-xl.border.border-slate-200(v-show="profileStep === 2" class="sm:flex-row sm:items-center sm:justify-between")
+        div
+          p.text-sm.font-medium.text-slate-800 Public profile visibility
+          p.text-xs.text-slate-600(class="mt-1") Control what visitors see on your BilloAI link. You can still use the eye icons on each field.
+        .flex.flex-wrap.gap-2
+          button(
+            type="button"
+            @click="setAllVisibility(true)"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-800 hover:bg-emerald-50 hover:border-emerald-200 transition-all duration-billo ease-billo-out"
+          )
+            VaIcon(name="visibility" size="18px")
+            span Show all
+          button(
+            type="button"
+            @click="hideContactFromPublic"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-800 hover:bg-amber-50 hover:border-amber-200 transition-all duration-billo ease-billo-out"
+          )
+            VaIcon(name="lock" size="18px")
+            span Hide email, phone & address
+
       // Phone Number
-      .space-y-2
+      .space-y-2(v-show="profileStep === 2")
         .flex.items-center.gap-2.justify-between
           .flex.items-center.gap-2
             .w-5.h-5.flex.items-center.justify-center
@@ -156,15 +193,14 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               size="20px"
               class="text-gray-600"
             )
-        input(
+        input.billo-input(
           type="tel"
           v-model="formData.phone"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           placeholder="+1 (555) 555-5555"
         )
 
       // Bio
-      .space-y-2
+      .space-y-2(v-show="profileStep === 2")
         .flex.items-center.gap-2.justify-between
           .flex.items-center.gap-2
             .w-5.h-5.flex.items-center.justify-center
@@ -183,14 +219,14 @@ main.p-8.max-w-2xl.mx-auto(v-else)
               size="20px"
               class="text-gray-600"
             )
-        textarea(
+        textarea.billo-input.resize-y(
           v-model="formData.bio"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent min-h-[100px] resize-y"
-          placeholder="Tell us about yourself..."
+          class="min-h-[120px]"
+          placeholder="Short intro visitors see on your profile…"
         )
 
       // Address
-      .space-y-4
+      .space-y-4(v-show="profileStep === 3")
         .flex.items-center.gap-2.justify-between
           .flex.items-center.gap-2
             .w-5.h-5.flex.items-center.justify-center
@@ -248,7 +284,7 @@ main.p-8.max-w-2xl.mx-auto(v-else)
             )
 
       // Social Media & Music Platforms
-      .space-y-4.mt-8.pt-8.border-t.border-gray-100
+      .space-y-4.mt-8.pt-8.border-t.border-slate-100(v-show="profileStep === 4")
         .flex.items-center.gap-2.mb-4
           .w-5.h-5.flex.items-center.justify-center
             svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5")
@@ -565,6 +601,14 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                   VaIcon(name="stars" size="24px" class="text-emerald-500")
                   h3.text-lg.font-semibold.text-gray-900 Add Custom Links with Premium
                 p.text-sm.text-gray-600 Create unlimited custom links with your own icons
+
+              .flex.rounded-lg.border.border-emerald-100.bg-white.p-3.mb-4.items-center.gap-3
+                .rounded-full.bg-emerald-100.p-2.shrink-0
+                  VaIcon(name="link" size="20px" class="text-emerald-700")
+                div.text-left
+                  p.text-xs.font-semibold.text-gray-900 Example on your public profile
+                  p.text-xs.text-gray-600(class="mt-0.5")
+                    | “Portfolio”, Cash App, Venmo, Calendly — icons match the link automatically when you upgrade.
               
               .mb-4
                 .flex.items-start.gap-2.mb-2
@@ -637,8 +681,9 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                     v-model="link.url"
                     type="url"
                     class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    placeholder="https://example.com"
+                    placeholder="https://cash.app/$user or https://venmo.com/…"
                   )
+                  p.text-xs.text-gray-500.px-1 Cash App, Venmo, PayPal, Zelle, Stripe, Ko-fi, Linktree, and similar URLs show the correct icon automatically; you can still upload your own.
                   //- Icon Selection
                   .flex.items-center.gap-4
                     //- Icon Preview
@@ -648,17 +693,12 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                         class="opacity-100"
                       )
                         .loading-spinner.w-6.h-6.border-2.border-white
-                      img(
-                        v-if="link.iconUrl || link.previewUrl"
-                        :src="link.previewUrl || link.iconUrl"
-                        class="w-6 h-6 object-contain"
-                        alt="Link icon"
-                      )
-                      VaIcon(
-                        v-else
-                        name="link"
-                        size="24px"
-                        class="text-gray-400"
+                      CustomLinkIcon(
+                        :link="link"
+                        img-class="w-6 h-6 object-contain"
+                        fallback-icon="link"
+                        fallback-size="24px"
+                        fallback-class="text-gray-400"
                       )
                     //- Icon Upload Button
                     button(
@@ -674,24 +714,37 @@ main.p-8.max-w-2xl.mx-auto(v-else)
                         VaIcon(name="upload" size="20px" class="text-gray-600")
                         span.text-sm.text-gray-700 {{ link.iconUrl ? 'Change Icon' : 'Upload Icon' }}
 
-      //- Required fields note
-      .text-sm.text-gray-500.mb-6
-        span.text-red-500 * 
-        | Required fields
+      //- Required fields note (step 4)
+      .text-sm.text-slate-600.mb-2(v-show="profileStep === 4")
+        span.text-red-500.font-medium *
+        |  Required fields are marked. You can go back anytime to edit earlier steps.
 
-      //- Submit Button Container
-      .flex.justify-center.w-full.mt-8
+      //- Wizard navigation
+      .flex.flex-col-reverse.gap-3.pt-8.mt-4.border-t.border-slate-200(class="sm:flex-row sm:items-center sm:justify-between")
+        button(
+          type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition-all duration-billo ease-billo-out hover:bg-slate-50"
+          v-show="profileStep > 1"
+          @click="goBackProfileStep"
+        )
+          VaIcon(name="arrow_back" size="20px")
+          span Back
+        p.text-xs.text-slate-500.text-center(class="sm:text-left" v-if="profileStep < 4")
+          | Step {{ profileStep }} of 4 — nothing is saved to the server until you finish the last step.
         button(
           type="submit"
-          class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-3.5 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px] font-medium text-base"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-3.5 text-base font-semibold text-white shadow-billo transition-all duration-billo ease-billo-out hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:min-w-[220px]"
           :disabled="saving"
         )
-          VaIcon(name="check" size="22px")
-          span {{ saving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Complete Profile') }}
+          VaIcon(:name="profileStep < 4 ? 'arrow_forward' : 'check'" size="22px")
+          span(v-if="saving") Saving…
+          span(v-else-if="profileStep < 4") Continue
+          span(v-else-if="isEditing") Save changes
+          span(v-else) Save & finish profile
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { authService } from '../../services/authService';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -717,6 +770,51 @@ const showQR = ref(false);
 const copiedLink = ref(false);
 const imageError = ref('');
 const imageFile = ref(null);
+
+const profileStep = ref(1);
+
+const profileSteps = [
+  { id: 1, title: 'Identity', hint: 'Photo, name & role' },
+  { id: 2, title: 'Contact', hint: 'Visibility & bio' },
+  { id: 3, title: 'Location', hint: 'Address (optional)' },
+  { id: 4, title: 'Links', hint: 'Social & finish' },
+];
+
+function goToProfileStep(n) {
+  if (n < 1 || n > 4) return;
+  profileStep.value = n;
+  error.value = '';
+}
+
+function goBackProfileStep() {
+  if (profileStep.value > 1) {
+    profileStep.value -= 1;
+    error.value = '';
+  }
+}
+
+async function handleProfileStepSubmit() {
+  if (profileStep.value === 1 && !formData.value.displayName?.trim()) {
+    error.value = 'Please enter your full name before continuing.';
+    return;
+  }
+  error.value = '';
+  if (profileStep.value < 4) {
+    profileStep.value += 1;
+    return;
+  }
+  await saveProfile();
+}
+
+watch(profileStep, () => {
+  nextTick(() => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  });
+});
 
 const formData = ref({
   displayName: '',
@@ -1295,6 +1393,45 @@ function toggleCustomLinkVisibility(index, event) {
     formData.value.visibility.customLinks = {};
   }
   formData.value.visibility.customLinks[index] = !getCustomLinkVisibility(index);
+}
+
+const VISIBILITY_SCALAR_KEYS = [
+  'nameTitle',
+  'company',
+  'title',
+  'bio',
+  'email',
+  'phone',
+  'address',
+  'linkedin',
+  'github',
+  'twitter',
+  'instagram',
+  'facebook',
+  'tiktok',
+  'spotify',
+  'soundcloud',
+  'youtubeMusic',
+  'appleMusic',
+  'otherLink',
+];
+
+function setAllVisibility(show) {
+  const v = formData.value.visibility;
+  VISIBILITY_SCALAR_KEYS.forEach((key) => {
+    if (key in v) v[key] = show;
+  });
+  if (v.customLinks && typeof v.customLinks === 'object') {
+    Object.keys(v.customLinks).forEach((idx) => {
+      v.customLinks[idx] = show;
+    });
+  }
+}
+
+function hideContactFromPublic() {
+  formData.value.visibility.email = false;
+  formData.value.visibility.phone = false;
+  formData.value.visibility.address = false;
 }
 </script>
 

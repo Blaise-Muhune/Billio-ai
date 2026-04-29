@@ -1,15 +1,21 @@
+<route>
+meta:
+  requiresGuest: true
+</route>
+
 <template lang="pug">
-.min-h-screen.flex.items-center.justify-center.bg-gradient-to-br.from-emerald-50.to-teal-50.py-12.px-4(class="sm:px-6 lg:px-8")
+.min-h-screen.flex.items-center.justify-center.bg-gradient-to-br.from-slate-50.via-emerald-50.to-teal-50.py-12.px-4.font-sans(class="sm:px-6 lg:px-8")
   .max-w-md.w-full
     // Header
     .text-center.mb-10
-      .mx-auto.w-32.h-12.mb-4
-        
-      h2.text-4xl.font-bold.tracking-tight.text-gray-900.mb-2 Welcome Back
-      p.text-base.text-gray-600 {{ isSignUp ? 'Create your account to get started' : 'Sign in to manage your business cards' }}
+      .mx-auto.mb-5(class="h-12 w-40")
+        Logo(classes="block h-full w-full")
+      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-2 BilloAI
+      h2.font-display.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 Welcome back
+      p.text-base.text-slate-600.leading-relaxed {{ isSignUp ? 'Create your account to get started.' : 'Sign in to scan, organize, and share your business cards.' }}
     
     // Main Card
-    .bg-white.rounded-2xl.shadow-xl.p-8.space-y-6
+    .billo-card-elevated.p-8.space-y-6
       // Success Alert for Email Verification
       transition(
         enter-active-class="transition ease-out duration-300"
@@ -106,7 +112,7 @@
               type="email"
               required
               placeholder="you@example.com"
-              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': error }"
+              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': showFieldError }"
             )
         
         // Password Input
@@ -120,7 +126,7 @@
               required
               placeholder="••••••••"
               :minlength="isSignUp ? 6 : undefined"
-              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': error }"
+              :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': showFieldError }"
             )
 
         // Auth Actions
@@ -189,7 +195,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authService } from '../../services/authService'
 import Logo from '../../components/Logo.vue'
@@ -207,6 +213,14 @@ const error = ref('')
 const successMessage = ref('')
 const showVerificationNotice = ref(false)
 
+const showFieldError = computed(() => Boolean(error.value))
+
+watch(isSignUp, () => {
+  error.value = ''
+  successMessage.value = ''
+  showVerificationNotice.value = false
+})
+
 // Handle email/password sign in
 const handleSignIn = async () => {
   try {
@@ -221,7 +235,12 @@ const handleSignIn = async () => {
     
     // If email is verified, redirect to profile setup if needed
     const userProfile = await authService.getUserProfile();
-    if (!userProfile) {
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '';
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      router.push(redirect);
+      return;
+    }
+    if (!userProfile?.profileCompleted) {
       router.push('/profile-setup');
     } else {
       router.push('/home');
@@ -254,7 +273,17 @@ const handleGoogleSignIn = async () => {
     loading.value = true
     error.value = ''
     await authService.signInWithGoogle()
-    router.push('/home')
+    const userProfile = await authService.getUserProfile()
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      router.push(redirect)
+      return
+    }
+    if (!userProfile?.profileCompleted) {
+      router.push('/profile-setup')
+    } else {
+      router.push('/home')
+    }
   } catch (err) {
     error.value = err.message
   } finally {
@@ -272,8 +301,9 @@ const handleResetPassword = async () => {
   try {
     loading.value = true
     error.value = ''
+    successMessage.value = ''
     await authService.sendPasswordResetEmail(email.value)
-    error.value = 'Password reset email sent. Please check your inbox.'
+    successMessage.value = 'Password reset email sent. Check your inbox (and spam), then return here to sign in.'
   } catch (err) {
     error.value = err.message
   } finally {

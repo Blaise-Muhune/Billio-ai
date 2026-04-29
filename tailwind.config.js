@@ -20,6 +20,25 @@ export default {
       //'laptop':'1400px',
     },
     extend: {
+      fontFamily: {
+        sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Instrument Sans', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        '2xl': '1rem',
+        '3xl': '1.25rem',
+        '4xl': '1.5rem',
+      },
+      boxShadow: {
+        billo: '0 10px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.08)',
+        'billo-sm': '0 1px 2px rgb(15 23 42 / 0.06)',
+      },
+      transitionDuration: {
+        billo: '180ms',
+      },
+      transitionTimingFunction: {
+        'billo-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
+      },
     },
   },
   plugins: [],

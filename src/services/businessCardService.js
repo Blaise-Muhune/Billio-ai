@@ -4,6 +4,7 @@ import { storage, db } from '../config/firebase';
 import { SUBSCRIPTION_PLANS } from '../config/plans';
 import OpenAI from 'openai';
 import { authService } from './authService';
+import { OPENAI_CHAT_MODEL } from '../config/openai';
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -87,10 +88,10 @@ export const businessCardService = {
       const imageUrl = await getDownloadURL(storageRef);
 
       try {
-        // Extract text using GPT-4 Vision
+        // Extract fields with multimodal chat (vision + text)
         if (onStatusUpdate) onStatusUpdate('Processing image with AI...');
         const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: OPENAI_CHAT_MODEL,
           messages: [
             {
               role: "user",
@@ -339,7 +340,7 @@ If no relevant information is found, return ONLY this error object:
 
       // Only proceed with GPT call if all checks pass
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: OPENAI_CHAT_MODEL,
         messages: [
           {
             role: "system",

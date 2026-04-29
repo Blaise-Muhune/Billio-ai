@@ -1,0 +1,86 @@
+/**
+ * BilloAI design tokens — single source for radius, shadow, motion, type scale.
+ * Use via Tailwind theme extension or var(--billo-*).
+ */
+:root {
+  /* Brand */
+  --billo-primary: #059669;
+  --billo-primary-hover: #047857;
+  --billo-accent: #0d9488;
+  --billo-surface: #f8fafc;
+  --billo-elevated: #ffffff;
+
+  /* Radius */
+  --billo-radius-sm: 0.5rem;
+  --billo-radius-md: 0.75rem;
+  --billo-radius-lg: 1rem;
+  --billo-radius-xl: 1.25rem;
+  --billo-radius-2xl: 1.5rem;
+
+  /* Shadow */
+  --billo-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+  --billo-shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.06);
+  --billo-shadow-lg: 0 10px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.08);
+  --billo-shadow-glow: 0 0 0 1px rgb(16 185 129 / 0.15), var(--billo-shadow-lg);
+
+  /* Motion */
+  --billo-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --billo-duration: 180ms;
+  --billo-duration-slow: 260ms;
+
+  /* Type scale (rem) */
+  --billo-text-display: clamp(2rem, 4vw + 1rem, 3rem);
+  --billo-text-h1: clamp(1.5rem, 2vw + 1rem, 2rem);
+  --billo-text-h2: 1.25rem;
+  --billo-text-body: 1rem;
+  --billo-text-small: 0.875rem;
+  --billo-text-caption: 0.8125rem;
+
+  /* Readable secondary (WCAG-friendly on white / mint) */
+  --billo-muted: #475569;
+  --billo-subtle: #64748b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --billo-duration: 0.01ms;
+    --billo-duration-slow: 0.01ms;
+  }
+}
+
+.billo-motion {
+  transition-property: transform, box-shadow, border-color, background-color, color, opacity;
+  transition-duration: var(--billo-duration);
+  transition-timing-function: var(--billo-ease-out);
+}
+
+.billo-motion-slow {
+  transition-duration: var(--billo-duration-slow);
+}
+
+.billo-focus:focus-visible {
+  outline: 2px solid var(--billo-primary);
+  outline-offset: 2px;
+}
+
+.billo-surface-card {
+  border-radius: var(--billo-radius-2xl);
+  background: var(--billo-elevated);
+  box-shadow: var(--billo-shadow-md);
+  border: 1px solid rgb(226 232 240 / 0.9);
+}
+
+.billo-step-panel {
+  animation: billo-step-enter var(--billo-duration-slow) var(--billo-ease-out) both;
+}
+
+@keyframes billo-step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

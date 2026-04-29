@@ -214,6 +214,32 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                         class="text-gray-700"
                       )
 
+              //- TikTok Link
+              .rounded-lg.bg-white.border(
+                class="border-black/30 shadow-sm overflow-hidden"
+                v-if="profile.tiktok && (isOwner || profile.visibility?.tiktok)"
+              )
+                a(:href="formatSocialLink(profile.tiktok, 'tiktok')" target="_blank" rel="noopener noreferrer" class="block h-full")
+                  .flex.flex-col.items-center.py-3.px-2.text-center
+                    .rounded-full(class="bg-black/10 p-2 mb-2")
+                      svg.w-5.h-5(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
+                        path(
+                          fill="currentColor"
+                          d="M19.321 5.562a5.122 5.122 0 0 1-.443-.258 6.228 6.228 0 0 1-1.138-1.009 6.268 6.268 0 0 1-1.362-2.638h.004C16.326.924 16.322.5 16.322.5h-3.217v15.093c0 .42-.003 1.685-.987 2.621-.616.585-1.417.875-2.369.875-2.362 0-3.571-2.017-3.571-3.938 0-1.967 1.268-3.865 3.479-3.865.365 0 .758.05 1.137.153v-3.325c-.375-.055-.752-.082-1.127-.083-2.358 0-4.125.871-5.261 2.355C3.18 11.668 2.6 13.397 2.6 15.129c0 1.719.574 3.336 1.617 4.552 1.276 1.487 3.093 2.319 5.11 2.319 1.815 0 3.505-.647 4.769-1.822 1.369-1.271 2.127-3.033 2.127-4.951V8.456c1.123.778 2.434 1.193 3.778 1.193V6.5c-.006 0-1.11.052-1.68-.938z"
+                        )
+                    .text-xs.font-medium.text-gray-900 TikTok
+                    button.mt-1(
+                      v-if="isOwner"
+                      @click.stop.prevent="toggleVisibility('tiktok')"
+                      class="bg-black/5 rounded-full p-1 inline-flex"
+                      :title="profile.visibility?.tiktok ? 'Hide from public' : 'Show to public'"
+                    )
+                      VaIcon(
+                        :name="profile.visibility?.tiktok ? 'visibility' : 'visibility_off'"
+                        size="14px"
+                        class="text-gray-700"
+                      )
+
               //- Instagram Link
               .rounded-lg.bg-white.border(
                 class="border-[#E4405F]/30 shadow-sm overflow-hidden"
@@ -415,10 +441,8 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
                   )
                     a(:href="formatSocialLink(link.url)" target="_blank" rel="noopener noreferrer" class="block h-full")
                       .flex.flex-col.items-center.py-3.px-2.text-center
-                        .rounded-full(class="bg-gray-900/10 p-2 mb-2" v-if="!link.iconUrl")
-                          VaIcon(name="link" size="20px" class="text-gray-700")
-                        .rounded-full(class="bg-white p-2 mb-2" v-if="link.iconUrl")
-                          img(:src="link.iconUrl" class="w-5 h-5 object-contain" :alt="link.name")
+                        .rounded-full(class="bg-white p-2 mb-2 border border-gray-100")
+                          CustomLinkIcon(:link="link" img-class="w-5 h-5 object-contain")
                         .text-xs.font-medium.text-gray-900 {{ link.name }}
                         //- Visibility Toggle
                         button.mt-1(
@@ -575,6 +599,7 @@ async function toggleVisibility(field) {
         address: true,
         linkedin: true,
         twitter: true,
+        tiktok: true,
         instagram: true,
         facebook: true,
         spotify: true,
@@ -618,7 +643,7 @@ const formattedAddress = computed(() => {
 });
 
 const hasSocialLinks = computed(() => {
-  return profile.value?.linkedin || profile.value?.twitter || profile.value?.instagram || profile.value?.facebook;
+  return profile.value?.linkedin || profile.value?.twitter || profile.value?.instagram || profile.value?.facebook || profile.value?.tiktok;
 });
 
 const hasMusicLinks = computed(() => {

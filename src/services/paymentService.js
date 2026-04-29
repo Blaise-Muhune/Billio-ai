@@ -3,6 +3,24 @@ import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs } fro
 import { db } from '../config/firebase';
 import { authService } from './authService';
 import { SUBSCRIPTION_PLANS } from '../config/stripe';
+import { parseJsonResponse } from '../utils/parseFetchJson';
+
+const LOCAL_API_HINT =
+  'Cannot reach the API server. In local dev, run `npm run start` in a second terminal (Express on port 3000) while Vite proxies `/api` from port 5173.';
+
+/** Wrap fetch so proxy ECONNREFUSED / network failures become a clear message. */
+async function fetchApi(input, init) {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    const name = e?.name || '';
+    const msg = e?.message || String(e);
+    if (name === 'TypeError' || /failed to fetch|load failed|networkerror/i.test(msg)) {
+      throw new Error(LOCAL_API_HINT);
+    }
+    throw e;
+  }
+}
 
 // Initialize Stripe lazily
 let stripePromise = null;
@@ -22,7 +40,7 @@ export const paymentService = {
 
       console.log('Creating subscription for user:', user.uid, 'with price:', priceId);
 
-      const response = await fetch('/api/subscription/create', {
+      const response = await fetchApi('/api/subscription/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,7 +54,7 @@ export const paymentService = {
         })
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
 
       if (!response.ok) {
         console.error('Subscription creation failed:', data);
@@ -51,6 +69,34 @@ export const paymentService = {
       console.error('Error in createSubscription:', error);
       throw error;
     }
+  },
+
+  /**
+   * Stripe Checkout for plan + billing cycle (matches server /api/subscription/create).
+   */
+  async createCheckoutSession({ plan, billingCycle, userId, email, successUrl, cancelUrl }) {
+    const response = await fetchApi('/api/subscription/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan,
+        billingCycle,
+        userId,
+        email,
+        successUrl,
+        cancelUrl
+      })
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || `Checkout failed (${response.status})`);
+    }
+    if (!data.url) {
+      throw new Error(
+        'Checkout did not return a payment URL. Confirm Stripe price IDs in .env and on the server.'
+      );
+    }
+    return data;
   },
 
   async getSubscriptionStatus() {
@@ -139,7 +185,7 @@ export const paymentService = {
         // Continue with cancellation even if email update fails
       });
 
-      const response = await fetch('/api/subscription/cancel', {
+      const response = await fetchApi('/api/subscription/cancel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,8 +197,8 @@ export const paymentService = {
         })
       });
 
-      const data = await response.json();
-      
+      const data = await parseJsonResponse(response);
+
       if (!response.ok) {
         // If subscription not found in Stripe, update local state anyway
         if (response.status === 404 && data.code === 'subscription_not_found') {
@@ -273,13 +319,11 @@ export const paymentService = {
 
       console.log('Getting current period end for user:', user.uid);
 
-      const response = await fetch(`/api/subscription/period-end/${user.uid}`);
+      const response = await fetchApi(`/api/subscription/period-end/${user.uid}`);
+      const data = await parseJsonResponse(response);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get current period end');
+        throw new Error(data.error || 'Failed to get current period end');
       }
-
-      const data = await response.json();
       console.log('Current period end data:', data);
 
       if (data.hasSubscription && data.currentPeriodEnd) {

@@ -1,6 +1,26 @@
+<route>
+meta:
+  title: BilloAI - Choose Your Plan
+  requiresAuth: true
+</route>
+
 <template lang="pug">
-main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emerald-50")
+main(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40")
   .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-12")
+    //- Dismissible checkout / flow messages (replaces blocking alert())
+    Transition(name="sub-fade")
+      .sub-callout(
+        v-if="callout"
+        :class="callout.variant === 'error' ? 'sub-callout--error' : 'sub-callout--info'"
+        role="status"
+      )
+        p.sub-callout__text {{ callout.message }}
+        button.sub-callout__dismiss(
+          type="button"
+          @click="dismissCallout"
+          aria-label="Dismiss"
+        ) ×
+
     //- Home Button
     .flex.justify-end.mb-8
       button(
@@ -11,8 +31,10 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
         span.font-medium Return Home
 
     .text-center.mb-12
-      h1.text-4xl.font-bold.text-gray-900.mb-4 Choose Your Plan
-      p.text-xl.text-gray-600 Select the plan that best fits your networking needs
+      h1.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 Choose your plan
+      p.text-lg.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Pick a tier that matches how many cards, events, and AI drafts you use—limits stay in sync everywhere on this page.
+      p.text-sm.text-gray-500.mt-4.max-w-2xl.mx-auto
+        | If a renewal payment fails, Stripe may retry; you may lose premium access until billing succeeds. You can update your card in the customer portal when available.
 
     //- Billing Toggle (Monthly/Yearly)
     .flex.justify-center.mb-10
@@ -33,12 +55,13 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
       .plan(
         v-for="(plan, index) in ['FREE', 'BASIC', 'PRO']"
         :key="index"
-        :class="{ active: plan === currentPlan, free: plan === 'FREE', basic: plan === 'BASIC', pro: plan === 'PRO' }"
+        :class="{ active: plan === currentPlan, free: plan === 'FREE', basic: plan === 'BASIC', pro: plan === 'PRO', recommended: plan === 'BASIC' }"
       )
+        span.plan__ribbon(v-if="plan === 'BASIC'") Most popular
         .plan__content
           .plan__header
             .flex.items-center.justify-between
-              h3 {{ plan }}
+              h3 {{ planDisplayName(plan) }}
               //- Show billing cycle badge for current plan
               .plan-badge(v-if="plan === currentPlan && plan !== 'FREE'")
                 span.text-xs.font-medium.px-2.py-1.rounded-full.text-white(
@@ -79,20 +102,53 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             button.plan__button.downgrade(
               v-else-if="plan === 'FREE' && (currentPlan === 'BASIC' || currentPlan === 'PRO')"
               @click="selectPlan(plan)"
-              :disabled="loading"
-            ) {{ loading ? 'Loading...' : 'Downgrade' }}
+              :disabled="pageLoading || checkoutPlan !== null"
+            ) {{ checkoutPlan === 'FREE' ? 'Processing…' : pageLoading ? 'One moment…' : 'Downgrade to Free' }}
             button.plan__button(
               v-else
               @click="selectPlan(plan, billingCycle)"
-              :disabled="loading"
-            ) {{ loading ? 'Loading...' : plan === currentPlan && billingCycle !== userBillingCycle ? 'Switch to ' + billingCycle : plan === 'FREE' ? 'Select' : 'Upgrade' }}
+              :disabled="pageLoading || checkoutPlan !== null"
+            ) {{ planCtaLabel(plan) }}
+
+    //- At-a-glance comparison
+    .mt-14.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6(class="sm:p-8")
+      h2.text-2xl.font-bold.text-gray-900.mb-2 Compare plans
+      p.text-sm.text-gray-500.mb-6 Limits apply per billing period for cards and events. AI drafts are per card.
+      .overflow-x-auto
+        table.w-full.text-sm.text-left.border-collapse.min-w-full
+          thead
+            tr.bg-gray-50.text-gray-700
+              th.font-semibold.p-3.border.border-gray-200 Feature
+              th.font-semibold.p-3.border.border-gray-200.text-center Free
+              th.font-semibold.p-3.border.border-gray-200.text-center Basic
+              th.font-semibold.p-3.border.border-gray-200.text-center Pro
+          tbody.text-gray-800
+            tr.bg-white
+              td.p-3.border.border-gray-200 Business cards (max)
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxCards }}
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxCards }}
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxCards }}
+            tr.bg-gray-50
+              td.p-3.border.border-gray-200 Events (max)
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxEvents }}
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxEvents }}
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxEvents }}
+            tr.bg-white
+              td.p-3.border.border-gray-200 AI email drafts per card
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.FREE.limits.maxDraftsPerCard }}
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.BASIC.limits.maxDraftsPerCard }}
+              td.p-3.border.border-gray-200.text-center {{ SUBSCRIPTION_PLANS.PRO.limits.maxDraftsPerCard }}
+            tr.bg-gray-50
+              td.p-3.border.border-gray-200 Custom profile links & icons
+              td.p-3.border.border-gray-200.text-center —
+              td.p-3.border.border-gray-200.text-center.text-emerald-700.font-medium Included
+              td.p-3.border.border-gray-200.text-center.text-emerald-700.font-medium Included
 
     //- Usage Stats
     .mt-12.bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-8
-      .flex.items-center.justify-between.mb-8
-        .flex.items-center.gap-3
-        h2.text-2xl.font-bold.text-gray-900 Current Usage
-          //- Show plan with billing cycle
+      .flex.flex-col.gap-4.mb-8(class="md:flex-row md:items-center md:justify-between")
+        .flex.flex-wrap.items-center.gap-3
+          h2.text-2xl.font-bold.text-gray-900 Current Usage
           .inline-flex.items-center.px-3.py-1.rounded-lg.text-sm.font-medium(
             :class="{ 'bg-gray-100 text-gray-700': currentPlan === 'FREE', 'bg-blue-100 text-blue-800': currentPlan === 'BASIC', 'bg-emerald-100 text-emerald-800': currentPlan === 'PRO' }"
           )
@@ -148,14 +204,15 @@ main(class="min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-emer
             .flex.items-center.gap-2
               VaIcon(name="email" size="20px" class="text-emerald-500")
               span.text-gray-700.font-medium Email Drafts
-            span.text-sm.text-gray-500 {{ usageStats.totalDrafts }}/{{ planLimits.draftsPerCard.limit }}
+            span.text-sm.text-gray-500 {{ peakDraftsOnOneCard }}/{{ planLimits.draftsPerCard.limit }}
+            span.text-xs.text-gray-400.ml-1 (per card)
           .w-full.bg-gray-100.rounded-full.h-3.mb-2
             .bg-emerald-500.rounded-full.h-full.transition-all.duration-500(
-              :style="{ width: `${Math.min((usageStats.totalDrafts / planLimits.draftsPerCard.limit) * 100, 100)}%` }"
+              :style="{ width: `${Math.min((peakDraftsOnOneCard / planLimits.draftsPerCard.limit) * 100, 100)}%` }"
             )
           .flex.items-center.justify-between.text-sm
-            span.text-gray-500 {{ planLimits.draftsPerCard.limit - usageStats.totalDrafts }} remaining
-            span.text-emerald-600.font-medium {{ Math.round((usageStats.totalDrafts / planLimits.draftsPerCard.limit) * 100) }}% used
+            span.text-gray-500 {{ Math.max(0, planLimits.draftsPerCard.limit - peakDraftsOnOneCard) }} headroom on busiest card
+            span.text-emerald-600.font-medium {{ Math.round((peakDraftsOnOneCard / planLimits.draftsPerCard.limit) * 100) }}% of per-card cap
           .mt-3.pt-3.border-t.border-gray-100
             .text-xs.text-gray-500 {{ planLimits.draftsPerCard.limit }} drafts per card
 
@@ -379,7 +436,9 @@ import { db } from '../../config/firebase';
 
 const router = useRouter();
 const route = useRoute();
-const loading = ref(false);
+const pageLoading = ref(false);
+const checkoutPlan = ref(null);
+const callout = ref(null);
 const canceling = ref(false);
 const showCancelModal = ref(false);
 const showSuccessModal = ref(false);
@@ -405,6 +464,37 @@ const planLimits = computed(() => {
   return checkPlanLimits(currentPlan.value, usageStats.value);
 });
 
+/** Highest draft count on any single card vs per-card limit (matches enforcement). */
+const peakDraftsOnOneCard = computed(() => {
+  const d = usageStats.value.draftsPerCard || {};
+  const vals = Object.values(d).map((n) => Number(n) || 0);
+  return vals.length ? Math.max(0, ...vals) : 0;
+});
+
+function dismissCallout() {
+  callout.value = null;
+}
+
+function planDisplayName(plan) {
+  return SUBSCRIPTION_PLANS[plan]?.name || plan;
+}
+
+const tierRank = { FREE: 0, BASIC: 1, PRO: 2 };
+
+function planCtaLabel(plan) {
+  if (checkoutPlan.value === plan) return 'Processing…';
+  if (pageLoading.value) return 'One moment…';
+  if (plan === currentPlan.value && plan !== 'FREE' && billingCycle.value !== userBillingCycle.value) {
+    return `Switch to ${billingCycle.value}`;
+  }
+  if (plan === 'FREE') return 'Select';
+  const cur = tierRank[currentPlan.value] ?? 0;
+  const next = tierRank[plan] ?? 0;
+  if (next < cur) return `Switch to ${planDisplayName(plan)}`;
+  if (next > cur) return `Upgrade to ${planDisplayName(plan)}`;
+  return 'Continue in Stripe';
+}
+
 /**
  * The subscription flow now includes automatic email notifications:
  * 
@@ -423,45 +513,29 @@ const planLimits = computed(() => {
  * All emails are sent from no-reply@billoai.com with proper branding
  */
 
-// Get features for the selected plan
+// Feature bullets always mirror SUBSCRIPTION_PLANS.limits (same source as compare table)
 function getPlanFeatures(plan) {
-  if (productCatalog.value && productCatalog.value.plans[plan]) {
+  if (productCatalog.value?.plans?.[plan]?.features?.length) {
     return productCatalog.value.plans[plan].features;
   }
-  
-  // Default features if catalog not loaded
-  if (plan === 'FREE') {
-    return [
-      'Up to 5 business cards',
-      'Basic card scanning',
-      '3 email drafts per card',
-      'Basic digital profile',
-      'QR code'
-    ];
-  }
-  
-  const features = {
-    BASIC: [
-      'Up to 20 business cards',
-      'Advanced card scanning',
-      '10 email drafts per card',
-      'Up to 5 events',
-      'Enhanced digital profile',
-      'QR code',
-      'No banner ads'
-    ],
-    PRO: [
-      'Unlimited business cards',
-      'Premium card scanning',
-      'Unlimited email drafts',
-      'Unlimited events',
-      'Premium digital profile',
-      'QR code',
-      'No banner ads',
-      'Custom link'
-    ]
-  };
-  return features[plan] || [];
+  const cfg = SUBSCRIPTION_PLANS[plan];
+  if (!cfg) return [];
+  const L = cfg.limits;
+  const eventsLine =
+    L.maxEvents === 1 ? '1 networking event' : `Up to ${L.maxEvents} networking events`;
+  const draftsLine =
+    L.maxDraftsPerCard === 1
+      ? '1 AI email draft per card'
+      : `${L.maxDraftsPerCard} AI email drafts per card`;
+  const core = [
+    `Up to ${L.maxCards} business cards`,
+    'AI card scanning & field extraction',
+    draftsLine,
+    eventsLine,
+    'Digital profile & QR code'
+  ];
+  if (plan === 'FREE') return core;
+  return [...core, 'No banner ads', 'Custom profile links & brand icons'];
 }
 
 // Get the plan price
@@ -540,7 +614,7 @@ async function applyChangesAndGoHome() {
 // Load subscription status and usage stats
 async function loadSubscriptionData() {
   try {
-    loading.value = true;
+    pageLoading.value = true;
 
     // Initialize with default values to prevent undefined errors
     currentPlan.value = 'FREE';
@@ -628,7 +702,11 @@ async function loadSubscriptionData() {
         
       showSuccessModal.value = true;
     } else if (route.query.canceled) {
-      alert('Subscription canceled. Feel free to try again when you\'re ready.');
+      callout.value = {
+        variant: 'info',
+        message:
+          'Checkout was canceled. No charges were made—you can pick a plan again whenever you are ready.'
+      };
     }
 
     // Clear the URL parameters
@@ -645,7 +723,7 @@ async function loadSubscriptionData() {
       router.push('/login');
     }
   } finally {
-    loading.value = false;
+    pageLoading.value = false;
   }
 }
 
@@ -720,12 +798,15 @@ function getFormattedEndDate(date) {
 
 // Handle plan selection
 async function selectPlan(plan, cycle = 'monthly') {
-  if (plan === currentPlan.value) return;
-  
+  if (plan === currentPlan.value && (plan === 'FREE' || cycle === userBillingCycle.value)) {
+    return;
+  }
+
+  callout.value = null;
   try {
-    loading.value = true;
-    selectedPlan.value = plan; // Set selected plan when user makes selection
-    
+    checkoutPlan.value = plan;
+    selectedPlan.value = plan;
+
     if (plan === 'FREE') {
       await paymentService.cancelSubscription();
       currentPlan.value = plan;
@@ -759,40 +840,28 @@ async function selectPlan(plan, cycle = 'monthly') {
         // Continue anyway, the webhook might still work
       }
       
-      const response = await fetch('/api/subscription/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          plan,
-          billingCycle: cycle,
-          userId: user.uid,
-          email: userEmail, // Pass email to subscription service
-          successUrl: `${window.location.origin}/subscription?success=true&plan=${plan}&cycle=${cycle}`,
-          cancelUrl: `${window.location.origin}/subscription?canceled=true`
-        })
+      const data = await paymentService.createCheckoutSession({
+        plan,
+        billingCycle: cycle,
+        userId: user.uid,
+        email: userEmail,
+        successUrl: `${window.location.origin}/subscription?success=true&plan=${plan}&cycle=${cycle}`,
+        cancelUrl: `${window.location.origin}/subscription?canceled=true`
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create subscription');
-      }
-
-      // Store selected plan and cycle in local storage
-      // This will help us recover if the page is refreshed
       localStorage.setItem('selectedPlan', plan);
       localStorage.setItem('billingCycle', cycle);
 
-      // Redirect to Stripe Checkout
       window.location.href = data.url;
     }
   } catch (error) {
     console.error('Error selecting plan:', error);
-    alert(error.message || 'Failed to select plan. Please try again.');
+    callout.value = {
+      variant: 'error',
+      message: error.message || 'Could not start checkout. Try again, or run the API on port 3000 for local dev.'
+    };
   } finally {
-    loading.value = false;
+    checkoutPlan.value = null;
   }
 }
 
@@ -1132,20 +1201,59 @@ onMounted(() => {
   }
 }
 
+.sub-fade-enter-active,
+.sub-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sub-fade-enter-from,
+.sub-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.sub-callout {
+  @apply flex items-start gap-3 rounded-2xl border px-4 py-3 mb-8 text-sm leading-relaxed shadow-sm;
+}
+
+.sub-callout--error {
+  @apply bg-red-50 border-red-200 text-red-900;
+}
+
+.sub-callout--info {
+  @apply bg-sky-50 border-sky-200 text-sky-900;
+}
+
+.sub-callout__text {
+  @apply flex-1 pr-2;
+}
+
+.sub-callout__dismiss {
+  @apply shrink-0 leading-none text-lg font-light w-8 h-8 rounded-lg border border-transparent hover:bg-black/5 text-current opacity-70 hover:opacity-100 transition-opacity;
+}
+
 /* Responsive Plan Cards Styling */
 .plans {
   @apply grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 my-8 md:my-12 px-2 md:px-0;
 }
 
 .plan {
-  @apply rounded-2xl border overflow-hidden transition-all duration-300 shadow-sm hover:shadow-lg bg-white;
+  @apply relative rounded-2xl border overflow-hidden transition-all duration-300 shadow-sm hover:shadow-lg bg-white;
   height: 100%;
+}
+
+.plan.recommended {
+  @apply border-blue-300/80 shadow-md shadow-blue-500/10;
+}
+
+.plan__ribbon {
+  @apply absolute top-3 right-3 z-10 text-[10px] uppercase tracking-wider font-semibold px-2 py-1 rounded-full bg-blue-600 text-white shadow;
 }
 
 /* Don't scale up on mobile as it can cause overflow issues */
 @media (min-width: 768px) {
   .plan.active {
-    @apply ring-2 ring-emerald-500 transform scale-105 shadow-xl;
+    @apply ring-2 ring-emerald-500/90 ring-offset-2 ring-offset-slate-50 transform scale-[1.02] shadow-xl;
   }
 }
 

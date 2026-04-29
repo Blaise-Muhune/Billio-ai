@@ -1,23 +1,22 @@
 <route>
 meta:
-  title: BilloAI - Smart Business Card Manager
-  description: Digitize your business cards with AI. Save time, stay organized, and never lose a contact again. Try BilloAI for free today.
+  title: BilloAI — Scan a card, get a contact, send the follow-up
+  description: Structured contacts from a photo, a shareable profile link, and AI drafts for follow-ups—built for events, sales, and founders.
 </route>
 
 <template lang="pug">
-main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50")
+main.font-sans(class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50")
   // Hero Section
   section.relative.overflow-hidden.flex.items-center.justify-center.min-h-screen
     .max-w-3xl.mx-auto.px-4.w-full.text-center
+      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-4 BilloAI
       // Title with proper spacing and alignment
-      h1.text-center.mb-6
-        .text-5xl.font-bold.mb-2
-          span.text-emerald-500 Smart
-        .text-5xl.font-bold.mb-2 Business Card
-        .text-5xl.font-bold Management
+      h1.font-display.text-center.mb-8.text-slate-900(class="text-[clamp(2rem,5vw,3.25rem)] leading-[1.1]")
+        span.block.font-bold.text-emerald-600 Smart business cards.
+        span.block.font-bold.mt-2 One place to grow your network.
 
       // Subtitle with proper width and spacing
-      p.text-lg.text-gray-600.mb-16.max-w-2xl.mx-auto Transform your business cards into actionable connections with AI-powered networking tools.
+      p.text-lg.text-slate-600.mb-16.max-w-xl.mx-auto.leading-relaxed Scan cards with AI, fix details in seconds, and keep follow-ups where you already work.
 
       // Progress Bar
       .w-full.max-w-md.mx-auto.mb-12
@@ -27,7 +26,7 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
       .flex.flex-col.items-center.gap-8
         router-link(
           to="/home"
-          class="w-full max-w-md bg-emerald-500 text-white px-8 py-4 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center justify-center gap-3 relative group"
+          class="w-full max-w-md bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-billo hover:bg-emerald-700 transition-all duration-billo ease-billo-out flex items-center justify-center gap-3 relative group"
         )
           span.text-lg.font-medium Get Started Free
           VaIcon(
@@ -38,15 +37,15 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
         
         a(
           href="#features"
-          class="text-gray-700 hover:text-emerald-600 transition-colors duration-300 text-lg font-medium"
-        ) Learn More
+          class="text-slate-700 hover:text-emerald-600 transition-colors duration-billo ease-billo-out text-lg font-semibold"
+        ) See how it works
 
   // Features Section
   section#features.py-24.bg-white
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.mb-20
-        h2.text-4xl.font-bold.text-gray-900.mb-6 Key Features
-        p.text-xl.text-gray-600.max-w-2xl.mx-auto Everything you need to manage your professional network effectively
+        h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 What you actually buy with BilloAI
+        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Less retyping. Fewer lost leads. A public link that still works when your title changes.
       
       .grid.gap-8.max-w-6xl.mx-auto(class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3")
         // Feature Cards
@@ -57,14 +56,14 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
             .bg-emerald-100.w-16.h-16.rounded-xl.flex.items-center.justify-center.mb-6
               VaIcon(:name="feature.icon" size="32px" class="text-emerald-600")
             h3.text-2xl.font-bold.text-gray-900.mb-4 {{ feature.title }}
-            p.text-gray-600.text-lg {{ feature.description }}
+            p.text-slate-600.text-base.leading-relaxed {{ feature.description }}
 
   // How It Works Section
   section.py-24.bg-gradient-to-br.from-emerald-50.to-teal-50
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.mb-20
-        h2.text-4xl.font-bold.text-gray-900.mb-6 Simple Process
-        p.text-xl.text-gray-600.max-w-2xl.mx-auto Get started in minutes with our intuitive workflow
+        h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 Simple process
+        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Get started in minutes with a guided flow built for busy events.
       
       .grid.gap-8.max-w-5xl.mx-auto(class="grid-cols-1 md:grid-cols-3")
         // Step Cards
@@ -76,54 +75,57 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
             .bg-emerald-100.w-12.h-12.rounded-xl.flex.items-center.justify-center.mb-6
               VaIcon(:name="step.icon" size="24px" class="text-emerald-600")
             h3.text-xl.font-bold.text-gray-900.mb-4 {{ step.title }}
-            p.text-gray-600 {{ step.description }}
+            p.text-slate-600.leading-relaxed {{ step.description }}
 
   // Benefits Section
   section.py-24.bg-white
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.mb-20
-        h2.text-4xl.font-bold.text-gray-900.mb-6 Why Choose BilloAI
-        p.text-xl.text-gray-600.max-w-2xl.mx-auto Built for modern professionals
+        h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 Why BilloAI vs. “I’ll deal with this later”
+        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed
+          | Most apps stop at OCR. BilloAI is built for the moment after the handshake: structured data, a link you can share, and language for the follow-up.
       
       .grid.gap-8.max-w-5xl.mx-auto(class="grid-cols-1 md:grid-cols-2")
         // Benefit Cards
         .benefit-card(v-for="benefit in benefits" :key="benefit.title")
-          .flex.items-start.gap-6.p-8.rounded-xl.transition-all.duration-300(
-            class="hover:bg-gray-50"
+          .flex.items-start.gap-6.p-8.rounded-2xl.border.border-slate-100.bg-slate-50/50.transition-all.duration-billo.ease-billo-out(
+            class="hover:bg-white hover:shadow-billo-sm hover:border-emerald-100"
           )
             .bg-emerald-100.p-4.rounded-xl.flex-shrink-0
               VaIcon(:name="benefit.icon" size="24px" class="text-emerald-600")
             div
-              h3.text-xl.font-bold.text-gray-900.mb-3 {{ benefit.title }}
-              p.text-gray-600 {{ benefit.description }}
+              h3.text-xl.font-bold.text-slate-900.mb-3 {{ benefit.title }}
+              p.text-slate-600.leading-relaxed {{ benefit.description }}
 
-  // Testimonials Section
-  section.py-16.bg-white
-    .max-w-4xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
-      .text-center.mb-10
-        h2.text-2xl.font-bold.text-gray-900.mb-2 What people are saying
-      
-      // Simple circle-based testimonial layout
-      .grid.gap-8.max-w-3xl.mx-auto(class="grid-cols-1 sm:grid-cols-2 md:grid-cols-3")
-        // Testimonial items
-        .testimonial-card(v-for="testimonial in testimonials" :key="testimonial.name")
-          .flex.flex-col.items-center.text-center
-            .w-12.h-12.rounded-full.mb-3.flex.items-center.justify-center.text-white.font-medium.text-sm.bg-gradient-to-br.from-emerald-500.to-teal-600 {{ getInitials(testimonial.name) }}
-            p.text-sm.text-gray-700.mb-2 "{{ testimonial.quote }}"
-            .text-xs.font-medium.text-gray-500 {{ testimonial.name }}
+  // Trust / outcomes (no fabricated personas)
+  section.py-20.bg-slate-50.border-y.border-slate-100
+    .max-w-5xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
+      .text-center.mb-14
+        h2.font-display.text-3xl.font-bold.text-slate-900.mb-3 What you get on day one
+        p.text-lg.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Honest outcomes—not a drawer of cardstock, not another “I’ll add them to LinkedIn eventually.”
+      .grid.gap-6(class="sm:grid-cols-3")
+        .rounded-2xl.border.border-slate-200.bg-white.p-6.text-left.shadow-billo-sm(
+          v-for="pillar in trustPillars"
+          :key="pillar.title"
+        )
+          .mb-4.inline-flex.h-12.w-12.items-center.justify-center.rounded-xl.bg-emerald-100
+            VaIcon(:name="pillar.icon" size="26px" class="text-emerald-700")
+          h3.text-lg.font-bold.text-slate-900.mb-2 {{ pillar.title }}
+          p.text-sm.text-slate-600.leading-relaxed {{ pillar.body }}
 
   // CTA Section
-  section.py-24.bg-gradient-to-br.from-emerald-500.to-teal-500.text-white
+  section.py-24.bg-gradient-to-br.from-emerald-600.to-teal-600.text-white
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.max-w-3xl.mx-auto
-        h2.text-4xl.font-bold.mb-6 Ready to Get Started?
-        p.text-xl.mb-12.max-w-2xl.mx-auto Join professionals who are already using BilloAI to manage their network more effectively.
+        h2.font-display.text-4xl.font-bold.mb-6 Ready before your next event?
+        p.text-xl.mb-10.max-w-2xl.mx-auto.leading-relaxed.opacity-95
+          | Upload your first card in minutes. If it’s not faster than typing the back of a card into your notes app, you’re not using it wrong—we built it to remove that step entirely.
         router-link(
           to="/home"
-          class="bg-white text-emerald-600 px-12 py-6 rounded-xl hover:bg-gray-50 transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center gap-3"
+          class="bg-white text-emerald-700 px-12 py-5 rounded-2xl font-semibold shadow-billo transition-all duration-billo ease-billo-out hover:bg-slate-50 inline-flex items-center gap-3"
         )
           VaIcon(name="rocket_launch" size="24px")
-          span.text-xl.font-medium Get Started Free
+          span.text-lg Start free — keep every lead
 </template>
 
 <script setup>
@@ -131,113 +133,93 @@ main(class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50"
 const features = [
   {
     icon: 'document_scanner',
-    title: 'One-Click Card Scanning',
-    description: 'Instantly scan business cards and save them to your contacts with a single click - no manual data entry required.'
+    title: 'Scan once, structure everything',
+    description:
+      'A photo becomes name, title, company, emails, phones, sites, and address fields you can edit—so the CRM row exists even if the CRM never does.',
   },
-  // {
-  //   icon: 'sync',
-  //   title: 'Auto Contact Sync',
-  //   description: "Automatically sync scanned cards with your phone's contacts and favorite CRM systems in seconds."
-  // },
   {
     icon: 'smart_toy',
-    title: 'AI Email Assistant',
-    description: 'Generate personalized follow-up emails instantly with AI that understands context and business etiquette.'
+    title: 'Follow-up language, not generic spam',
+    description:
+      'Draft a warm, human “nice to meet you” note grounded in who they are and where you met—ready to send or tweak in seconds.',
   },
   {
     icon: 'qr_code_2',
-    title: 'Dynamic Digital Cards',
-    description: 'Create digital business cards that update in real-time - when you change jobs or details, all shared cards update automatically.'
+    title: 'A living link, not a dead PDF',
+    description:
+      'Share a profile + QR that reflects your current role. When you change jobs or links, the same URL stays fresh for people you already met.',
   },
   {
     icon: 'event_available',
-    title: 'Event Networking Mode',
-    description: 'Special mode for conferences and events - scan multiple cards rapidly and organize them by event automatically.'
+    title: 'Event mode for real hallways',
+    description:
+      'Rapid capture and grouping by event so Monday morning isn’t “who was that again?”—it’s a sorted list with context.',
   },
-  // {
-  //   icon: 'badge',
-  //   title: 'Smart Tags & Categories',
-  //   description: 'AI automatically categorizes contacts by industry, role, and potential opportunities for smarter networking.'
-  // }
 ];
 
 // How It Works Steps
 const steps = [
   {
     icon: 'photo_camera',
-    title: 'Capture Cards',
-    description: 'Simply take a photo or upload your business cards to get started.'
+    title: 'Capture',
+    description: 'Snap or upload a card in seconds—coffee stains, glossy stock, and crooked angles included.',
   },
   {
     icon: 'auto_awesome',
-    title: 'AI Processing',
-    description: 'Our AI automatically extracts and organizes all the important information.'
+    title: 'Structure',
+    description: 'We pull the fields that matter, suggest readable colors for your digital card, and keep the raw image until you delete it.',
   },
   {
     icon: 'chat',
-    title: 'Start Connecting',
-    description: 'Generate personalized follow-up messages and manage your network effectively.'
-  }
+    title: 'Follow up',
+    description: 'Turn a contact into a message you’d actually send—then save, copy, or iterate without starting from a blank page.',
+  },
 ];
 
 // Benefits
 const benefits = [
   {
     icon: 'speed',
-    title: '10x Faster Networking',
-    description: 'Save hours of manual data entry and follow-up message writing with our AI-powered tools.'
+    title: 'Minutes, not Monday',
+    description:
+      'The job isn’t “OCR.” It’s getting from card → usable contact → sent message before the lead goes cold. BilloAI is tuned for that path.',
   },
   {
     icon: 'psychology',
-    title: 'Smart Organization',
-    description: 'Automatically categorize and tag contacts based on events, industries, and relationships.'
+    title: 'Context beats columns',
+    description:
+      'Events, titles, and companies become the story behind each row—so your outreach sounds like you remember the conversation, not a mail merge.',
   },
   {
     icon: 'cloud_done',
-    title: 'Always Accessible',
-    description: 'Access your contacts and generate emails from any device, anywhere, anytime.'
+    title: 'Where you already work',
+    description:
+      'Web-first: scan on your phone, polish on your laptop. Your cards and drafts stay in one place instead of scattered camera-roll screenshots.',
   },
   {
     icon: 'shield',
-    title: 'Enterprise Ready',
-    description: 'Built with security and scalability in mind for growing businesses.'
-  }
+    title: 'Built for real data',
+    description:
+      'Business cards are PII. We treat them that way—clear limits by plan, your account gate, and a product posture aimed at individuals & small teams first.',
+  },
 ];
 
-// Helper function to get initials from name
-function getInitials(name) {
-  return name.split(' ')
-    .map(part => part.charAt(0))
-    .join('')
-    .toUpperCase();
-}
-
-// Testimonials
-const testimonials = [
+const trustPillars = [
   {
-    quote: "So much better than keeping business cards in a drawer. No more typing everything manually.",
-    name: "Zara"
+    icon: 'hub',
+    title: 'One pipeline from paper to people',
+    body: 'Instead of “photo in camera roll → maybe LinkedIn → maybe spreadsheet,” you get structured fields, a profile link, and drafts in one flow.',
   },
   {
-    quote: "I can finally find people I met at conferences months ago. Makes follow-ups way easier.",
-    name: "Theo"
+    icon: 'verified',
+    title: 'No fake social proof',
+    body: 'We’d rather spell the outcome—fewer lost leads, faster follow-ups—than invent testimonials. Try the free tier and judge the workflow.',
   },
   {
-    quote: "Used to lose important contacts all the time. Not anymore.",
-    name: "Astrid"
+    icon: 'trending_up',
+    title: 'Room to grow with you',
+    body: 'Free for taste; paid tiers when cards, events, and drafts become part of your job. Upgrade when the habit sticks, not on day zero.',
   },
-  {
-    quote: "The email templates are a huge timesaver. One less thing to think about.",
-    name: "Silas"
-  },
-  {
-    quote: "Helps me remember where I met someone. No more awkward follow-up conversations.",
-    name: "Fiona"
-  },
-  {
-    quote: "Been using it for 3 months. Can't imagine going back to the old way.",
-    name: "Kieran"
-  }
 ];
 </script>
 
@@ -289,11 +271,4 @@ html {
   min-width: 200px;
 }
 
-.testimonial-card {
-  transition: all 0.2s ease;
-}
-
-.testimonial-card:hover .rounded-full {
-  transform: scale(1.1);
-}
 </style>

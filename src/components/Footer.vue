@@ -1,14 +1,13 @@
 <template lang="pug">
-footer.bg-gray-50.border-t.border-gray-100.text-center.py-8.mt-auto
+footer.bg-slate-50.border-t.border-slate-200/80.text-center.py-10.mt-auto.font-sans
   .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8")
     .text-center
       // Footer links
       .flex.flex-wrap.justify-center.gap-x-8.gap-y-4.mb-6
-        router-link(to="/privacy-policy" class="text-gray-600 hover:text-emerald-600 transition-colors") Privacy Policy
-        // router-link(to="/demo" class="text-gray-600 hover:text-emerald-600 transition-colors") Demo
-        router-link(to="/subscription" class="text-gray-600 hover:text-emerald-600 transition-colors") Pricing
+        router-link(to="/privacy-policy" class="text-slate-600 hover:text-emerald-600 transition-colors duration-billo ease-billo-out font-medium") Privacy Policy
+        router-link(to="/subscription" class="text-slate-600 hover:text-emerald-600 transition-colors duration-billo ease-billo-out font-medium") Pricing
       // Copyright
-      p.text-gray-500.text-sm &copy; {{ currentYear }} BilloAI. All rights reserved.
+      p.text-slate-500.text-sm &copy; {{ currentYear }} BilloAI. All rights reserved.
   
   // Structured Data for SEO
   div(itemscope itemtype="https://schema.org/Organization" style="display: none;")

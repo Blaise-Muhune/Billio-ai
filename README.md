@@ -1,3 +1,11 @@
+# BilloAI
+
+**BilloAI** is an AI-assisted business card scanner and networking app: scan cards, organize contacts, manage a public profile (including custom links on paid plans), and integrate with Firebase, Stripe, and OpenAI. This repository ships that product on top of the Vue stack described below.
+
+**Run locally:** from the project root, `npm install` then `npm run dev` (Vite). Configure `.env` with `VITE_FIREBASE_*`, `VITE_OPENAI_API_KEY`, optional **`VITE_OPENAI_MODEL`** (defaults to OpenAI’s current flagship **`gpt-5.5`** for card vision and email drafts; set to another slug if your account requires it), Stripe keys, and other variables your features need. For subscription webhooks and server APIs, run `node server.js` with the server env vars documented in `server.js`.
+
+---
+
 # VueFlowFast - Vue 3 template to get you into the flow fast with unplugin super powers
 
 **A pre-configured Vue 3+Vite 3 project for quickly deploying ideas using highly readable SFCs.**
