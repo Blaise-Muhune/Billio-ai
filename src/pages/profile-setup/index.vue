@@ -1,6 +1,6 @@
 <route>
 meta:
-  title: BilloAI - Complete Your Profile
+  title: BilloAI — Edit your public profile
   requiresAuth: true
 </route>
 
@@ -13,9 +13,9 @@ meta:
 main.billo-app-bg.mx-auto.max-w-2xl.p-6.font-sans(v-else class="sm:p-8")
   .billo-panel-premium.billo-motion.p-6(class="sm:p-8")
     .text-center.mb-8
-      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-2 BilloAI profile
-      h1.font-display.text-3xl.font-bold.text-slate-900(class="sm:text-4xl") {{ isEditing ? 'Edit your profile' : 'Build your public profile' }}
-      p.text-slate-600.mt-3.text-base.max-w-md.mx-auto.leading-relaxed {{ isEditing ? 'Update what visitors see on your card link.' : 'Four quick steps — only name is required. Everything else is optional.' }}
+      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-2 Public profile
+      h1.font-display.text-3xl.font-bold.text-slate-900(class="sm:text-4xl") {{ isEditing ? 'Edit your public profile' : 'Build your public profile' }}
+      p.text-slate-600.mt-3.text-base.max-w-md.mx-auto.leading-relaxed {{ isEditing ? 'What visitors see on your share link. Follow-ups still open in your own Gmail or Outlook.' : 'Only name is required — or go back to quick onboarding.' }}
 
     //- Step indicator
     nav.mb-10(aria-label="Profile setup steps")
@@ -769,6 +769,43 @@ main.billo-app-bg.mx-auto.max-w-2xl.p-6.font-sans(v-else class="sm:p-8")
           span(v-else-if="profileStep < 4") Continue
           span(v-else-if="isEditing") Save changes
           span(v-else) Save & finish profile
+
+    //- Email preferences + account data (edit mode)
+    section#email-prefs.mt-10.space-y-4(v-if="isEditing")
+      .billo-panel-premium.p-5(class="sm:p-6")
+        h2.text-lg.font-bold.text-slate-900 Email preferences
+        p.text-sm.text-slate-600.mt-1 Product emails (follow-up nudges, event wrap-ups). Billing receipts still come from Stripe.
+        label.mt-4.flex.items-start.gap-3.cursor-pointer
+          input(
+            type="checkbox"
+            class="mt-1"
+            v-model="productEmailsOptOut"
+          )
+          span.text-sm.text-slate-800 Opt out of product emails
+        button(
+          type="button"
+          class="mt-3 inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+          :disabled="prefsSaving"
+          @click="saveEmailPrefs"
+        ) {{ prefsSaving ? 'Saving…' : 'Save email preference' }}
+        p.text-xs.text-emerald-700.mt-2(v-if="prefsSaved") Saved.
+
+      .billo-panel-premium.p-5.border.border-red-100(class="sm:p-6")
+        h2.text-lg.font-bold.text-slate-900 Your data
+        p.text-sm.text-slate-600.mt-1 Download a copy of your contacts, drafts, and profile — or delete your account.
+        .mt-4.flex.flex-wrap.gap-3
+          button(
+            type="button"
+            class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            :disabled="exporting"
+            @click="exportAccountData"
+          ) {{ exporting ? 'Preparing…' : 'Download my data' }}
+          button(
+            type="button"
+            class="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+            :disabled="deletingAccount"
+            @click="deleteAccount"
+          ) {{ deletingAccount ? 'Deleting…' : 'Delete account' }}
 </template>
 
 <script setup>
@@ -777,12 +814,14 @@ import { useRouter, useRoute } from 'vue-router';
 import { collection, query, where, getDocs, limit, deleteField } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { authService } from '../../services/authService';
+import { authJsonHeaders } from '../../utils/apiAuth.js';
+import { parseJsonResponse } from '../../utils/parseFetchJson.js';
 import {
   buildProfileShareUrl,
   normalizePublicProfileSlug,
   displayNameInitials
 } from '../../utils/publicProfileSlug';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadImageToAzure } from '../../services/azureUploadService';
 import { businessCardService } from '../../services/businessCardService';
 import { paymentService } from '../../services/paymentService';
 import { useStore } from 'vuex';
@@ -790,11 +829,15 @@ import { useStore } from 'vuex';
 const router = useRouter();
 const route = useRoute();
 const store = useStore();
-const storage = getStorage();
 const user = ref(null);
 const error = ref('');
 const saving = ref(false);
 const loading = ref(true);
+const productEmailsOptOut = ref(false);
+const prefsSaving = ref(false);
+const prefsSaved = ref(false);
+const exporting = ref(false);
+const deletingAccount = ref(false);
 const imageInput = ref(null);
 const profileImage = ref(null);
 const isEditing = ref(false);
@@ -1005,62 +1048,15 @@ async function handleIconUpload(event) {
       return;
     }
 
-    // Create a unique filename with timestamp and sanitized name
-    const timestamp = Date.now();
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    
-    try {
-      // First try the custom-icons path with proper security rules
-      const filename = `custom-icons/${user.value.uid}/${timestamp}-${sanitizedName}`;
-      
-      // Create storage reference
-      const iconRef = storageRef(storage, filename);
-      
-      // Upload the file with metadata
-      const metadata = {
-        contentType: file.type,
-        customMetadata: {
-          uploadedBy: user.value.uid,
-          originalName: file.name,
-          uploadedAt: new Date().toISOString()
-        }
-      };
-
-      // Upload file
-      const uploadTask = await uploadBytes(iconRef, file, metadata);
-      console.log('Icon uploaded successfully:', uploadTask.ref.fullPath);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(uploadTask.ref);
-      console.log('Icon download URL:', downloadURL);
-      
-      // Update the custom link's icon URL
-      formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
-    } catch (uploadError) {
-      console.error('Error with first upload path, trying backup path:', uploadError);
-      
-      // Try fallback path if the first one fails due to permission issues
-      const backupFilename = `users/${user.value.uid}/custom-icons/${timestamp}-${sanitizedName}`;
-      const backupIconRef = storageRef(storage, backupFilename);
-      
-      // Upload file with simplified metadata
-      await uploadBytes(backupIconRef, file);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(backupIconRef);
-      
-      // Update the custom link's icon URL
-      formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
-    }
+    const downloadURL = await uploadImageToAzure(file, 'custom-icons');
+    formData.value.customLinks[currentUploadIndex].iconUrl = downloadURL;
     
     // Reset the file input
     if (event.target) {
       event.target.value = '';
     }
 
-    // Show success message
-    const successMessage = 'Icon uploaded successfully!';
-    console.log(successMessage);
+    console.log('Icon uploaded successfully!');
 
   } catch (err) {
     console.error('Error uploading icon:', err);
@@ -1099,6 +1095,73 @@ function previewIcon(event, index) {
   }
 }
 
+async function saveEmailPrefs() {
+  prefsSaving.value = true;
+  prefsSaved.value = false;
+  try {
+    const headers = await authJsonHeaders();
+    const res = await fetch('/api/email/preferences', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ productEmailsOptOut: productEmailsOptOut.value })
+    });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'Failed to save');
+    prefsSaved.value = true;
+  } catch (err) {
+    error.value = err.message || 'Could not save email preference';
+  } finally {
+    prefsSaving.value = false;
+  }
+}
+
+async function exportAccountData() {
+  exporting.value = true;
+  try {
+    const headers = await authJsonHeaders();
+    const res = await fetch('/api/account/export', { headers });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'Export failed');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'billoai-export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    error.value = err.message || 'Export failed';
+  } finally {
+    exporting.value = false;
+  }
+}
+
+async function deleteAccount() {
+  const ok = window.confirm(
+    'Delete your BilloAI account and all contacts/drafts? This cannot be undone.'
+  );
+  if (!ok) return;
+  const typed = window.prompt('Type DELETE to confirm');
+  if (typed !== 'DELETE') return;
+  deletingAccount.value = true;
+  try {
+    const headers = await authJsonHeaders();
+    const res = await fetch('/api/account/delete', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ confirm: 'DELETE' })
+    });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'Delete failed');
+    await authService.signOut().catch(() => {});
+    router.push('/');
+  } catch (err) {
+    error.value = err.message || 'Delete failed';
+  } finally {
+    deletingAccount.value = false;
+  }
+}
+
 onMounted(async () => {
   try {
     loading.value = true;
@@ -1118,6 +1181,16 @@ onMounted(async () => {
     // Check if we're editing or completing profile
     const userProfile = await authService.getUserProfile();
     isEditing.value = !!userProfile?.profileCompleted;
+
+    // First-time users go through the fast onboarding path
+    if (!isEditing.value) {
+      router.replace('/onboarding');
+      return;
+    }
+
+    productEmailsOptOut.value = Boolean(
+      userProfile?.productEmailsOptOut || userProfile?.emailUnsubscribed
+    );
 
     // Initialize formData with default values
     formData.value = {
@@ -1274,21 +1347,7 @@ async function saveProfile() {
     // Upload profile image if selected
     let photoURL = user.value.photoURL;
     if (imageFile.value) {
-      try {
-        // First try with profile-images path
-        const filename = `profile-images/${user.value.uid}/${Date.now()}-${imageFile.value.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const imageRef = storageRef(storage, filename);
-        await uploadBytes(imageRef, imageFile.value);
-        photoURL = await getDownloadURL(imageRef);
-      } catch (uploadError) {
-        console.error('Error with profile image upload, trying backup path:', uploadError);
-        
-        // Try fallback path if the first one fails due to permission issues
-        const backupFilename = `users/${user.value.uid}/profile-images/${Date.now()}-${imageFile.value.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const backupImageRef = storageRef(storage, backupFilename);
-        await uploadBytes(backupImageRef, imageFile.value);
-        photoURL = await getDownloadURL(backupImageRef);
-      }
+      photoURL = await uploadImageToAzure(imageFile.value, 'profile-images');
     }
 
     // Update user profile in Firebase Auth
@@ -1322,6 +1381,7 @@ async function saveProfile() {
       customLinks: formData.value.customLinks,
       photoURL: photoURL || '',
       profileCompleted: true,
+      profileEnrichmentPending: false,
       updatedAt: new Date(),
       github: formData.value.github?.trim() || '',
       visibility: formData.value.visibility,

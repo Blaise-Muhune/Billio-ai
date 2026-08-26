@@ -1,10 +1,40 @@
 # BilloAI
 
-**BilloAI** is an AI-assisted business card scanner and networking app: scan cards, organize contacts, manage a public profile (including custom links on paid plans), and integrate with Firebase, Stripe, and OpenAI. This repository ships that product on top of the Vue stack described below.
+Scan cards / contact screenshots → AI follow-up draft → open in Gmail or Outlook (you send from your inbox).
 
-**Run locally:** from the project root, `npm install` then `npm run dev` (Vite). Configure `.env` with `VITE_FIREBASE_*`, `VITE_OPENAI_API_KEY`, optional **`VITE_OPENAI_MODEL`** (defaults to OpenAI’s current flagship **`gpt-5.5`** for card vision and email drafts; set to another slug if your account requires it), Stripe keys, and other variables your features need. For subscription webhooks and server APIs, run `node server.js` with the server env vars documented in `server.js`.
+## Local run
+
+```bash
+npm install
+npm run dev          # Vite (frontend)
+npm run start        # Express API on :3000 (proxied via Vite /api)
+```
+
+Copy `.env.example` → `.env`. Important:
+
+| Var | Where | Notes |
+|-----|--------|--------|
+| `OPENAI_API_KEY` | **Server only** | Scan + drafts. Do **not** put this in `VITE_*`. |
+| `RESEND_API_KEY` + `EMAIL_FROM` | Server | Prefer Resend; verify your domain. |
+| `CRON_SECRET` | Server + Vercel | Crons send `Authorization: Bearer …` |
+| Stripe price IDs + webhook secret | Server | Webhook URL: `/api/webhook` |
+| Firebase admin + Azure | Server | Auth, Firestore, profile image uploads |
+
+## Ops checklist before production
+
+1. Resend domain verified for `EMAIL_FROM`
+2. `CRON_SECRET` set; Vercel cron routes hit `/api/cron/daily` and `/api/cron/maintenance`
+3. Deploy `firestore.rules` + `firestore.indexes.json`
+4. Stripe Customer Portal enabled in Dashboard (for `/api/subscription/portal`)
+5. Webhook events wired (`checkout.session.completed`, subscription updates, `invoice.payment_failed`)
+
+## Stack
+
+Vue 3 + Vite + Firebase + Stripe + Express (Vercel) + OpenAI (server-side).
 
 ---
+
+Legacy VueFlowFast template notes below are optional scaffolding history.
 
 # VueFlowFast - Vue 3 template to get you into the flow fast with unplugin super powers
 

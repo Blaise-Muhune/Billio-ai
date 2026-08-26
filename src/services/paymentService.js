@@ -4,6 +4,8 @@ import { db } from '../config/firebase';
 import { authService } from './authService';
 import { SUBSCRIPTION_PLANS } from '../config/stripe';
 import { parseJsonResponse } from '../utils/parseFetchJson';
+import { authJsonHeaders } from '../utils/apiAuth.js';
+import { trackFunnel } from '../utils/analytics.js';
 
 const LOCAL_API_HINT =
   'Cannot reach the API server. In local dev, run `npm run start` in a second terminal (Express on port 3000) while Vite proxies `/api` from port 5173.';
@@ -40,11 +42,10 @@ export const paymentService = {
 
       console.log('Creating subscription for user:', user.uid, 'with price:', priceId);
 
+      const headers = await authJsonHeaders();
       const response = await fetchApi('/api/subscription/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           priceId,
           userId: user.uid,
@@ -75,9 +76,10 @@ export const paymentService = {
    * Stripe Checkout for plan + billing cycle (matches server /api/subscription/create).
    */
   async createCheckoutSession({ plan, billingCycle, userId, email, successUrl, cancelUrl }) {
+    const headers = await authJsonHeaders();
     const response = await fetchApi('/api/subscription/create', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         plan,
         billingCycle,
@@ -96,6 +98,7 @@ export const paymentService = {
         'Checkout did not return a payment URL. Confirm Stripe price IDs in .env and on the server.'
       );
     }
+    trackFunnel('checkout_started', { plan, billingCycle });
     return data;
   },
 
@@ -185,11 +188,10 @@ export const paymentService = {
         // Continue with cancellation even if email update fails
       });
 
+      const headers = await authJsonHeaders();
       const response = await fetchApi('/api/subscription/cancel', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ 
           userId: user.uid,
           subscriptionId,
@@ -319,7 +321,8 @@ export const paymentService = {
 
       console.log('Getting current period end for user:', user.uid);
 
-      const response = await fetchApi(`/api/subscription/period-end/${user.uid}`);
+      const headers = await authJsonHeaders();
+      const response = await fetchApi(`/api/subscription/period-end/${user.uid}`, { headers });
       const data = await parseJsonResponse(response);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get current period end');
@@ -327,7 +330,6 @@ export const paymentService = {
       console.log('Current period end data:', data);
 
       if (data.hasSubscription && data.currentPeriodEnd) {
-        // Return the date
         return new Date(data.currentPeriodEnd);
       }
 
@@ -337,4 +339,23 @@ export const paymentService = {
       throw error;
     }
   },
-}; 
+
+  async openBillingPortal(returnUrl) {
+    const headers = await authJsonHeaders();
+    const response = await fetchApi('/api/subscription/portal', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        returnUrl: returnUrl || `${window.location.origin}/subscription`
+      })
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to open billing portal');
+    }
+    if (!data.url) throw new Error('No portal URL returned');
+    trackFunnel('billing_portal_opened');
+    window.location.href = data.url;
+    return data;
+  },
+};

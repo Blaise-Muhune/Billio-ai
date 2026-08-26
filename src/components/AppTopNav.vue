@@ -22,15 +22,31 @@
             class="ml-1 hidden items-center gap-1 border-l border-slate-200 pl-4 md:flex"
             aria-label="Main"
           >
+            <router-link to="/home" class="nav-home-link">
+              <VaIcon name="home" size="16px" class="text-slate-500" />
+              <span>Home</span>
+            </router-link>
             <router-link to="/dashboard" class="nav-home-link">
               <VaIcon name="contacts" size="16px" class="text-slate-500" />
               <span>Contacts</span>
             </router-link>
-            <a :href="profileUrl" class="nav-home-link" target="_blank" rel="noopener noreferrer">
+            <a
+              v-if="shareUnlocked"
+              :href="profileUrl"
+              class="nav-home-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <VaIcon name="open_in_new" size="16px" class="text-slate-500" />
               <span>Live profile</span>
             </a>
-            <button type="button" class="nav-home-link" title="Scroll to QR code" @click="goToQrSection">
+            <button
+              v-if="shareUnlocked"
+              type="button"
+              class="nav-home-link"
+              title="Scroll to QR code"
+              @click="goToQrSection"
+            >
               <VaIcon name="qr_code" size="16px" class="text-slate-500" />
               <span>QR</span>
             </button>
@@ -99,6 +115,7 @@
               >
                 <div class="py-1">
                   <a
+                    v-if="shareUnlocked"
                     :href="profileUrl"
                     class="nav-home-menu-item"
                     target="_blank"
@@ -161,12 +178,16 @@
       </div>
       <nav class="flex flex-col gap-1 p-3">
         <p class="px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Work</p>
+        <router-link v-if="user" to="/home" class="nav-home-drawer-link" @click="showMobileMenu = false">
+          <VaIcon name="home" size="20px" />
+          <span>Home</span>
+        </router-link>
         <router-link v-if="user" to="/dashboard" class="nav-home-drawer-link" @click="showMobileMenu = false">
           <VaIcon name="contacts" size="20px" />
           <span>Contacts</span>
         </router-link>
         <button
-          v-if="user"
+          v-if="user && shareUnlocked"
           type="button"
           class="nav-home-drawer-link w-full text-left"
           @click="showMobileMenu = false; goToQrSection()"
@@ -174,9 +195,9 @@
           <VaIcon name="qr_code" size="20px" />
           <span>QR code</span>
         </button>
-        <p class="mt-3 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Your page</p>
+        <p v-if="shareUnlocked" class="mt-3 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Your page</p>
         <a
-          v-if="user"
+          v-if="user && shareUnlocked"
           :href="profileUrl"
           class="nav-home-drawer-link"
           target="_blank"
@@ -230,6 +251,7 @@ const showMobileMenu = ref(false);
 const showUserMenu = ref(false);
 const navAvatarImgFailed = ref(false);
 const subscriptionPlan = ref('FREE');
+const shareUnlocked = ref(false);
 
 watch(
   () => user.value?.photoURL,
@@ -237,6 +259,14 @@ watch(
     navAvatarImgFailed.value = false;
   }
 );
+
+function refreshShareUnlock() {
+  try {
+    shareUnlocked.value = localStorage.getItem('billo_share_unlocked') === '1';
+  } catch {
+    shareUnlocked.value = false;
+  }
+}
 
 const profileUrl = computed(() => {
   if (!user.value?.uid) return '';
@@ -277,8 +307,12 @@ async function refreshSubscriptionPlan() {
 let unsubscribeAuth = null;
 
 onMounted(() => {
+  refreshShareUnlock();
+  window.addEventListener('storage', refreshShareUnlock);
+  window.addEventListener('billo-share-unlocked', refreshShareUnlock);
   unsubscribeAuth = authService.onAuthStateChanged(async (currentUser) => {
     user.value = currentUser;
+    refreshShareUnlock();
     if (currentUser) {
       await refreshFirestoreProfileSlug();
       await refreshSubscriptionPlan();
@@ -295,6 +329,8 @@ onUnmounted(() => {
     unsubscribeAuth();
   }
   document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('storage', refreshShareUnlock);
+  window.removeEventListener('billo-share-unlocked', refreshShareUnlock);
 });
 
 function handleClickOutside(event) {

@@ -34,7 +34,7 @@ main.billo-app-bg.font-sans
       h1.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 Choose your plan
       p.text-lg.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Pick a tier that matches how many cards, events, and AI drafts you use—limits stay in sync everywhere on this page.
       p.mx-auto.mt-4.max-w-2xl.text-sm.text-slate-500
-        | If a renewal payment fails, Stripe may retry; you may lose premium access until billing succeeds. You can update your card in the customer portal when available.
+        | If a renewal payment fails, Stripe may retry; you may lose premium access until billing succeeds. Update your card anytime in the customer portal.
 
     //- Billing Toggle (Monthly/Yearly)
     .flex.justify-center.mb-10
@@ -216,9 +216,18 @@ main.billo-app-bg.font-sans
           .mt-3.pt-3.border-t.border-gray-100
             .text-xs.text-gray-500 {{ planLimits.draftsPerCard.limit }} drafts per card
 
-    //- Cancel Subscription Button
-    .mt-8.text-center(v-if="currentPlan !== 'FREE' && subscriptionStatus !== 'canceled'")
+    //- Billing portal + Cancel
+    .mt-8.text-center.flex.flex-col.items-center.gap-3(v-if="currentPlan !== 'FREE'")
       button(
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+        :disabled="portalLoading"
+        @click="openPortal"
+      )
+        VaIcon(name="credit_card" size="18px")
+        span {{ portalLoading ? 'Opening…' : 'Update card / invoices' }}
+      button(
+        v-if="subscriptionStatus !== 'canceled'"
         class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200 border border-red-200"
         @click="confirmCancelSubscription"
         :disabled="canceling"
@@ -440,6 +449,7 @@ const pageLoading = ref(false);
 const checkoutPlan = ref(null);
 const callout = ref(null);
 const canceling = ref(false);
+const portalLoading = ref(false);
 const showCancelModal = ref(false);
 const showSuccessModal = ref(false);
 const currentPlan = ref('FREE');
@@ -497,20 +507,14 @@ function planCtaLabel(plan) {
 
 /**
  * The subscription flow now includes automatic email notifications:
- * 
- * 1. When a user subscribes, their email is stored in both the standard 'email' field
- *    and a dedicated 'subscriptionEmail' field in their user document
- * 
- * 2. A flag 'emailSubscribed' is set to true to indicate they're receiving subscription emails
- * 
- * 3. The server sends the following email notifications:
- *    - Subscription confirmation when payment is successful
- *    - Renewal reminders before billing cycle ends
- *    - Payment failure notifications
- *    - Subscription cancellation confirmations
- *    - Plan change confirmations
- * 
- * All emails are sent from no-reply@billoai.com with proper branding
+ *
+ * 1. Confirmation on successful checkout (Stripe webhook)
+ * 2. Cancellation confirmation when canceling at period end
+ * 3. Renewal heads-up ~7 days before billing (daily cron)
+ * 4. Payment-failed notice from Stripe (throttled)
+ * 5. Soft Free-plan notice when paid access actually ends (maintenance cron)
+ *
+ * Product nudges (follow-up digests, event wrap-ups) are separate, capped, and opt-out aware.
  */
 
 // Feature bullets always mirror SUBSCRIPTION_PLANS.limits (same source as compare table)
@@ -866,6 +870,17 @@ async function selectPlan(plan, cycle = 'monthly') {
 }
 
 // Handle subscription cancellation
+async function openPortal() {
+  portalLoading.value = true;
+  try {
+    await paymentService.openBillingPortal(`${window.location.origin}/subscription`);
+  } catch (err) {
+    alert(err.message || 'Could not open billing portal');
+  } finally {
+    portalLoading.value = false;
+  }
+}
+
 async function confirmCancelSubscription() {
   try {
   showCancelModal.value = true;

@@ -1,6 +1,6 @@
 <route>
 meta:
-  title: BilloAI — Your cards & follow-ups
+  title: BilloAI — Follow up before you forget
   requiresAuth: true
 </route>
 
@@ -10,51 +10,71 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
   .flex-1.w-full.flex.flex-col
     //- Main content (global top nav + offset live in App.vue)
     .flex-1.w-full
-      .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-8")
-        //- Quick Actions Bar
-        .billo-panel-premium.billo-motion.mb-8.p-4(class="sm:p-6")
-          .flex.flex-col.gap-4(class="sm:flex-row sm:items-center sm:justify-between")
-            .flex.min-w-0.flex-col.gap-2(class="sm:flex-row sm:items-center sm:gap-3")
-              h3.text-lg.font-semibold.tracking-tight(class="text-slate-900 sm:text-xl") Your Networking Hub
-              span.inline-flex.w-fit.items-center.rounded-full.border.px-3.py-1.text-xs.font-semibold.uppercase.tracking-wide.text-emerald-800(
-                class="border-emerald-200/80 bg-emerald-50/90 sm:text-sm sm:normal-case sm:tracking-normal"
-              ) {{ businessCards.length }} cards
-            .flex.flex-col.gap-3(class="sm:flex-row sm:items-center sm:gap-3")
-              // Event Selector removed from here
-              .flex.min-w-0.items-center.gap-2.w-full(class="sm:w-auto")
-                button(
-                  class="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/40 hover:text-emerald-900 sm:flex-initial sm:px-5"
-                  @click="handleCreateEvent"
-                  :disabled="!user || !user.emailVerified"
-                  :title="!user?.emailVerified ? 'Please verify your email to create events' : ''"
-                )
-                  VaIcon.shrink-0(name="add" size="18px")
-                  span.whitespace-nowrap.truncate New Event
-                button(
-                  class="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:from-emerald-500 hover:to-teal-500 hover:shadow-lg sm:flex-initial sm:px-5"
-                  @click="handleUploadCard"
-                  :disabled="!user || !user.emailVerified"
-                  :title="!user?.emailVerified ? 'Please verify your email to upload cards' : ''"
-                )
-                  VaIcon.shrink-0(name="upload" size="18px")
-                  span.whitespace-nowrap.truncate Upload Card
+      .max-w-7xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-6 sm:py-8")
+        //- Mode switcher — Capture vs Follow-ups (one job at a time)
+        .billo-home-modes.mb-6
+          .billo-home-modes__rail(role="tablist" aria-label="Home mode")
+            button.billo-home-modes__tab(
+              type="button"
+              role="tab"
+              :aria-selected="homeMode === 'capture'"
+              :class="{ 'is-active': homeMode === 'capture' }"
+              @click="homeMode = 'capture'"
+            )
+              VaIcon(name="photo_camera" size="18px")
+              span Capture
+            button.billo-home-modes__tab(
+              type="button"
+              role="tab"
+              :aria-selected="homeMode === 'followups'"
+              :class="{ 'is-active': homeMode === 'followups' }"
+              @click="homeMode = 'followups'"
+            )
+              VaIcon(name="send" size="18px")
+              span To send
+              span.billo-home-modes__count(v-if="pendingFollowUpCount > 0") {{ pendingFollowUpCount }}
+          p.billo-home-modes__hint
+            template(v-if="homeMode === 'capture'") Snap a card or contact screenshot while you’re still talking.
+            template(v-else) Open a draft in Gmail or Outlook — send from your own inbox.
 
-        // Email Verification Notice
-        .bg-amber-50.border-l-4.border-amber-400.p-4.rounded-xl.mb-8(
-          v-if="user && !user.emailVerified"
+        // Soft verify notice (doesn't scream; still blocks capture actions)
+        .billo-verify-soft.mb-6#billo-verify(v-if="user && !user.emailVerified")
+          p
+            strong Confirm your email
+            |  to unlock capture. Check your inbox — or
+            |
+            button(type="button" @click="resendVerification" :disabled="loading") resend the link
+            | .
+
+        //- First-run coach — only when capturing or empty queue
+        transition(
+          enter-active-class="transition duration-300 ease-out"
+          enter-from-class="opacity-0 -translate-y-2"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition duration-200 ease-in"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
         )
-          .flex
-            .flex-shrink-0
-              VaIcon(name="info" size="20px" class="text-amber-500")
-            .ml-3
-              p.text-sm.text-amber-700.font-medium Please verify your email
-              p.text-sm.text-amber-600.mt-1 To start uploading business cards and creating events, please verify your email address. Check your inbox for the verification link.
-              button.mt-2.text-sm.font-medium.text-amber-700.hover_text-amber-800.underline(
-                @click="resendVerification"
-                :disabled="loading"
-              ) Resend verification email
+          .billo-first-run.mb-6(v-if="showFirstRunCoach && homeMode === 'capture'")
+            .billo-first-run__inner
+              .billo-first-run__copy
+                p.billo-first-run__kicker Your first follow-up
+                h2.billo-first-run__title Capture one person. Send before you leave.
+                p.billo-first-run__lede Card photo or contact screenshot — draft opens in Gmail or Outlook.
+              .billo-first-run__actions
+                button.billo-first-run__cta(
+                  type="button"
+                  @click="handleCameraScan"
+                  :disabled="!user?.emailVerified"
+                )
+                  VaIcon(name="photo_camera" size="18px")
+                  span Scan now
+                button.billo-first-run__dismiss(
+                  type="button"
+                  @click="dismissFirstRunCoach"
+                ) Dismiss
 
-        //- Hidden File Input
+        //- Hidden File Input (gallery)
         input(
           type="file"
           ref="fileInput"
@@ -62,6 +82,15 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
           accept="image/*"
           @change="handleFileSelect"
           multiple
+        )
+        //- Camera capture for booth / hallway scans (mobile rear camera when available)
+        input(
+          type="file"
+          ref="cameraInput"
+          class="hidden"
+          accept="image/*"
+          capture="environment"
+          @change="handleFileSelect"
         )
         
         //- Hidden VCF Input
@@ -74,31 +103,42 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
           multiple
         )
 
-        //- Upload Area (Initial State)
-        .billo-panel-premium.billo-motion.mb-8.p-5(v-if="!uploading && !selectedFiles.length" class="sm:p-8")
-          .rounded-2xl.border-2.border-dashed.p-6.transition-all.duration-300(
-            class="border-emerald-200/90 bg-gradient-to-b from-emerald-50/80 to-white sm:p-10 hover:border-emerald-400 hover:shadow-md hover:shadow-emerald-500/10"
-            @dragover.prevent
-            @drop.prevent="handleDrop"
-          )
-            .flex.flex-col.items-center.justify-center.text-center
-              VaIcon(name="upload" size="48px" class="text-emerald-400 mb-4")
-              h3.text-xl.font-bold.tracking-tight(class="text-slate-900 sm:text-2xl sm:mb-2") Upload Business Cards or Contacts
-              p.mb-6.text-sm(class="text-slate-600 sm:text-base") Drag and drop image files or contact files (.vcf)
-              .flex.flex-col.gap-3(class="sm:flex-row")
+        //- Capture mode
+        template(v-if="showCaptureSurface")
+          //- Upload Area (Initial State)
+          .billo-capture.mb-8(v-if="!uploading && !selectedFiles.length && !showContactPreview")
+            .billo-capture__stage(
+              @dragover.prevent
+              @drop.prevent="handleDrop"
+            )
+              h2.billo-capture__title Capture who you met
+              p.billo-capture__lede Card, badge, or screenshot of a contact — auto-detected.
+              button.billo-capture__primary(
+                type="button"
+                @click="handleCameraScan"
+                :disabled="!user || !user.emailVerified"
+              )
+                VaIcon(name="photo_camera" size="22px")
+                span Use camera
+              .billo-capture__secondary
                 button(
-                  class="flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 sm:px-6"
+                  type="button"
                   @click="handleUploadCard"
-                )
-                  VaIcon(name="file_upload" size="20px")
-                  span Browse Images
+                  :disabled="!user || !user.emailVerified"
+                ) Gallery
                 button(
-                  class="flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 sm:px-6"
-                  @click="handleImportContacts"
-                )
-                  VaIcon(name="contact_page" size="20px")
-                  span Import Contacts (.vcf)
-              p.text-gray-500.text-sm.mt-3 You can select multiple files
+                  type="button"
+                  @click="handleCreateEvent"
+                  :disabled="!user || !user.emailVerified"
+                ) New event
+                details.billo-capture__more
+                  summary More
+                  button(
+                    type="button"
+                    @click="handleImportContacts"
+                    :disabled="!user || !user.emailVerified"
+                  ) Import .vcf
+              p.billo-capture__micro Compressed on-device. Screenshots work.
 
         //- File Preview Area
         .billo-panel-premium.billo-motion.mb-8.p-5(v-if="!uploading && selectedFiles.length > 0" class="sm:p-8")
@@ -126,7 +166,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               .flex.flex-col.sm_flex-row.items-center.gap-3
                 .flex.items-center.gap-2.min-w-max
                   VaIcon(name="event" size="18px" class="text-emerald-500")
-                  span.text-sm.font-medium.text-gray-700 Assign to Event:
+                  span.text-sm.font-medium.text-gray-700 Event (where you met):
                 .flex-1.flex.flex-wrap.gap-2.items-center.w-full
                   select(
                     class="form-select rounded-lg border-emerald-200 py-1.5 px-2 text-sm flex-1 min-w-[200px] bg-white"
@@ -146,6 +186,18 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   )
                     VaIcon(name="add" size="14px")  
                     span New Event
+
+            //- Conversation context for better follow-ups
+            .mb-4.rounded-lg.border.border-slate-200.bg-white.p-3
+              label.block.text-sm.font-medium.text-slate-700.mb-1 What did you talk about? (optional)
+              textarea(
+                v-model="scanMetNote"
+                rows="2"
+                maxlength="280"
+                placeholder="e.g. Met at SaaStr booth — talked pricing for their sales team"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              )
+              p.text-xs.text-slate-500.mt-1 Used in the follow-up so it sounds like you were there.
 
           //- Preview grid
           .grid.grid-cols-2.sm_grid-cols-3.md_grid-cols-4.lg_grid-cols-6.gap-3
@@ -196,7 +248,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               .flex.flex-col.sm_flex-row.items-center.gap-3
                 .flex.items-center.gap-2.min-w-max
                   VaIcon(name="event" size="18px" class="text-emerald-500")
-                  span.text-sm.font-medium.text-gray-700 Assign to Event:
+                  span.text-sm.font-medium.text-gray-700 Event (where you met):
                 .flex-1.flex.flex-wrap.gap-2.items-center.w-full
                   select(
                     class="form-select rounded-lg border-emerald-200 py-1.5 px-2 text-sm flex-1 min-w-[200px] bg-white"
@@ -256,8 +308,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               .mt-4
                 p.text-red-600.font-medium {{ error }}
 
-        // Main Content Area
-        .grid(class="grid-cols-1")
+        //- Follow-ups queue
+        template(v-if="showFollowUpsSurface")
+          // Main Content Area
+          .grid(class="grid-cols-1")
           // Business Cards Section
           div
             .billo-panel-premium.billo-motion.p-4(class="sm:p-6")
@@ -388,8 +442,8 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   class="col-span-full flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"
                 )
                   VaIcon(name="person" size="48px" class="text-gray-400 mb-4")
-                  p.text-gray-500.text-center.mb-2 Sign in to manage your business cards
-                  p.text-sm.text-gray-400.text-center Upload, organize, and connect with your network
+                  p.text-gray-500.text-center.mb-2 Sign in to send follow-ups
+                  p.text-sm.text-gray-400.text-center Scan a card or contact screenshot, get a note, open Gmail or Outlook in one tap
                   button(
                     class="mt-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
                     @click="router.push('/auth')"
@@ -403,22 +457,22 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   class="col-span-full flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 max-w-2xl mx-auto"
                 )
                   VaIcon(name="search_off" size="48px" class="text-gray-400 mb-4")
-                  p.text-gray-700.text-center.text-lg.font-semibold.mb-1 No business cards yet
+                  p.text-gray-700.text-center.text-lg.font-semibold.mb-1 No follow-ups yet
                   p.text-sm.text-gray-500.text-center(v-if="searchQuery") 
-                    | No cards match your search. Try different keywords or clear the search.
+                    | No people match your search. Try different keywords or clear the search.
                   template(v-else)
                     p.text-sm.text-gray-500.text-center.mb-6.max-w-md
-                      | Add a photo of a card — we’ll pull the details so you can save contacts and follow up fast.
+                      | Scan someone you just met — card photo or contact screenshot — we’ll draft a warm note you can send from Gmail or Outlook before you leave.
                     ol.text-sm.text-gray-600.text-left.max-w-md.space-y-3.mb-8.list-decimal.pl-5
                       li
-                        span.font-medium.text-gray-800 Upload
-                        |  a clear photo (desk or hand is fine).
+                        span.font-medium.text-gray-800 Scan
+                        |  their card or a screenshot of their contact.
                       li
                         span.font-medium.text-gray-800 Review
-                        |  the scanned fields and fix anything that looks off.
+                        |  the details, then generate a short follow-up.
                       li
-                        span.font-medium.text-gray-800 Save
-                        |  to contacts or draft a short follow-up from the card.
+                        span.font-medium.text-gray-800 Send
+                        |  in one tap from Gmail or Outlook.
                   button(
                     v-if="searchQuery"
                     class="mt-2 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
@@ -429,10 +483,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   button(
                     v-else
                     class="mt-2 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-                    @click="handleUploadCard"
+                    @click="goToCapture"
                   )
-                    VaIcon(name="upload" size="20px")
-                    span.font-medium Upload your first card
+                    VaIcon(name="photo_camera" size="20px")
+                    span.font-medium Scan your first contact
                 
                 // Cards grid with pagination
                 div(v-else)
@@ -448,11 +502,23 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                     )
                       .flex.min-h-0.flex-1.flex-col.px-4.pb-3.pt-4(class="sm:px-5 sm:pt-5")
                         header.min-w-0
-                          h3.text-lg.font-semibold.leading-snug.text-slate-900(
-                            class="billo-type-display sm:text-xl"
-                            :style="{ fontFamily: getFontFamily(card.style?.fontStyle) || undefined }"
-                          ) {{ card.name }}
+                          .flex.min-w-0.flex-wrap.items-center.gap-2
+                            h3.text-lg.font-semibold.leading-snug.text-slate-900(
+                              class="billo-type-display sm:text-xl"
+                              :style="{ fontFamily: getFontFamily(card.style?.fontStyle) || undefined }"
+                            ) {{ card.name }}
+                            span.inline-flex.items-center.rounded-md.border.font-semibold.uppercase.tracking-wide(
+                              v-if="card.source === 'screenshot'"
+                              class="border-sky-200 bg-sky-50 text-sky-800 px-1.5 py-0.5 text-[10px]"
+                            ) Screenshot
+                            span.inline-flex.items-center.rounded-md.border.font-semibold.uppercase.tracking-wide(
+                              v-else-if="card.source === 'manual' || card.importedContact"
+                              class="border-slate-200 bg-slate-50 text-slate-600 px-1.5 py-0.5 text-[10px]"
+                            ) Imported
                           p.text-sm.leading-snug.text-slate-600(class="mt-0.5") {{ card.title }}
+                          p.text-xs.text-amber-700.mt-1(
+                            v-if="card.extractWarnings?.length || (card.confidence?.overall != null && card.confidence.overall < 0.55)"
+                          ) {{ card.extractWarnings?.[0] || 'Some fields may need a quick check before you send.' }}
 
                         //- One column, full width — text wraps instead of truncating
                         .mt-4.min-w-0.border-t.pt-3(
@@ -574,6 +640,21 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                             ) {{ getEventName(card.eventId) || 'Tap to choose an event' }}
                           VaIcon.shrink-0.text-slate-400(name="chevron_right" size="22px" class="mt-0.5")
 
+                        .mt-2.rounded-lg.border.px-3(
+                          class="border-amber-100 bg-amber-50/60 py-2.5"
+                          v-if="card.metNote"
+                        )
+                          p.text-xs.font-medium.text-amber-800/80 What you talked about
+                          p.text-sm.leading-snug.text-slate-800(class="mt-0.5 break-words") {{ card.metNote }}
+                        button.mt-2.flex.w-full.items-center.gap-2.rounded-lg.border.border-dashed.px-3.py-2.text-left.text-sm.text-slate-600.transition-colors(
+                          v-else
+                          type="button"
+                          class="border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 hover:text-emerald-900"
+                          @click.stop="openEditCardModal(card)"
+                        )
+                          VaIcon(name="chat" size="18px" class="shrink-0")
+                          span Add what you talked about (for a better follow-up)
+
                         //- Primary action first, then one clear row for the rest
                         footer.mt-4.space-y-2.border-t.pt-3(
                           class="border-slate-100"
@@ -581,19 +662,19 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                           button.flex.h-11.w-full.items-center.justify-center.gap-2.rounded-lg.bg-emerald-600.text-sm.font-semibold.text-white.shadow-sm.transition-colors(
                             type="button"
                             class="hover:bg-emerald-500 active:bg-emerald-700"
-                            @click="saveContact(card)"
+                            @click.stop="confirmGenerateEmail(card)"
+                            :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
                           )
-                            VaIcon(name="person_add" size="20px" class="shrink-0")
-                            span Save to contacts
+                            VaIcon(name="send" size="20px" class="shrink-0")
+                            span {{ generatingDraft === card.id ? 'Writing follow-up…' : 'Send follow-up' }}
                           .flex.min-w-0.gap-2
                             button.flex.h-10.min-w-0.flex-1.items-center.justify-center.gap-2.rounded-lg.border.text-sm.font-medium.text-slate-800.transition-colors(
                               class="border-slate-200 bg-white hover:bg-slate-50"
                               type="button"
-                              @click.stop="confirmGenerateEmail(card)"
-                              :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
+                              @click="saveContact(card)"
                             )
-                              VaIcon(name="smart_toy" size="18px" class="shrink-0 text-slate-600")
-                              span.truncate Draft with AI
+                              VaIcon(name="person_add" size="18px" class="shrink-0 text-slate-600")
+                              span.truncate Save contact
                             button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.text-slate-600.transition-colors(
                               class="border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
                               type="button"
@@ -611,8 +692,8 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                             )
                               VaIcon(name="delete" size="20px")
 
-        // Stats Grid (Moved to bottom)
-        
+        // Stats Grid
+        .mt-8.grid.gap-4(class="grid-cols-1 sm:grid-cols-3")
           .stat-card.billo-card-elevated.billo-motion.p-5(
             v-for="stat in stats"
             :key="stat.label"
@@ -635,9 +716,9 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
       )
         .p-6.relative
           .flex.items-center.justify-between.mb-6
-            h3.text-lg.font-medium Message Drafts
+            h3.text-lg.font-medium Follow-ups
             .flex.items-center.gap-3
-              span.text-sm.text-gray-600.bg-gray-100.px-2.py-1.rounded {{ cardDrafts[selectedCardForDrafts?.id]?.length || 0 }} drafts
+              span.text-sm.text-gray-600.bg-gray-100.px-2.py-1.rounded {{ cardDrafts[selectedCardForDrafts?.id]?.length || 0 }} notes
               button(
                 class="bg-white border border-emerald-200 text-emerald-600 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed group relative"
                 @click="confirmGenerateEmail(selectedCardForDrafts)"
@@ -648,7 +729,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   size="14px"
                   class="text-emerald-600"
                 )
-                span.text-sm.font-medium New Draft
+                span.text-sm.font-medium New follow-up
               button(
                 class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                 @click="showDraftsListModal = false"
@@ -688,8 +769,8 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               class="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"
             )
               VaIcon(name="description" size="48px" class="text-gray-400 mb-4")
-              p.text-gray-500.text-center.mb-2 No email drafts yet
-              p.text-sm.text-gray-400.text-center Click "Generate New Draft" to create your first email
+              p.text-gray-500.text-center.mb-2 No follow-ups yet
+              p.text-sm.text-gray-400.text-center Click “New follow-up” to write your first note
             
             // Loading State
             .loading-state(
@@ -720,36 +801,75 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
           )
             VaIcon(name="close" size="24px")
           .flex.items-center.justify-between.mb-6
-            h3.text-2xl.font-bold Email Draft
+            h3.text-2xl.font-bold Your follow-up
+          p.text-sm.text-slate-500.mb-4(v-if="selectedDraft?.subject")
+            span.font-medium.text-slate-700 Subject:
+            |  {{ selectedDraft.subject }}
           .bg-gray-50.p-6.rounded-xl.mb-6
-            pre.whitespace-pre-wrap.text-base.leading-relaxed {{ emailDraft }}
-          .flex.justify-end.gap-4
-            button(
-              class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300"
-              @click="showEmailModal = false"
-            ) Close
-            button(
-              class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2"
-              @click="copyEmailDraft"
+            pre.whitespace-pre-wrap.text-base.leading-relaxed {{ emailDraft }}{{ selectedDraft?.signature ? '\n\n' + selectedDraft.signature : '' }}
+          p.text-xs.text-amber-700.mb-4(
+            v-if="!selectedCardForDrafts?.emails?.length"
+          ) Add an email on this contact before you can open Gmail/Outlook. Edit the card, then come back.
+          p.text-xs.text-slate-500.mb-4(v-else) Opens in your mail app with everything filled in—hit Send there. Then confirm below so we stop nudging you.
+          .flex.flex-col.gap-3
+            .rounded-xl.border.border-emerald-200.bg-emerald-50.p-3(
+              v-if="selectedDraft?.status === 'compose_opened'"
             )
-              VaIcon(name="content_copy" size="16px")
-              span {{ copiedEmailDraft ? 'Copied!' : 'Copy' }}
-            button(
-              class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2"
-              @click="sendSMSDraft"
-              :disabled="!selectedCardForDrafts?.phones?.length"
-              :title="!selectedCardForDrafts?.phones?.length ? 'No phone number available' : ''"
-            )
-              VaIcon(name="sms" size="16px")
-              span Send SMS
-            button(
-              class="bg-emerald-500 text-white hover:bg-emerald-600 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center gap-2"
-              @click="sendEmailDraft"
-              :disabled="!selectedCardForDrafts?.emails?.length"
-              :title="!selectedCardForDrafts?.emails?.length ? 'No email address available' : ''"
-            )
-              VaIcon(name="send" size="16px")
-              span Send Email
+              p.text-sm.text-emerald-900.mb-2 Did you send it?
+              .flex.flex-wrap.gap-2
+                button(
+                  type="button"
+                  class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                  @click="confirmDraftSent"
+                ) Yes, mark sent
+                button(
+                  type="button"
+                  class="bg-white border border-emerald-200 text-emerald-900 px-3 py-2 rounded-lg text-sm font-medium"
+                  @click="showEmailModal = false"
+                ) Still drafting
+            .grid.gap-3(class="sm:grid-cols-2")
+              button(
+                class="bg-emerald-600 text-white hover:bg-emerald-500 px-4 py-3 rounded-lg transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                @click="sendFollowUp('gmail')"
+                :disabled="!selectedCardForDrafts?.emails?.length"
+                :title="!selectedCardForDrafts?.emails?.length ? 'No email on this card' : 'Open Gmail with this follow-up'"
+              )
+                VaIcon(name="mail" size="18px")
+                span Send with Gmail
+              button(
+                class="bg-sky-700 text-white hover:bg-sky-600 px-4 py-3 rounded-lg transition-all duration-200 font-semibold text-sm shadow-sm hover:shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                @click="sendFollowUp('outlook')"
+                :disabled="!selectedCardForDrafts?.emails?.length"
+                :title="!selectedCardForDrafts?.emails?.length ? 'No email on this card' : 'Open Outlook with this follow-up'"
+              )
+                VaIcon(name="forward_to_inbox" size="18px")
+                span Send with Outlook
+            .flex.flex-wrap.justify-end.gap-3
+              button(
+                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300"
+                @click="showEmailModal = false"
+              ) Close
+              button(
+                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2"
+                @click="copyEmailDraft"
+              )
+                VaIcon(name="content_copy" size="16px")
+                span {{ copiedEmailDraft ? 'Copied!' : 'Copy' }}
+              button(
+                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2 disabled:opacity-50"
+                @click="sendFollowUp('mailto')"
+                :disabled="!selectedCardForDrafts?.emails?.length"
+              )
+                VaIcon(name="send" size="16px")
+                span Other mail app
+              button(
+                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2"
+                @click="sendSMSDraft"
+                :disabled="!selectedCardForDrafts?.phones?.length"
+                :title="!selectedCardForDrafts?.phones?.length ? 'No phone number available' : ''"
+              )
+                VaIcon(name="sms" size="16px")
+                span SMS
 
       // Confirmation Modal
       VaModal(
@@ -764,7 +884,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
           )
             VaIcon(name="close" size="24px")
           .flex.items-center.justify-between.mb-6
-            h3.text-2xl.font-bold Message Drafts
+            h3.text-2xl.font-bold Follow-ups
           
           // Card Info Section
           .bg-gray-50.rounded-xl.p-4.mb-6.flex.items-center.gap-4
@@ -799,8 +919,8 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               class="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"
             )
               VaIcon(name="description" size="48px" class="text-gray-400 mb-4")
-              p.text-gray-500.text-center.mb-2 No email drafts yet
-              p.text-sm.text-gray-400.text-center Click "Generate New Draft" to create your first email
+              p.text-gray-500.text-center.mb-2 No follow-ups yet
+              p.text-sm.text-gray-400.text-center Click “New follow-up” to write your first note
             
             // Loading State
             .loading-state(
@@ -822,7 +942,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
             )
               .loading-spinner.w-3.h-3.border-2.border-white(v-if="generatingDraft === selectedCardForGeneration?.id")
               VaIcon(v-else name="smart_toy" size="16px")
-              span {{ generatingDraft === selectedCardForGeneration?.id ? 'Generating...' : 'Generate New Draft' }}
+              span {{ generatingDraft === selectedCardForGeneration?.id ? 'Writing…' : 'Write new follow-up' }}
 
       // Move to Event Modal
       VaModal(
@@ -945,8 +1065,8 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               VaIcon(v-else name="delete" size="16px")
               span(class="font-medium") {{ deletingCard ? 'Deleting...' : 'Delete Card' }}
 
-      // QR Code Section
-      #billo-qr-share.billo-panel-premium.billo-motion.mt-12.p-5(class="sm:p-8")
+      // QR Code Section — progressive; unlocked after first capture / send
+      #billo-qr-share.billo-panel-premium.billo-motion.mt-12.p-5(v-if="showAdvancedShare" class="sm:p-8")
         .mb-8.text-center
           h2.text-xl.font-bold.tracking-tight(class="text-slate-900 sm:text-2xl") Share Your Info
           p.mt-2.text-sm(class="text-slate-600 sm:text-base") Let others easily connect with you by scanning your QR code
@@ -1073,6 +1193,16 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                 )
                   VaIcon(name="add" size="18px")
                   span.sm_block.hidden New Event
+
+            .form-group
+              label.block.text-sm.font-medium.text-gray-700.mb-1 What did you talk about?
+              textarea(
+                v-model="editCardData.metNote"
+                rows="2"
+                maxlength="280"
+                placeholder="e.g. Booth chat about pricing / hiring / partnership"
+                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-base"
+              )
 
             // Contact Information
             .form-group
@@ -1246,22 +1376,30 @@ import { businessCardService } from '../../services/businessCardService';
 import { authService } from '../../services/authService';
 import { paymentService } from '../../services/paymentService';
 import { walletService } from '../../services/walletService';
-import { useRouter } from 'vue-router';
-import { storage } from '../../config/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useRouter, useRoute } from 'vue-router';
 import QrcodeVue from 'qrcode.vue';
 import PlanLimitModal from '../../components/PlanLimitModal.vue';
 // Import formatDate from dateUtils
 import { formatDate } from '../../utils/dateUtils';
 import { buildProfileShareUrl, displayNameInitials } from '../../utils/publicProfileSlug';
+import { buildFollowUpMessage, openFollowUpCompose } from '../../utils/followUpSend';
+import { compressImageForScan } from '../../utils/compressImageForScan';
 
 const router = useRouter();
+const route = useRoute();
 const user = ref(null);
+const homeMode = ref('capture');
+const firstRunCoachDismissed = ref(false);
+const showProfileEnrichNudge = ref(false);
+const shareUnlocked = ref(false);
 const businessCards = ref([]);
 const uploading = ref(false);
 const processingStatus = ref('');
 const error = ref('');
 const fileInput = ref(null);
+const cameraInput = ref(null);
+const scanMetNote = ref('');
+const scanSourceMode = ref('auto');
 const selectedEventFilter = ref('all');
 const showEmailModal = ref(false);
 const emailDraft = ref('');
@@ -1327,7 +1465,8 @@ const editCardData = ref({
   emails: [],
   phones: [],
   websites: [],
-  eventId: null
+  eventId: null,
+  metNote: ''
 });
 const saving = ref(false);
 
@@ -1389,7 +1528,8 @@ function openEditCardModal(card) {
     emails: [...(card.emails || [])],
     phones: [...(card.phones || [])],
     websites: [...(card.websites || [])],
-    eventId: card.eventId
+    eventId: card.eventId,
+    metNote: card.metNote || ''
   };
   showEditCardModal.value = true;
 }
@@ -1429,7 +1569,8 @@ async function saveCardChanges() {
       emails: editCardData.value.emails.filter(email => email.trim()),
       phones: editCardData.value.phones.filter(phone => phone.trim()),
       websites: editCardData.value.websites.filter(website => website.trim()),
-      eventId: editCardData.value.eventId || null
+      eventId: editCardData.value.eventId || null,
+      metNote: (editCardData.value.metNote || '').trim()
     };
 
     await businessCardService.updateCard(updatedCard);
@@ -1454,24 +1595,152 @@ async function saveCardChanges() {
 
 // Auth state management
 onMounted(() => {
-  const unsubscribe = authService.onAuthStateChanged((currentUser) => {
+  try {
+    firstRunCoachDismissed.value = localStorage.getItem('billo_first_run_dismissed') === '1';
+  } catch {
+    firstRunCoachDismissed.value = false;
+  }
+
+  const unsubscribe = authService.onAuthStateChanged(async (currentUser) => {
     user.value = currentUser;
     if (currentUser) {
-      // Load saved event selection or default to 'all'
+      const startScanFlag = route.query.start === 'scan';
+      const eventFromEmail =
+        typeof route.query.event === 'string' && route.query.event ? route.query.event : '';
+
       const savedEvent = localStorage.getItem(STORAGE_KEY);
-      selectedEventFilter.value = savedEvent || 'all';
+      if (eventFromEmail) {
+        selectedEventFilter.value = eventFromEmail;
+        selectedPreviewEvent.value = eventFromEmail;
+      } else {
+        selectedEventFilter.value = savedEvent || 'all';
+      }
 
       refreshFirestoreProfileSlug();
-      loadCards();
+      await loadCards();
       loadEvents();
       // Check premium status
       checkPremiumStatus();
+
+      try {
+        shareUnlocked.value = localStorage.getItem('billo_share_unlocked') === '1';
+      } catch {
+        shareUnlocked.value = false;
+      }
+      if (businessCards.value.length > 0) {
+        unlockShareFeatures();
+        homeMode.value = startScanFlag ? 'capture' : 'followups';
+      } else {
+        homeMode.value = 'capture';
+      }
+
+      try {
+        const profile = await authService.getUserProfile();
+        showProfileEnrichNudge.value = !!profile?.profileEnrichmentPending;
+      } catch {
+        showProfileEnrichNudge.value = false;
+      }
+
+      if (startScanFlag || eventFromEmail) {
+        router.replace({ path: '/home' });
+      }
+
+      const shouldStartScan =
+        startScanFlag ||
+        (() => {
+          try {
+            return localStorage.getItem('billo_start_scan') === '1';
+          } catch {
+            return false;
+          }
+        })();
+
+      if (shouldStartScan) {
+        try {
+          localStorage.removeItem('billo_start_scan');
+        } catch {
+          /* ignore */
+        }
+        nextTick(() => {
+          if (currentUser.emailVerified) handleCameraScan();
+        });
+      }
     }
   });
 
   // Cleanup subscription
   return () => unsubscribe();
 });
+
+const firstRunHasCard = computed(() => businessCards.value.length > 0);
+const firstRunHasDraft = computed(() =>
+  Object.values(cardDrafts.value || {}).some((list) => Array.isArray(list) && list.length > 0) ||
+  Object.keys(emailDrafts.value || {}).length > 0
+);
+const firstRunHasSent = computed(() => {
+  const lists = Object.values(cardDrafts.value || {});
+  return lists.some(
+    (list) => Array.isArray(list) && list.some((d) => d?.status === 'sent' || d?.sentAt)
+  );
+});
+const pendingFollowUpCount = computed(() => {
+  let n = 0;
+  for (const list of Object.values(cardDrafts.value || {})) {
+    if (!Array.isArray(list)) continue;
+    n += list.filter((d) => d?.status !== 'sent' && !d?.sentAt).length;
+  }
+  // Contacts with no drafts yet still count as “to send”
+  const draftedIds = new Set(Object.keys(cardDrafts.value || {}));
+  for (const card of businessCards.value || []) {
+    if (!draftedIds.has(card.id)) n += 1;
+  }
+  return n;
+});
+const showCaptureSurface = computed(
+  () =>
+    homeMode.value === 'capture' ||
+    selectedFiles.value.length > 0 ||
+    uploading.value ||
+    (showContactPreview.value && selectedContactFiles.value.length > 0)
+);
+const showFollowUpsSurface = computed(
+  () =>
+    homeMode.value === 'followups' &&
+    !selectedFiles.value.length &&
+    !uploading.value &&
+    !(showContactPreview.value && selectedContactFiles.value.length > 0)
+);
+const showAdvancedShare = computed(() => shareUnlocked.value || firstRunHasSent.value);
+const showFirstRunCoach = computed(() => {
+  if (!user.value?.emailVerified) return false;
+  if (firstRunCoachDismissed.value) return false;
+  if (firstRunHasSent.value) return false;
+  try {
+    return localStorage.getItem('billo_first_run') === '1' || route.query.start === 'scan';
+  } catch {
+    return route.query.start === 'scan';
+  }
+});
+
+function unlockShareFeatures() {
+  shareUnlocked.value = true;
+  try {
+    localStorage.setItem('billo_share_unlocked', '1');
+    window.dispatchEvent(new Event('billo-share-unlocked'));
+  } catch {
+    /* ignore */
+  }
+}
+
+function dismissFirstRunCoach() {
+  firstRunCoachDismissed.value = true;
+  try {
+    localStorage.setItem('billo_first_run_dismissed', '1');
+    localStorage.removeItem('billo_first_run');
+  } catch {
+    /* ignore */
+  }
+}
 
 async function loadCards() {
   try {
@@ -1539,17 +1808,32 @@ async function handleDrop(event) {
   }
 }
 
-function previewSelectedFiles(files) {
+async function previewSelectedFiles(files) {
   // Clear existing selection
   selectedFiles.value = [];
   previewUrls.value = [];
+  homeMode.value = 'capture';
+  scanSourceMode.value = 'auto';
+
+  // Default event from current filter when scanning at a booth
+  if (
+    selectedEventFilter.value &&
+    selectedEventFilter.value !== 'all' &&
+    selectedEventFilter.value !== 'null'
+  ) {
+    selectedPreviewEvent.value = selectedEventFilter.value;
+  }
   
-  // Process image files
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    // Already verified as image in handleDrop, but double check
-    if (file.type.startsWith('image/')) {
-      // Create preview URLs
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      const compressed = await compressImageForScan(file);
+      const url = URL.createObjectURL(compressed);
+      previewUrls.value.push(url);
+      selectedFiles.value.push(compressed);
+    } catch (err) {
+      console.error('Image compress failed, using original:', err);
       const url = URL.createObjectURL(file);
       previewUrls.value.push(url);
       selectedFiles.value.push(file);
@@ -1583,10 +1867,15 @@ function previewSelectedContactFiles(files) {
 async function processSelectedFiles() {
   if (selectedFiles.value.length === 0) return;
   
-  // Use the selected event from preview if available, otherwise use the global filter
-  const eventId = selectedPreviewEvent.value || selectedEvent.value || null;
+  // Prefer preview event; else active filter if it's a real event id
+  let eventId = selectedPreviewEvent.value || null;
+  if (!eventId && selectedEventFilter.value && selectedEventFilter.value !== 'all' && selectedEventFilter.value !== 'null') {
+    eventId = selectedEventFilter.value;
+  }
   
-  await uploadFiles(selectedFiles.value, eventId);
+  await uploadFiles(selectedFiles.value, eventId, scanMetNote.value, {
+    source: scanSourceMode.value === 'auto' ? undefined : scanSourceMode.value
+  });
   // Clear the selection after upload (successful or not)
   clearSelectedFiles();
 }
@@ -1612,19 +1901,24 @@ function clearSelectedFiles() {
   // Clear arrays
   selectedFiles.value = [];
   previewUrls.value = [];
+  scanMetNote.value = '';
+  scanSourceMode.value = 'auto';
   
   // Reset file input
   if (fileInput.value) {
     fileInput.value.value = '';
   }
+  if (cameraInput.value) {
+    cameraInput.value.value = '';
+  }
 }
 
-async function uploadFiles(files, eventId = null) {
+async function uploadFiles(files, eventId = null, metNote = '', options = {}) {
   // No need to check file types again, already done in preview
   uploading.value = true;
   error.value = '';
   successMessage.value = '';
-  processingStatus.value = `Preparing to upload ${files.length} business card${files.length > 1 ? 's' : ''}...`;
+  processingStatus.value = `Preparing to scan ${files.length} contact${files.length > 1 ? 's' : ''}...`;
 
   try {
     const result = await businessCardService.uploadMultipleCards(
@@ -1632,7 +1926,9 @@ async function uploadFiles(files, eventId = null) {
       eventId,
       (status) => {
         processingStatus.value = status;
-      }
+      },
+      metNote,
+      options
     );
     
     // Add all new cards to the beginning of the list
@@ -1642,6 +1938,18 @@ async function uploadFiles(files, eventId = null) {
         // Initialize expandedDrafts for each new card
         expandedDrafts.value[card.id] = false;
       });
+      unlockShareFeatures();
+      homeMode.value = 'followups';
+
+      // Auto-draft first contact to keep the meet → draft → send loop tight
+      processingStatus.value = 'Drafting your follow-up...';
+      for (const card of result.success) {
+        try {
+          await generateEmailDraft(card);
+        } catch (draftErr) {
+          console.warn('Auto-draft skipped:', draftErr);
+        }
+      }
     }
     
     // Set success message
@@ -1652,7 +1960,7 @@ async function uploadFiles(files, eventId = null) {
       uploading.value = false;
       successMessage.value = '';
       processingStatus.value = '';
-    }, 5000);
+    }, 2500);
   } catch (err) {
     error.value = err.message || 'Error uploading business cards';
     console.error(err);
@@ -1984,43 +2292,33 @@ function handleEventChange() {
 // Features data for landing page
 const features = [
   {
-    icon: 'smart_toy',
-    title: 'AI-Powered Organization',
-    description: 'Automatically categorize and organize your business cards with intelligent event tagging.'
+    icon: 'send',
+    title: 'One-tap follow-up',
+    description: 'Open a warm note in Gmail or Outlook—send from your real inbox before the lead goes cold.'
   },
   {
-    icon: 'email',
-    title: 'Smart Message Drafts',
-    description: 'Generate personalized follow-up messages with AI assistance in seconds.'
+    icon: 'photo_camera',
+    title: 'Scan the meet',
+    description: 'Capture the card while you’re still talking. We pull the fields that matter.'
   },
   {
     icon: 'event',
-    title: 'Event Management',
-    description: 'Organize contacts by events and conferences for better networking.'
+    title: 'Event context',
+    description: 'Group people by conference so Monday is a short list of follow-ups, not guesswork.'
   },
   {
     icon: 'qr_code',
-    title: 'Smart Card Scanning',
-    description: 'Instantly digitize business cards with advanced OCR technology.'
-  },
-  {
-    icon: 'security',
-    title: 'Enterprise Security',
-    description: 'Bank-level encryption and security for your business data.'
-  },
-  {
-    icon: 'analytics',
-    title: 'Network Analytics',
-    description: 'Get insights into your professional network and connections.'
+    title: 'Share your link',
+    description: 'Hand them your live profile + QR when they ask for yours.'
   }
 ];
 
 // Stats data
 const stats = computed(() => [
   {
-    icon: 'qr_code',
+    icon: 'groups',
     value: businessCards.value.length,
-    label: 'Business Cards'
+    label: 'People met'
   },
   {
     icon: 'event',
@@ -2028,9 +2326,9 @@ const stats = computed(() => [
     label: 'Events'
   },
   {
-    icon: 'email',
-    value: Object.keys(cardDrafts.value).length,
-    label: 'Message Drafts'
+    icon: 'send',
+    value: Object.values(cardDrafts.value).reduce((n, list) => n + (list?.length || 0), 0),
+    label: 'Follow-ups ready'
   }
 ]);
 
@@ -2379,6 +2677,23 @@ function hidePlanLimitModal() {
 }
 
 // Add new methods for handling actions when not logged in
+function promptEmailVerify() {
+  try {
+    document.getElementById('billo-verify')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch {
+    /* ignore */
+  }
+}
+
+function goToCapture() {
+  homeMode.value = 'capture';
+  if (!user.value?.emailVerified) {
+    promptEmailVerify();
+    return;
+  }
+  handleCameraScan();
+}
+
 function handleCreateEvent() {
   if (!user.value) {
     router.push('/auth');
@@ -2386,7 +2701,7 @@ function handleCreateEvent() {
   }
 
   if (!user.value.emailVerified) {
-    alert('Please verify your email address before creating events.');
+    promptEmailVerify();
     return;
   }
 
@@ -2400,11 +2715,25 @@ async function handleUploadCard() {
   }
 
   if (!user.value.emailVerified) {
-    alert('Please verify your email address before uploading cards.');
+    promptEmailVerify();
     return;
   }
 
   fileInput.value.click();
+}
+
+async function handleCameraScan() {
+  if (!user.value) {
+    router.push('/auth');
+    return;
+  }
+
+  if (!user.value.emailVerified) {
+    promptEmailVerify();
+    return;
+  }
+
+  cameraInput.value?.click();
 }
 
 function handleRevealQR() {
@@ -2446,19 +2775,51 @@ async function resendVerification() {
   }
 }
 
-// Add this function in the script section after copyEmailDraft function
-function sendEmailDraft() {
+// One-tap follow-up: open compose, mark as compose_opened (not sent until confirmed)
+async function sendFollowUp(provider = 'gmail') {
   if (!selectedCardForDrafts?.value?.emails?.length) return;
-  
-  const email = selectedCardForDrafts.value.emails[0];
-  const subject = selectedDraft.value?.subject || `Follow-up: ${selectedCardForDrafts.value.name} from ${selectedCardForDrafts.value.company || 'our meeting'}`;
-  const body = `${selectedDraft.value?.body || emailDraft.value} \n\n${selectedDraft.value?.signature || ''}`;
-  
-  // Create mailto URL with encoded parameters
-  const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  
-  // Open default email client
-  window.open(mailtoUrl, '_blank');
+
+  const message = buildFollowUpMessage(
+    selectedDraft.value,
+    selectedCardForDrafts.value,
+    emailDraft.value
+  );
+  openFollowUpCompose(provider, message);
+
+  if (selectedDraft.value?.id) {
+    try {
+      await businessCardService.markDraftComposeOpened(selectedDraft.value.id, provider);
+      selectedDraft.value = {
+        ...selectedDraft.value,
+        status: 'compose_opened',
+        composeOpenedVia: provider
+      };
+      unlockShareFeatures();
+      await loadDrafts(selectedCardForDrafts.value.id);
+    } catch (err) {
+      console.error('Could not mark compose opened:', err);
+    }
+  }
+}
+
+async function confirmDraftSent() {
+  if (!selectedDraft.value?.id) return;
+  const provider = selectedDraft.value.composeOpenedVia || selectedDraft.value.sentVia || 'unknown';
+  try {
+    await businessCardService.markDraftSent(selectedDraft.value.id, provider);
+    selectedDraft.value = { ...selectedDraft.value, status: 'sent', sentVia: provider };
+    unlockShareFeatures();
+    if (selectedCardForDrafts.value?.id) {
+      await loadDrafts(selectedCardForDrafts.value.id);
+    }
+    showEmailModal.value = false;
+  } catch (err) {
+    console.error('Could not confirm sent:', err);
+  }
+}
+
+function sendEmailDraft() {
+  return sendFollowUp('mailto');
 }
 
 // Add this function in the script section after sendEmailDraft function
@@ -2864,6 +3225,312 @@ button:focus {
 
 .shadow-sm:hover {
   box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+}
+
+.billo-first-run__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  padding: 1.25rem 1.25rem 1.35rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.95), rgb(236 253 245 / 0.75));
+  border: 1px solid rgb(167 243 208 / 0.7);
+  box-shadow: 0 18px 40px -28px rgb(15 118 110 / 0.35);
+}
+
+@media (min-width: 768px) {
+  .billo-first-run__inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+}
+
+.billo-first-run__kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.billo-first-run__title {
+  margin: 0 0 0.4rem;
+  font-family: 'Instrument Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.billo-first-run__lede {
+  margin: 0 0 0.85rem;
+  max-width: 34rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.billo-first-run__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.billo-first-run__steps li {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  background: rgb(255 255 255 / 0.9);
+  border: 1px solid #e2e8f0;
+}
+
+.billo-first-run__steps li.done {
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.billo-first-run__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  min-width: 11rem;
+}
+
+.billo-first-run__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: linear-gradient(105deg, #059669, #0d9488);
+  color: #fff;
+  font-weight: 650;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.billo-first-run__cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.billo-first-run__link,
+.billo-first-run__dismiss {
+  border: 0;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.billo-first-run__link {
+  color: #0f766e;
+}
+
+.billo-first-run__dismiss {
+  color: #94a3b8;
+}
+
+.billo-home-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.billo-home-modes__rail {
+  display: inline-flex;
+  align-self: stretch;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px -22px rgb(15 23 42 / 0.35);
+  max-width: 28rem;
+}
+
+.billo-home-modes__tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.billo-home-modes__tab.is-active {
+  background: linear-gradient(105deg, #059669, #0d9488);
+  color: #fff;
+  box-shadow: 0 8px 18px -12px rgb(5 150 105 / 0.9);
+}
+
+.billo-home-modes__count {
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.22);
+  font-size: 0.7rem;
+  line-height: 1.35rem;
+  text-align: center;
+}
+
+.billo-home-modes__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.billo-verify-soft {
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+.billo-verify-soft button {
+  border: 0;
+  background: transparent;
+  color: #b45309;
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.billo-capture__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(2rem, 6vw, 3.5rem) 1.25rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgb(167 243 208 / 0.7);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgb(16 185 129 / 0.16), transparent 60%),
+    linear-gradient(180deg, #fff 0%, #f0fdf4 100%);
+  box-shadow: 0 22px 50px -36px rgb(15 118 110 / 0.45);
+}
+
+.billo-capture__title {
+  margin: 0 0 0.5rem;
+  font-family: 'Instrument Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.billo-capture__lede {
+  margin: 0 0 1.5rem;
+  max-width: 26rem;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.billo-capture__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.25rem;
+  min-width: min(100%, 18rem);
+  padding: 0.85rem 1.4rem;
+  border: 0;
+  border-radius: 1rem;
+  background: linear-gradient(105deg, #059669, #0d9488);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 16px 30px -16px rgb(5 150 105 / 0.95);
+}
+
+.billo-capture__primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.billo-capture__secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.billo-capture__secondary > button,
+.billo-capture__more > button {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.8rem;
+  border: 1px solid #e2e8f0;
+  background: rgb(255 255 255 / 0.9);
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.billo-capture__more {
+  position: relative;
+}
+
+.billo-capture__more summary {
+  list-style: none;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.8rem;
+  border: 1px solid #e2e8f0;
+  background: rgb(255 255 255 / 0.9);
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.billo-capture__more summary::-webkit-details-marker {
+  display: none;
+}
+
+.billo-capture__more[open] > button {
+  display: block;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.billo-capture__micro {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 </style>

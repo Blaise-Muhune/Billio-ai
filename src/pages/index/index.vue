@@ -1,51 +1,49 @@
 <route>
 meta:
-  title: BilloAI — Scan a card, get a contact, send the follow-up
-  description: Structured contacts from a photo, a shareable profile link, and AI drafts for follow-ups—built for events, sales, and founders.
+  title: BilloAI — The follow-up button for in-person networking
+  description: Meet someone, scan their card, send a warm follow-up from Gmail or Outlook before the lead goes cold—built for conferences, sales, and founders.
 </route>
 
 <template lang="pug">
-main.font-sans.billo-app-bg
-  // Hero Section
-  section.relative.overflow-hidden.flex.items-center.justify-center.min-h-screen
-    .max-w-3xl.mx-auto.px-4.w-full.text-center
-      p.text-xs.font-semibold.uppercase.tracking-widest.text-emerald-600.mb-4 BilloAI
-      // Title with proper spacing and alignment
-      h1.font-display.text-center.mb-8.text-slate-900(class="text-[clamp(2rem,5vw,3.25rem)] leading-[1.1]")
-        span.block.font-bold.text-emerald-600 Smart business cards.
-        span.block.font-bold.mt-2 One place to grow your network.
+main.font-sans.billo-landing
+  // Hero — one composition: brand, promise, CTA, product stage
+  section.billo-landing-hero
+    .billo-landing-hero__glow(aria-hidden="true")
+    .billo-landing-hero__inner
+      .billo-landing-hero__copy
+        p.billo-landing-hero__brand BilloAI
+        h1.billo-landing-hero__title
+          span.block Meet someone.
+          span.block.billo-landing-hero__accent Send the follow-up before you forget.
+        p.billo-landing-hero__lede
+          | Scan a card or contact screenshot. Get a human draft. Open it in Gmail or Outlook in one tap.
+        .billo-landing-hero__actions
+          router-link.billo-landing-hero__cta(to="/home") Start following up free
+          a.billo-landing-hero__ghost(href="#loop") See the 60-second loop
 
-      // Subtitle with proper width and spacing
-      p.text-lg.text-slate-600.mb-16.max-w-xl.mx-auto.leading-relaxed Scan cards with AI, fix details in seconds, and keep follow-ups where you already work.
-
-      // Progress Bar
-      .w-full.max-w-md.mx-auto.mb-12
-        .h-1.bg-emerald-500.rounded-full
-
-      // Action Buttons with proper spacing and styling
-      .flex.flex-col.items-center.gap-8
-        router-link(
-          to="/home"
-          class="w-full max-w-md bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-billo hover:bg-emerald-700 transition-all duration-billo ease-billo-out flex items-center justify-center gap-3 relative group"
-        )
-          span.text-lg.font-medium Get Started Free
-          VaIcon(
-            name="arrow_downward"
-            size="24px"
-            class="absolute right-8 transition-all duration-300 group-hover:translate-y-1"
-          )
-        
-        a(
-          href="#features"
-          class="text-slate-700 hover:text-emerald-600 transition-colors duration-billo ease-billo-out text-lg font-semibold"
-        ) See how it works
+      .billo-landing-hero__stage(aria-hidden="true")
+        .billo-landing-stage
+          .billo-landing-stage__card
+            p.billo-landing-stage__kicker Capture
+            p.billo-landing-stage__name Alex Chen
+            p.billo-landing-stage__meta Product · SaaStr
+          .billo-landing-stage__arrow
+          .billo-landing-stage__draft
+            p.billo-landing-stage__kicker Draft
+            p.billo-landing-stage__subject Great meeting you at SaaStr
+            p.billo-landing-stage__body Enjoyed the pricing chat — happy to stay in touch.
+          .billo-landing-stage__arrow
+          .billo-landing-stage__send
+            p.billo-landing-stage__kicker Send
+            p.billo-landing-stage__apps Gmail · Outlook
 
   // Features Section
   section#features.py-24.bg-white
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.mb-20
         h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 What you actually buy with BilloAI
-        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Less retyping. Fewer lost leads. A public link that still works when your title changes.
+        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed
+          | Not another contact dump—a habit: meet → remember → send, before Monday morning regret.
       
       .grid.gap-8.max-w-6xl.mx-auto(class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3")
         // Feature Cards
@@ -59,11 +57,11 @@ main.font-sans.billo-app-bg
             p.text-base.leading-relaxed.text-slate-600 {{ feature.description }}
 
   // How It Works Section
-  section.py-24.bg-gradient-to-br.from-emerald-50.to-teal-50
+  section#loop.py-24.bg-gradient-to-br.from-emerald-50.to-teal-50
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.mb-20
-        h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 Simple process
-        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Get started in minutes with a guided flow built for busy events.
+        h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 The 60-second loop
+        p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed Built for the hallway after a talk—not for “I’ll process these cards later.”
       
       .grid.gap-8.max-w-5xl.mx-auto(class="grid-cols-1 md:grid-cols-3")
         // Step Cards
@@ -83,7 +81,7 @@ main.font-sans.billo-app-bg
       .text-center.mb-20
         h2.font-display.text-4xl.font-bold.text-slate-900.mb-6 Why BilloAI vs. “I’ll deal with this later”
         p.text-xl.text-slate-600.max-w-2xl.mx-auto.leading-relaxed
-          | Most apps stop at OCR. BilloAI is built for the moment after the handshake: structured data, a link you can share, and language for the follow-up.
+          | Most apps stop at OCR. Billo is built for the moment after the handshake: a message you’d actually send, from the inbox you already use.
       
       .grid.gap-8.max-w-5xl.mx-auto(class="grid-cols-1 md:grid-cols-2")
         // Benefit Cards
@@ -117,15 +115,15 @@ main.font-sans.billo-app-bg
   section.py-24.bg-gradient-to-br.from-emerald-600.to-teal-600.text-white
     .max-w-7xl.mx-auto.px-4(class="sm:px-6 lg:px-8")
       .text-center.max-w-3xl.mx-auto
-        h2.font-display.text-4xl.font-bold.mb-6 Ready before your next event?
+        h2.font-display.text-4xl.font-bold.mb-6 Ready for your next event?
         p.text-xl.mb-10.max-w-2xl.mx-auto.leading-relaxed.opacity-95
-          | Upload your first card in minutes. If it’s not faster than typing the back of a card into your notes app, you’re not using it wrong—we built it to remove that step entirely.
+          | Leave with follow-ups sent—not a pocket full of cards you’ll sort “tomorrow.” Try it free before your next conference.
         router-link(
           to="/home"
           class="bg-white text-emerald-700 px-12 py-5 rounded-2xl font-semibold shadow-billo transition-all duration-billo ease-billo-out hover:bg-slate-50 inline-flex items-center gap-3"
         )
           VaIcon(name="rocket_launch" size="24px")
-          span.text-lg Start free — keep every lead
+          span.text-lg Start free — send your first follow-up
 </template>
 
 <script setup>
@@ -133,27 +131,27 @@ main.font-sans.billo-app-bg
 const features = [
   {
     icon: 'document_scanner',
-    title: 'Scan once, structure everything',
+    title: 'Capture the meet',
     description:
-      'A photo becomes name, title, company, emails, phones, sites, and address fields you can edit—so the CRM row exists even if the CRM never does.',
+      'Snap the card while you’re still talking. We pull name, title, company, and email so you’re not typing under fluorescent lights.',
   },
   {
-    icon: 'smart_toy',
-    title: 'Follow-up language, not generic spam',
+    icon: 'send',
+    title: 'One-tap follow-up',
     description:
-      'Draft a warm, human “nice to meet you” note grounded in who they are and where you met—ready to send or tweak in seconds.',
-  },
-  {
-    icon: 'qr_code_2',
-    title: 'A living link, not a dead PDF',
-    description:
-      'Share a profile + QR that reflects your current role. When you change jobs or links, the same URL stays fresh for people you already met.',
+      'Get a warm “great meeting you” note, then open it prefilled in Gmail or Outlook—send from your real inbox, not a copy-paste chore.',
   },
   {
     icon: 'event_available',
-    title: 'Event mode for real hallways',
+    title: 'Keep event context',
     description:
-      'Rapid capture and grouping by event so Monday morning isn’t “who was that again?”—it’s a sorted list with context.',
+      'Group people by conference or meetup so Monday isn’t “who was that again?”—it’s a short list of people you still owe a note.',
+  },
+  {
+    icon: 'qr_code_2',
+    title: 'Share your living link',
+    description:
+      'Hand them your profile + QR when they ask for yours. Same URL stays fresh when your title or links change.',
   },
 ];
 
@@ -161,18 +159,18 @@ const features = [
 const steps = [
   {
     icon: 'photo_camera',
-    title: 'Capture',
-    description: 'Snap or upload a card in seconds—coffee stains, glossy stock, and crooked angles included.',
+    title: 'Meet & scan',
+    description: 'Snap their card at the booth or after the talk—messy angles and glossy stock are fine.',
   },
   {
     icon: 'auto_awesome',
-    title: 'Structure',
-    description: 'We pull the fields that matter, suggest readable colors for your digital card, and keep the raw image until you delete it.',
+    title: 'Get the note',
+    description: 'AI writes a short, human follow-up grounded in who they are—not a mail-merge template.',
   },
   {
-    icon: 'chat',
-    title: 'Follow up',
-    description: 'Turn a contact into a message you’d actually send—then save, copy, or iterate without starting from a blank page.',
+    icon: 'send',
+    title: 'Send in one tap',
+    description: 'Open Gmail or Outlook with the message ready. Hit send before you leave the venue.',
   },
 ];
 
@@ -182,48 +180,300 @@ const benefits = [
     icon: 'speed',
     title: 'Minutes, not Monday',
     description:
-      'The job isn’t “OCR.” It’s getting from card → usable contact → sent message before the lead goes cold. BilloAI is tuned for that path.',
+      'The job isn’t “OCR.” It’s card → usable contact → sent message before the lead goes cold. Billo is tuned for that path.',
   },
   {
     icon: 'psychology',
-    title: 'Context beats columns',
+    title: 'Sounds like you were there',
     description:
-      'Events, titles, and companies become the story behind each row—so your outreach sounds like you remember the conversation, not a mail merge.',
+      'Titles, companies, and events become the story behind each note—so outreach feels remembered, not automated.',
   },
   {
-    icon: 'cloud_done',
-    title: 'Where you already work',
+    icon: 'mail',
+    title: 'Your inbox, not ours',
     description:
-      'Web-first: scan on your phone, polish on your laptop. Your cards and drafts stay in one place instead of scattered camera-roll screenshots.',
+      'Follow-ups open in Gmail or Outlook so they come from you. No “sent via random SaaS” that tanks reply rates.',
   },
   {
     icon: 'shield',
     title: 'Built for real data',
     description:
-      'Business cards are PII. We treat them that way—clear limits by plan, your account gate, and a product posture aimed at individuals & small teams first.',
+      'Business cards are PII. Clear plan limits, your account gate, and a product aimed at individuals & small teams first.',
   },
 ];
 
 const trustPillars = [
   {
     icon: 'hub',
-    title: 'One pipeline from paper to people',
-    body: 'Instead of “photo in camera roll → maybe LinkedIn → maybe spreadsheet,” you get structured fields, a profile link, and drafts in one flow.',
+    title: 'One loop: meet → send',
+    body: 'Instead of camera roll → LinkedIn → spreadsheet, you get a follow-up ready to send before the connection cools.',
   },
   {
     icon: 'verified',
     title: 'No fake social proof',
-    body: 'We’d rather spell the outcome—fewer lost leads, faster follow-ups—than invent testimonials. Try the free tier and judge the workflow.',
+    body: 'We’d rather promise fewer lost leads and more notes sent than invent testimonials. Try free and judge the loop.',
   },
   {
     icon: 'trending_up',
-    title: 'Room to grow with you',
-    body: 'Free for taste; paid tiers when cards, events, and drafts become part of your job. Upgrade when the habit sticks, not on day zero.',
+    title: 'Pay when the habit sticks',
+    body: 'Free to taste the workflow. Upgrade when follow-ups, events, and drafts become part of how you network.',
   },
 ];
 </script>
 
 <style scoped>
+.billo-landing {
+  --billo-ink: #0f172a;
+  --billo-muted: #475569;
+  --billo-line: rgb(15 23 42 / 0.08);
+  color: var(--billo-ink);
+  background: #fff;
+}
+
+.billo-landing-hero {
+  position: relative;
+  min-height: min(100vh, 56rem);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 90% 70% at 12% -10%, rgb(16 185 129 / 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 95% 15%, rgb(13 148 136 / 0.16), transparent 50%),
+    linear-gradient(165deg, #f8fafc 0%, #ecfdf5 42%, #f0fdfa 100%);
+}
+
+.billo-landing-hero__glow {
+  position: absolute;
+  inset: auto -20% -35% 20%;
+  height: 55%;
+  background: radial-gradient(circle at 50% 0%, rgb(16 185 129 / 0.18), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+  animation: billo-landing-breathe 9s ease-in-out infinite;
+}
+
+.billo-landing-hero__inner {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: clamp(4.5rem, 12vh, 7rem) 0 clamp(3rem, 8vh, 5rem);
+  display: grid;
+  gap: clamp(2rem, 5vw, 3.5rem);
+  align-items: center;
+}
+
+@media (min-width: 960px) {
+  .billo-landing-hero__inner {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+}
+
+.billo-landing-hero__brand {
+  margin: 0 0 1rem;
+  font-family: 'Instrument Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2.4rem, 6vw, 3.75rem);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  background: linear-gradient(105deg, #059669, #0f766e 55%, #0d9488);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: billo-landing-rise 0.7s ease-out both;
+}
+
+.billo-landing-hero__title {
+  margin: 0 0 1rem;
+  font-family: 'Instrument Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(1.55rem, 3.6vw, 2.35rem);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--billo-ink);
+  animation: billo-landing-rise 0.75s 0.06s ease-out both;
+}
+
+.billo-landing-hero__accent {
+  color: #0f766e;
+}
+
+.billo-landing-hero__lede {
+  margin: 0 0 1.75rem;
+  max-width: 34rem;
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
+  line-height: 1.55;
+  color: var(--billo-muted);
+  animation: billo-landing-rise 0.8s 0.12s ease-out both;
+}
+
+.billo-landing-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+  animation: billo-landing-rise 0.85s 0.18s ease-out both;
+}
+
+.billo-landing-hero__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.15rem;
+  padding: 0.8rem 1.35rem;
+  border-radius: 1rem;
+  background: linear-gradient(105deg, #059669, #0d9488);
+  color: #fff;
+  font-weight: 650;
+  font-size: 1.02rem;
+  text-decoration: none;
+  box-shadow: 0 18px 36px -18px rgb(5 150 105 / 0.95);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.billo-landing-hero__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 40px -16px rgb(5 150 105 / 0.95);
+}
+
+.billo-landing-hero__ghost {
+  color: #334155;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(51 65 85 / 0.25);
+  padding-bottom: 0.1rem;
+}
+
+.billo-landing-hero__ghost:hover {
+  color: #0f766e;
+  border-bottom-color: #0f766e;
+}
+
+.billo-landing-hero__stage {
+  animation: billo-landing-rise 0.9s 0.22s ease-out both;
+}
+
+.billo-landing-stage {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.1rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--billo-line);
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 30px 60px -40px rgb(15 118 110 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.8);
+}
+
+.billo-landing-stage__card,
+.billo-landing-stage__draft,
+.billo-landing-stage__send {
+  padding: 0.95rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid var(--billo-line);
+  background: #fff;
+}
+
+.billo-landing-stage__card {
+  animation: billo-landing-pulse 5.5s ease-in-out infinite;
+}
+
+.billo-landing-stage__draft {
+  animation: billo-landing-pulse 5.5s 0.4s ease-in-out infinite;
+}
+
+.billo-landing-stage__send {
+  animation: billo-landing-pulse 5.5s 0.8s ease-in-out infinite;
+}
+
+.billo-landing-stage__kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0d9488;
+}
+
+.billo-landing-stage__name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.billo-landing-stage__meta,
+.billo-landing-stage__body,
+.billo-landing-stage__apps {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  color: var(--billo-muted);
+  line-height: 1.4;
+}
+
+.billo-landing-stage__subject {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.billo-landing-stage__arrow {
+  width: 1.5rem;
+  height: 0.55rem;
+  margin-left: 1rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(16 185 129 / 0.15), #10b981);
+  position: relative;
+}
+
+.billo-landing-stage__arrow::after {
+  content: '';
+  position: absolute;
+  right: -0.15rem;
+  top: 50%;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid #059669;
+  border-bottom: 2px solid #059669;
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+@keyframes billo-landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes billo-landing-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes billo-landing-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0);
+  }
+  50% {
+    box-shadow: 0 10px 24px -16px rgb(5 150 105 / 0.55);
+  }
+}
+
 .feature-card, .step-card, .benefit-card {
   transition: all 0.3s ease;
 }

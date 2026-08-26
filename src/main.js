@@ -68,7 +68,7 @@ router.beforeEach(async (to, from, next) => {
   if (requiresGuest && user) {
     try {
       const profile = await authService.getUserProfile()
-      next(profile?.profileCompleted ? '/home' : '/profile-setup')
+      next(profile?.profileCompleted ? '/home' : '/onboarding')
     } catch {
       next('/home')
     }
@@ -76,9 +76,12 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const allowIncompleteProfile =
+    to.path === '/onboarding' ||
     to.path === '/profile-setup' ||
     to.path === '/auth' ||
     to.path === '/privacy-policy' ||
+    to.path === '/terms' ||
+    to.path === '/help' ||
     to.path === '/demo' ||
     /^\/profile\/[^/]+$/.test(to.path)
 
@@ -86,7 +89,7 @@ router.beforeEach(async (to, from, next) => {
     try {
       const profile = await authService.getUserProfile()
       if (!profile?.profileCompleted) {
-        next({ path: '/profile-setup' })
+        next({ path: '/onboarding' })
         return
       }
     } catch (e) {

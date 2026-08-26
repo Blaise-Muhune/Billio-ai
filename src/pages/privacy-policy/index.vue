@@ -4,7 +4,7 @@
       <article class="billo-card-elevated billo-motion space-y-8 p-6 sm:p-10">
         <header>
           <h1 class="mb-2 text-3xl font-bold tracking-tight text-slate-900">Privacy Policy</h1>
-          <p class="text-sm text-slate-500">Last Updated: {{ currentDate }}</p>
+          <p class="text-sm text-slate-500">Last Updated: August 26, 2026</p>
         </header>
         <div class="space-y-8 text-slate-700">
 
@@ -56,8 +56,11 @@
         <p class="mb-4">We share your information with:</p>
         <ul class="list-disc pl-6 space-y-2">
           <li><strong>Stripe:</strong> For processing payments and managing subscriptions</li>
-          <li><strong>Firebase:</strong> For user authentication and data storage</li>
-          <li><strong>Service Providers:</strong> Who assist in operating our service</li>
+          <li><strong>Firebase (Google):</strong> Authentication and Firestore database</li>
+          <li><strong>OpenAI:</strong> Vision and text models to extract contact fields from scan images and draft follow-up copy. Images are processed for that purpose and are not stored as the contact’s profile photo.</li>
+          <li><strong>Azure Blob Storage:</strong> Optional storage for profile photos and custom icons you upload</li>
+          <li><strong>Resend / email SMTP:</strong> Product emails to you (nudges, reminders). Not used to email your contacts.</li>
+          <li><strong>Vercel Analytics:</strong> Aggregated product usage signals</li>
           <li><strong>Legal Requirements:</strong> When required by law or to protect our rights</li>
         </ul>
       </section>
@@ -123,11 +126,6 @@
 </template>
 
 <script setup>
-const currentDate = new Date().toLocaleDateString('en-US', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric'
-});
 </script>
 
 <style scoped>

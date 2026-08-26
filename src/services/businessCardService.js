@@ -1,38 +1,51 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc, increment, setDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { storage, db } from '../config/firebase';
+import { db } from '../config/firebase';
 import { SUBSCRIPTION_PLANS } from '../config/plans';
-import OpenAI from 'openai';
 import { authService } from './authService';
-import { OPENAI_CHAT_MODEL } from '../config/openai';
+import { fileToDataUrl } from './azureUploadService';
+import {
+  inferScanSource,
+  normalizeScanSource,
+  readImageDimensions,
+  SCAN_SOURCES
+} from '../utils/scanSource.js';
+import { PROMPT_VERSION } from '../prompts/index.js';
+import { authJsonHeaders } from '../utils/apiAuth.js';
+import { parseJsonResponse } from '../utils/parseFetchJson.js';
+import { trackFunnel } from '../utils/analytics.js';
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+async function apiAiScanExtract(imageDataUrl) {
+  const headers = await authJsonHeaders();
+  const response = await fetch('/api/ai/scan-extract', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ imageDataUrl })
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(data.error || `Scan failed (${response.status})`);
+  }
+  return data;
+}
+
+async function apiAiFollowUpDraft(payload) {
+  const headers = await authJsonHeaders();
+  const response = await fetch('/api/ai/follow-up-draft', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(data.error || `Draft failed (${response.status})`);
+  }
+  return data;
+}
 
 export const businessCardService = {
-  async uploadCard(file, eventId = null, onStatusUpdate = null) {
-    let storageRef = null;
-    let imageDeleted = false; // Flag to track if image has been deleted
-
-    // Helper function to safely delete the image
-    const safeDeleteImage = async () => {
-      if (storageRef && !imageDeleted) {
-        try {
-          await deleteObject(storageRef);
-          imageDeleted = true;
-        } catch (deleteError) {
-          // Only log if it's not a 'not-found' error
-          if (deleteError.code !== 'storage/object-not-found') {
-            console.error('Error deleting image:', deleteError);
-          }
-        }
-      }
-    };
-
+  async uploadCard(file, eventId = null, onStatusUpdate = null, metNote = '', options = {}) {
     try {
-      if (!storage || !db) {
+      if (!db) {
         throw new Error('Firebase not initialized');
       }
 
@@ -78,166 +91,87 @@ export const businessCardService = {
       const currentUsage = usageDoc.exists() ? usageDoc.data() : { cards: 0 };
 
       if (currentUsage.cards >= userLimits.maxCards) {
-        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} business cards. Please upgrade your plan to add more cards.`);
+        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} contacts. Please upgrade your plan to add more.`);
       }
 
-      // Upload image to Firebase Storage
-      if (onStatusUpdate) onStatusUpdate('Uploading image...');
-      storageRef = ref(storage, `business-cards/${user.uid}/${Date.now()}-${file.name}`);
-      await uploadBytes(storageRef, file);
-      const imageUrl = await getDownloadURL(storageRef);
+      // Keep the scan in-memory (data URL) — no cloud image upload needed for AI vision
+      if (onStatusUpdate) onStatusUpdate('Preparing image...');
+      const imageDataUrl = await fileToDataUrl(file);
 
+      let source = normalizeScanSource(options.source);
+      if (!options.source) {
+        const dims = await readImageDimensions(file);
+        source = inferScanSource(file, dims);
+      }
+
+      // Extract fields via authenticated server (OpenAI key stays server-side)
+      if (onStatusUpdate) onStatusUpdate('Reading contact details...');
+      const { extracted, promptVersion } = await apiAiScanExtract(imageDataUrl);
+      trackFunnel('scan_success', { source: source || 'card' });
+
+      if (onStatusUpdate) onStatusUpdate('Saving contact...');
+      
       try {
-        // Extract fields with multimodal chat (vision + text)
-        if (onStatusUpdate) onStatusUpdate('Processing image with AI...');
-        const response = await openai.chat.completions.create({
-          model: OPENAI_CHAT_MODEL,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `
-
-
-
-
-
-If validation passes, analyze the business card and provide:
-
-1. Extract the following information: name, company, emails (as array), phones (as array), title, websites (as array), address, and any other relevant information.
-
-2. Analyze the visual style and ensure high contrast readability:
-   - Determine the dominant background color of the card
-   - Choose text colors that provide excellent contrast against the background:
-     * primaryColor: for main text (name, contact info) - MUST have contrast ratio at least 4.5:1
-     * secondaryColor: for secondary text (titles, additional info) - MUST have contrast ratio at least 3:1
-   - If the background is very light, use darker text colors
-   - If the background is dark or vibrant, use light text colors
-   - For white/very light backgrounds, use dark grays or navy instead of pure black
-   - For dark backgrounds, use off-white or light gray instead of pure white
-
-Return a JSON object with two main sections (ONLY if validation passes):
-{
-  "info": {
-    "name": "...",
-    "company": "...",
-    "emails": ["email1@example.com"],
-    "phones": ["+1234567890"],
-    "title": "...",
-    "websites": ["website1.com"],
-    "address": "..."
-  },
-  "style": {
-    "cardBackgroundColor": "#HEXCODE",
-    "mainTextColor": "#HEXCODE",
-    "secondaryTextColor": "#HEXCODE",
-    "fontStyle": "modern/traditional/elegant",
-    "layoutStyle": "minimal/complex/traditional",
-    "contrastInfo": "Primary text contrast ratio: X:1, Secondary text contrast ratio: Y:1",
-    "designNotes": "Description of notable design elements and style choices"
-  }
-}
-If no relevant information is found, return ONLY this error object:
-{
-  "error": true,
-  "message": "Specific reason why image is invalid"
-}  
-`
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: imageUrl
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 1000,
-          response_format: { type: "json_object" }
-        });
-
-        if (onStatusUpdate) onStatusUpdate('Saving card data...');
-        
-        try {
-          const parsedData = JSON.parse(response.choices[0].message.content);
-          
-          // Check if the response contains an error
-          if (parsedData.error) {
-            await safeDeleteImage();
-            throw new Error(parsedData.message || 'Invalid business card image');
-          }
-          
-          // Rename style properties to match our expected format
-          const style = {
-            ...parsedData.style,
-            backgroundColor: parsedData.style.cardBackgroundColor,
-            primaryColor: parsedData.style.mainTextColor,
-            secondaryColor: parsedData.style.secondaryTextColor
-          };
-          delete style.cardBackgroundColor;
-          delete style.mainTextColor;
-          delete style.secondaryTextColor;
-          
-          // Save to Firestore with user ID and style information
-          const cardData = {
-            ...parsedData.info,
-            style,
-            imageUrl,
-            eventId,
-            userId: user.uid,
-            createdAt: new Date(),
-          };
-
-          // Create the card document
-          const docRef = await addDoc(collection(db, 'business-cards'), cardData);
-
-          // Update usage stats
-          try {
-            const usageRef = doc(db, 'usage_stats', user.uid);
-            const usageDoc = await getDoc(usageRef);
-            
-            if (!usageDoc.exists()) {
-              // Create initial usage stats document
-              await setDoc(usageRef, {
-                cards: 1,
-                events: 0,
-                draftsPerCard: {},
-                createdAt: new Date(),
-                updatedAt: new Date()
-              });
-            } else {
-              // Update existing usage stats
-              await updateDoc(usageRef, {
-                cards: (usageDoc.data().cards || 0) + 1,
-                updatedAt: new Date()
-              });
-            }
-          } catch (usageError) {
-            console.error('Error updating usage stats:', usageError);
-            // Continue with the card creation even if usage stats update fails
-          }
-
-          // Return success data with message
-          return { 
-            id: docRef.id, 
-            ...cardData,
-            message: `Successfully processed business card for ${cardData.name}! Added to your collection.`
-          };
-        } catch (parseError) {
-          await safeDeleteImage();
-          console.error('Error parsing GPT response:', parseError);
-          console.error('Raw response:', response.choices[0].message.content);
-          throw new Error('Failed to parse business card data');
+        if (extracted.detectedSource && !options.source) {
+          source = normalizeScanSource(extracted.detectedSource);
         }
-      } catch (error) {
-        await safeDeleteImage();
-        throw error;
+        
+        // Save extracted text/style only — scan image is not persisted
+        const note = String(metNote || '').trim();
+        const cardData = {
+          ...extracted.info,
+          style: extracted.style,
+          eventId: eventId && eventId !== 'null' ? eventId : null,
+          metNote: note,
+          source: source || SCAN_SOURCES.CARD,
+          confidence: extracted.confidence,
+          extractWarnings: extracted.warnings,
+          promptVersion: promptVersion || PROMPT_VERSION,
+          userId: user.uid,
+          createdAt: new Date(),
+        };
+
+        // Create the card document
+        const docRef = await addDoc(collection(db, 'business-cards'), cardData);
+
+        // Update usage stats
+        try {
+          const usageRefInner = doc(db, 'usage_stats', user.uid);
+          const usageDocInner = await getDoc(usageRefInner);
+          
+          if (!usageDocInner.exists()) {
+            // Create initial usage stats document
+            await setDoc(usageRefInner, {
+              cards: 1,
+              events: 0,
+              draftsPerCard: {},
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          } else {
+            // Update existing usage stats
+            await updateDoc(usageRefInner, {
+              cards: (usageDocInner.data().cards || 0) + 1,
+              updatedAt: new Date()
+            });
+          }
+        } catch (usageError) {
+          console.error('Error updating usage stats:', usageError);
+          // Continue with the card creation even if usage stats update fails
+        }
+
+        const label = source === SCAN_SOURCES.SCREENSHOT ? 'screenshot' : 'card';
+        // Return success data with message
+        return { 
+          id: docRef.id, 
+          ...cardData,
+          message: `Saved ${cardData.name || 'contact'} from ${label}.`
+        };
+      } catch (parseError) {
+        console.error('Error saving scan result:', parseError);
+        throw parseError;
       }
     } catch (error) {
-      await safeDeleteImage();
       console.error('Error uploading business card:', error);
       
       if (error.code === 'permission-denied') {
@@ -294,11 +228,8 @@ If no relevant information is found, return ONLY this error object:
         throw new Error('Invalid card data');
       }
 
-      // Get primary email from the emails array
-      const recipientEmail = card.emails && card.emails.length > 0 ? card.emails[0] : null;
-      if (!recipientEmail) {
-        throw new Error('No email address found on the business card');
-      }
+      // Get primary email from the emails array (optional — user can add later)
+      const recipientEmail = card.emails && card.emails.length > 0 ? card.emails[0] : '';
 
       // Check usage limits BEFORE making GPT call
       const userRef = doc(db, 'users', user.uid);
@@ -328,77 +259,53 @@ If no relevant information is found, return ONLY this error object:
       }
 
       // Get event details if card has an eventId
-      let eventContext = 'Recent business connection';
+      let eventContext = 'Recent in-person meeting';
       if (card.eventId) {
         const eventRef = doc(db, 'events', card.eventId);
         const eventDoc = await getDoc(eventRef);
         if (eventDoc.exists()) {
           const eventData = eventDoc.data();
-          eventContext = `Met at ${eventData.name}`;
+          const bits = [`Met at ${eventData.name || 'an event'}`];
+          if (eventData.date) bits.push(`date: ${eventData.date}`);
+          if (eventData.location) bits.push(`location: ${eventData.location}`);
+          eventContext = bits.join(' · ');
         }
       }
 
-      // Only proceed with GPT call if all checks pass
-      const response = await openai.chat.completions.create({
-        model: OPENAI_CHAT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert at writing professional, personalized emails for business networking. Generate three components: 1) A compelling subject line, 2) The email body and 3) A professional signature. The email should be concise, friendly, and focused on building a professional connection."
-          },
-          {
-            role: "user",
-            content: `Write an email with the following details:
+      const senderProfile = {
+        displayName: userData.displayName || user.displayName || '',
+        title: userData.title || '',
+        company: userData.company || '',
+        email: userData.email || user.email || ''
+      };
 
-Sender: ${user.displayName}
-Sender's Title: ${user.title || 'Professional'}
-Recipient: ${card.name}
-Recipient's Company: ${card.company}
-Recipient's Title: ${card.title || 'not specified'}
-Context: ${eventContext}
-
-Guidelines:
-- Generate a compelling subject line that encourages opening the email
-- include small introduction of yourself of name and any relevant information
-- Keep the body brief but warm and professional
-- the body should be a single paragraph cuase it could be sent as a text message too.
-- Include a clear next step or call to action
-- the call to action should be something that is easy to do and not too pushy cause they might be in other city so thing like  "let's keep in touch" should be fine and not "let grab a coffee"
-- Add a professional signature with sender's name and title
-- Format the response as a JSON object with subject, body, and signature fields
-- generate a complete email that wont require any additional edits
-- make the email sound human and not robotic and a bit casual
-- make the email sound like you met them at an event and you are reaching out to them
-
-
-return a json object with the following fields:
-{
-  "subject": "...",
-  "body": "...",
-  "signature": "..."
-}
-`
-          }
-        ],
-        response_format: { type: "json_object" }
+      const { draft: normalized, promptVersion } = await apiAiFollowUpDraft({
+        sender: senderProfile,
+        recipient: {
+          name: card.name,
+          company: card.company,
+          title: card.title
+        },
+        eventContext,
+        metNote: card.metNote || ''
       });
-
-      const emailData = JSON.parse(response.choices[0].message.content);
-      const body = `${emailData.body}`;
+      trackFunnel('draft_generated', { hasEmail: Boolean(recipientEmail) });
 
       // Save the draft to Firestore with validated data
       const draftData = {
-        subject: emailData.subject,
-        content: body,
-        signature: emailData.signature,
+        subject: normalized.subject,
+        content: normalized.body,
+        signature: normalized.signature,
         cardId: card.id,
         userId: user.uid,
         createdAt: new Date(),
         recipientName: card.name || 'Unknown',
         recipientCompany: card.company || 'Unknown',
-        recipientEmail: recipientEmail,
+        recipientEmail: recipientEmail || '',
         recipientTitle: card.title || 'Unknown',
-        status: 'draft'
+        status: 'draft',
+        needsEmail: !recipientEmail,
+        promptVersion: promptVersion || PROMPT_VERSION
       };
 
       const docRef = await addDoc(collection(db, 'email-drafts'), draftData);
@@ -443,6 +350,62 @@ return a json object with the following fields:
       };
     } catch (error) {
       console.error('Error in generateEmailDraft:', error);
+      throw error;
+    }
+  },
+
+  async markDraftComposeOpened(draftId, provider = 'unknown') {
+    try {
+      if (!db) throw new Error('Firebase not initialized');
+      const user = authService.getCurrentUser();
+      if (!user) throw new Error('User must be logged in');
+      const draftRef = doc(db, 'email-drafts', draftId);
+      const draftDoc = await getDoc(draftRef);
+      if (!draftDoc.exists() || draftDoc.data().userId !== user.uid) {
+        throw new Error('Draft not found');
+      }
+      const prev = draftDoc.data();
+      if (prev.status === 'sent') {
+        return { id: draftId, status: 'sent', sentVia: prev.sentVia };
+      }
+      await updateDoc(draftRef, {
+        status: 'compose_opened',
+        composeOpenedAt: new Date(),
+        composeOpenedVia: provider,
+        updatedAt: new Date()
+      });
+      trackFunnel('compose_opened', { provider });
+      return { id: draftId, status: 'compose_opened', composeOpenedVia: provider };
+    } catch (error) {
+      console.error('Error marking compose opened:', error);
+      throw error;
+    }
+  },
+
+  async markDraftSent(draftId, provider = 'unknown') {
+    try {
+      if (!db) {
+        throw new Error('Firebase not initialized');
+      }
+      const user = authService.getCurrentUser();
+      if (!user) {
+        throw new Error('User must be logged in');
+      }
+      const draftRef = doc(db, 'email-drafts', draftId);
+      const draftDoc = await getDoc(draftRef);
+      if (!draftDoc.exists() || draftDoc.data().userId !== user.uid) {
+        throw new Error('Draft not found');
+      }
+      await updateDoc(draftRef, {
+        status: 'sent',
+        sentAt: new Date(),
+        sentVia: provider,
+        updatedAt: new Date()
+      });
+      trackFunnel('draft_marked_sent', { provider });
+      return { id: draftId, status: 'sent', sentVia: provider };
+    } catch (error) {
+      console.error('Error marking draft sent:', error);
       throw error;
     }
   },
@@ -691,20 +654,8 @@ return a json object with the following fields:
         throw new Error('You do not have permission to delete this card');
       }
 
-      // Delete the card
+      // Delete the card (scan images are not stored in cloud storage)
       await deleteDoc(cardRef);
-
-      // If there's an image URL, delete it from storage
-      const imageUrl = cardDoc.data().imageUrl;
-      if (imageUrl) {
-        try {
-          const imageRef = ref(storage, imageUrl);
-          await deleteObject(imageRef);
-        } catch (storageError) {
-          console.error('Error deleting image from storage:', storageError);
-          // Continue even if storage deletion fails
-        }
-      }
 
       return { id: cardId };
     } catch (error) {
@@ -729,6 +680,7 @@ return a json object with the following fields:
         phones: cardData.phones,
         websites: cardData.websites,
         eventId: cardData.eventId || null,
+        metNote: cardData.metNote != null ? String(cardData.metNote).trim() : '',
         updatedAt: serverTimestamp()
       };
 
@@ -745,9 +697,9 @@ return a json object with the following fields:
     }
   },
 
-  async uploadMultipleCards(files, eventId = null, onStatusUpdate = null) {
+  async uploadMultipleCards(files, eventId = null, onStatusUpdate = null, metNote = '', options = {}) {
     try {
-      if (!storage || !db) {
+      if (!db) {
         throw new Error('Firebase not initialized');
       }
 
@@ -799,41 +751,49 @@ return a json object with the following fields:
 
       // Check if adding these files would exceed the limit
       if (currentUsage.cards + files.length > userLimits.maxCards) {
-        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} business cards. You can upload ${userLimits.maxCards - currentUsage.cards} more cards. Please upgrade your plan to add more.`);
+        throw new Error(`You have reached your plan's limit of ${userLimits.maxCards} contacts. You can add ${userLimits.maxCards - currentUsage.cards} more. Please upgrade to continue.`);
       }
 
-      if (onStatusUpdate) onStatusUpdate(`Processing ${files.length} business cards...`);
+      if (onStatusUpdate) onStatusUpdate(`Processing ${files.length} contact${files.length === 1 ? '' : 's'}...`);
 
       // Process each file in sequence
       const results = [];
       const errors = [];
 
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        const entry = files[i];
+        const file = entry?.file || entry;
+        const perFileSource = entry?.source || options.source;
         try {
-          if (onStatusUpdate) onStatusUpdate(`Processing card ${i + 1} of ${files.length}: ${file.name}`);
+          if (onStatusUpdate) onStatusUpdate(`Processing ${i + 1} of ${files.length}: ${file.name || 'image'}`);
           
           // Use the existing uploadCard method to process each file
-          const result = await this.uploadCard(file, eventId, (status) => {
-            if (onStatusUpdate) onStatusUpdate(`Card ${i + 1} of ${files.length}: ${status}`);
-          });
+          const result = await this.uploadCard(
+            file,
+            eventId,
+            (status) => {
+              if (onStatusUpdate) onStatusUpdate(`${i + 1} of ${files.length}: ${status}`);
+            },
+            metNote,
+            perFileSource ? { source: perFileSource } : {}
+          );
           
           results.push(result);
         } catch (error) {
-          console.error(`Error processing card ${i + 1} (${file.name}):`, error);
+          console.error(`Error processing contact ${i + 1} (${file?.name}):`, error);
           errors.push({
-            fileName: file.name,
+            fileName: file?.name || `file-${i + 1}`,
             error: error.message || 'Unknown error'
           });
         }
       }
 
-      if (onStatusUpdate) onStatusUpdate(`Completed processing ${results.length} of ${files.length} cards successfully`);
+      if (onStatusUpdate) onStatusUpdate(`Saved ${results.length} of ${files.length} successfully`);
 
       return {
         success: results,
         errors,
-        message: `Successfully processed ${results.length} of ${files.length} business cards.${errors.length > 0 ? ` Failed to process ${errors.length} cards.` : ''}`
+        message: `Saved ${results.length} of ${files.length} contact${files.length === 1 ? '' : 's'}.${errors.length > 0 ? ` ${errors.length} failed.` : ''}`
       };
     } catch (error) {
       console.error('Error uploading multiple business cards:', error);
@@ -971,6 +931,7 @@ return a json object with the following fields:
               style,
               eventId,
               userId: user.uid,
+              source: 'manual',
               createdAt: new Date(),
               importedContact: true
             };

@@ -145,10 +145,14 @@ export const authService = {
       if (!user) throw new Error('User must be logged in');
 
       const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        ...profileData,
-        updatedAt: new Date()
-      });
+      await setDoc(
+        userRef,
+        {
+          ...profileData,
+          updatedAt: new Date()
+        },
+        { merge: true }
+      );
       
       return true;
     } catch (error) {

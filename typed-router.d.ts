@@ -24,10 +24,13 @@ declare module 'vue-router/auto-routes' {
     '/auth/': RouteRecordInfo<'/auth/', '/auth', Record<never, never>, Record<never, never>>,
     '/dashboard/': RouteRecordInfo<'/dashboard/', '/dashboard', Record<never, never>, Record<never, never>>,
     '/demo/': RouteRecordInfo<'/demo/', '/demo', Record<never, never>, Record<never, never>>,
+    '/help/': RouteRecordInfo<'/help/', '/help', Record<never, never>, Record<never, never>>,
     '/home/': RouteRecordInfo<'/home/', '/home', Record<never, never>, Record<never, never>>,
+    '/onboarding/': RouteRecordInfo<'/onboarding/', '/onboarding', Record<never, never>, Record<never, never>>,
     '/privacy-policy/': RouteRecordInfo<'/privacy-policy/', '/privacy-policy', Record<never, never>, Record<never, never>>,
     '/profile/[username]': RouteRecordInfo<'/profile/[username]', '/profile/:username', { username: ParamValue<true> }, { username: ParamValue<false> }>,
     '/profile-setup/': RouteRecordInfo<'/profile-setup/', '/profile-setup', Record<never, never>, Record<never, never>>,
     '/subscription/': RouteRecordInfo<'/subscription/', '/subscription', Record<never, never>, Record<never, never>>,
+    '/terms/': RouteRecordInfo<'/terms/', '/terms', Record<never, never>, Record<never, never>>,
   }
 }

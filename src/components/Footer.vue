@@ -33,6 +33,10 @@ footer.app-footer.mt-auto.border-t.font-sans(
           ul.space-y-2
             li
               router-link.app-footer__link(to="/privacy-policy") Privacy policy
+            li
+              router-link.app-footer__link(to="/terms") Terms of service
+            li
+              router-link.app-footer__link(to="/help") Help
 
     //- Bottom bar
     .mt-10.flex.flex-col.items-center.justify-between.gap-4.border-t.pt-8(
@@ -41,7 +45,12 @@ footer.app-footer.mt-auto.border-t.font-sans(
       p.text-sm.text-slate-500
         | © {{ currentYear }} BilloAI. All rights reserved.
       p.text-xs.text-slate-400.text-center(class="sm:text-right")
-        | Questions? Use in-app help from your home screen after signing in.
+        | Questions?
+        |
+        router-link.text-emerald-700(to="/help") Help
+        |  or
+        |
+        a.text-emerald-700(href="mailto:support@billoai.com") support@billoai.com
 
   //- Structured data (SEO)
   div(itemscope itemtype="https://schema.org/Organization" style="display: none;")

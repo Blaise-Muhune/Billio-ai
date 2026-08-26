@@ -5,7 +5,7 @@ import { Analytics } from '@vercel/analytics/vue'
   AppTopNav(v-if="showAppTopNav")
   .flex-1(:class="showAppTopNav ? 'pt-12 sm:pt-14' : ''")
     RouterView
-  Footer
+  Footer(v-if="showChrome")
   Analytics
 </template>
 
@@ -16,7 +16,11 @@ import AppTopNav from './components/AppTopNav.vue'
 import Footer from './components/Footer.vue'
 
 const route = useRoute()
-const showAppTopNav = computed(() => route.matched.some((r) => r.meta?.requiresAuth === true))
+const hideChrome = computed(() => route.matched.some((r) => r.meta?.hideAppNav === true))
+const showAppTopNav = computed(
+  () => route.matched.some((r) => r.meta?.requiresAuth === true) && !hideChrome.value
+)
+const showChrome = computed(() => !hideChrome.value)
 
 onErrorCaptured((err, instance, info) => {
   console.error('Error captured in App.vue:', err)

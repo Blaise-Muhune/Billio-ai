@@ -10,8 +10,8 @@ meta:
     .text-center.mb-10
       .mx-auto.mb-6.flex.justify-center
         Logo(classes="block")
-      h2.font-display.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 Welcome back
-      p.text-base.text-slate-600.leading-relaxed {{ isSignUp ? 'Create your account to get started.' : 'Sign in to scan, organize, and share your business cards.' }}
+      h2.font-display.text-4xl.font-bold.tracking-tight.text-slate-900.mb-3 {{ isSignUp ? 'Start following up' : 'Welcome back' }}
+      p.text-base.text-slate-600.leading-relaxed {{ isSignUp ? 'Create an account — you’ll scan your first card in under a minute.' : 'Sign in to scan cards and send warm follow-ups from Gmail or Outlook.' }}
     
     // Main Card
     .billo-panel-premium.billo-motion.p-8.space-y-6
@@ -240,7 +240,7 @@ const handleSignIn = async () => {
       return;
     }
     if (!userProfile?.profileCompleted) {
-      router.push('/profile-setup');
+      router.push('/onboarding');
     } else {
       router.push('/home');
     }
@@ -258,7 +258,7 @@ const handleSignUp = async () => {
     error.value = '';
     await authService.createUserWithEmailAndPassword(email.value, password.value);
     showVerificationNotice.value = true;
-    successMessage.value = 'Account created successfully! Please check your email to verify your address. After verification, you can sign in to complete your profile.';
+    successMessage.value = 'Account created. Verify your email, then sign in — we’ll get you to your first scan right away.';
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -279,7 +279,7 @@ const handleGoogleSignIn = async () => {
       return
     }
     if (!userProfile?.profileCompleted) {
-      router.push('/profile-setup')
+      router.push('/onboarding')
     } else {
       router.push('/home')
     }

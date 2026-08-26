@@ -21,6 +21,15 @@ const routes = [
     meta: { requiresGuest: true }
   },
   {
+    path: '/onboarding',
+    name: 'Onboarding',
+    component: () => import('../pages/onboarding/index.vue'),
+    meta: {
+      requiresAuth: true,
+      hideAppNav: true
+    }
+  },
+  {
     path: '/profile-setup',
     name: 'ProfileSetup',
     component: () => import('../pages/profile-setup/index.vue'),
@@ -93,17 +102,22 @@ router.beforeEach(async (to, from, next) => {
 
     if (requiresGuest && user) {
       // Redirect to home if user is logged in and route requires guest
-      next({ name: 'Home' });
+      try {
+        const profile = await authService.getUserProfile();
+        next(profile?.profileCompleted ? { name: 'Home' } : { path: '/onboarding' });
+      } catch {
+        next({ name: 'Home' });
+      }
       return;
     }
 
-    // If user is logged in and trying to access a route other than profile setup
-    if (user && to.name !== 'ProfileSetup') {
+    // If user is logged in and trying to access a route other than profile setup / onboarding
+    if (user && to.name !== 'ProfileSetup' && to.name !== 'Onboarding' && to.path !== '/onboarding') {
       // Check if profile is completed
       const profile = await authService.getUserProfile();
       if (!profile?.profileCompleted && to.name !== 'Auth') {
-        // Redirect to profile setup if profile is not completed
-        next({ name: 'ProfileSetup' });
+        // Redirect to fast onboarding if profile is not completed
+        next({ path: '/onboarding' });
         return;
       }
     }

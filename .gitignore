@@ -80,3 +80,8 @@ out
 
 # Local Netlify folder
 .netlify
+.vercel
+.env*
+!.env.example
+*.key.tmp
+.openai.key.tmp

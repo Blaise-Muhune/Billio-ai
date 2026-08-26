@@ -7,6 +7,17 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { SUBSCRIPTION_PLANS } from './src/config/serverStripe.js';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+import {
+  StorageSharedKeyCredential,
+  generateBlobSASQueryParameters,
+  BlobSASPermissions,
+  SASProtocol
+} from '@azure/storage-blob';
+import { assertCronAuthorized } from './src/server/crons/helpers.js';
+import { runDailyCrons, runMaintenanceCrons } from './src/server/crons/index.js';
+import { runScanExtract, runFollowUpDraft } from './src/server/aiService.js';
+import crypto from 'crypto';
 
 // Get the directory path of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -14,6 +25,16 @@ const __dirname = dirname(__filename);
 
 // Load environment variables from the root .env file
 dotenv.config({ path: join(__dirname, '.env') });
+
+// Prefer server OPENAI_API_KEY; allow one-time migration from old VITE_ key (never ship VITE_ to clients for AI)
+if (!process.env.OPENAI_API_KEY && process.env.VITE_OPENAI_API_KEY) {
+  process.env.OPENAI_API_KEY = process.env.VITE_OPENAI_API_KEY;
+  console.warn(
+    'Using VITE_OPENAI_API_KEY as OPENAI_API_KEY. Move the key to OPENAI_API_KEY and remove VITE_OPENAI_API_KEY from client env.'
+  );
+}
+
+const useResend = Boolean(process.env.RESEND_API_KEY);
 
 // Check for required environment variables
 const requiredEnvVars = [
@@ -26,11 +47,86 @@ const requiredEnvVars = [
   'STRIPE_BASIC_YEARLY_PRICE_ID',
   'STRIPE_PRO_YEARLY_PRICE_ID',
   'STRIPE_WEBHOOK_SECRET',
-  'EMAIL_HOST',
-  'EMAIL_PORT',
-  'EMAIL_USER',
-  'EMAIL_PASS'
+  'AZURE_STORAGE_CONNECTION_STRING',
+  'OPENAI_API_KEY',
+  ...(useResend
+    ? []
+    : ['EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS'])
 ];
+
+const AZURE_UPLOAD_CONTAINERS = new Set(['profile-images', 'custom-icons']);
+
+function parseAzureConnectionString(connectionString) {
+  const parts = Object.fromEntries(
+    connectionString
+      .split(';')
+      .filter(Boolean)
+      .map((part) => {
+        const idx = part.indexOf('=');
+        return [part.slice(0, idx), part.slice(idx + 1)];
+      })
+  );
+  if (!parts.AccountName || !parts.AccountKey) {
+    throw new Error('Invalid AZURE_STORAGE_CONNECTION_STRING');
+  }
+  return parts;
+}
+
+function createAzureCredential() {
+  const parts = parseAzureConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING);
+  return {
+    accountName: parts.AccountName,
+    credential: new StorageSharedKeyCredential(parts.AccountName, parts.AccountKey)
+  };
+}
+
+async function requireFirebaseUser(req) {
+  const header = req.headers.authorization || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    const err = new Error('Missing Authorization bearer token');
+    err.status = 401;
+    throw err;
+  }
+  try {
+    return await admin.auth().verifyIdToken(match[1]);
+  } catch {
+    const err = new Error('Invalid or expired auth token');
+    err.status = 401;
+    throw err;
+  }
+}
+
+function unsubscribeSecret() {
+  return process.env.UNSUBSCRIBE_SECRET || process.env.CRON_SECRET || process.env.STRIPE_WEBHOOK_SECRET || '';
+}
+
+function makeUnsubscribeToken(uid) {
+  const secret = unsubscribeSecret();
+  if (!secret) return '';
+  return crypto.createHmac('sha256', secret).update(`unsub:${uid}`).digest('hex').slice(0, 32);
+}
+
+function verifyUnsubscribeToken(uid, token) {
+  const expected = makeUnsubscribeToken(uid);
+  if (!expected || !token || expected.length !== String(token).length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(token)));
+  } catch {
+    return false;
+  }
+}
+
+function buildUnsubscribeUrl(uid) {
+  const token = makeUnsubscribeToken(uid);
+  const base = (process.env.APP_URL || 'https://www.billoai.com').replace(/\/$/, '');
+  if (!token) return `${base}/profile-setup#email-prefs`;
+  return `${base}/api/email/unsubscribe?u=${encodeURIComponent(uid)}&t=${encodeURIComponent(token)}`;
+}
+
+function sanitizeUploadFileName(name = 'upload.bin') {
+  return String(name).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'upload.bin';
+}
 
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
@@ -68,151 +164,122 @@ const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2023-10-16' // Latest stable version
 });
 
-// Set up email transporter
+const resendClient = useResend ? new Resend(process.env.RESEND_API_KEY) : null;
+const defaultFromAddress =
+  process.env.EMAIL_FROM ||
+  (process.env.EMAIL_USER
+    ? `BilloAI <${process.env.EMAIL_USER}>`
+    : 'BilloAI <onboarding@resend.dev>');
+
+// Zoho/SMTP fallback when Resend is not configured
 let emailTransporter;
-try {
-  emailTransporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT, 10),
-    secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    // Add important options for reliability
-    tls: {
-      // Do not fail on invalid certs
-      rejectUnauthorized: false
-    },
-    debug: true, // Enable debug output
-    logger: true // Log information to the console
-  });
-  
-  // Verify connection configuration
-  emailTransporter.verify(function(error, success) {
-    if (error) {
-      console.error('Email transporter verification failed:', error);
-      console.log('Attempting to create fallback ethereal email account...');
-      
-      // Create a test account on ethereal.email for testing
-      nodemailer.createTestAccount().then(testAccount => {
-        console.log('Created ethereal test account', testAccount);
-        
-        // Create a transporter using the ethereal test account
-        emailTransporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
-          },
-          debug: true,
-          logger: true
-        });
-        
-        console.log('⚠️ Using Ethereal Email as fallback. All emails will be captured at ethereal.email and not actually delivered.');
-      }).catch(err => {
-        console.error('Failed to create fallback email account:', err);
-      });
-    } else {
-      console.log('✅ Email server is ready to send messages');
-      console.log('Email configuration:', {
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS ? '[PROVIDED]' : '[NOT PROVIDED]'
-      });
-    }
-  });
-} catch (err) {
-  console.error('Failed to create email transporter:', err);
-  
-  // Try to create a fallback ethereal email account
+if (!useResend) {
   try {
-    nodemailer.createTestAccount().then(testAccount => {
-      emailTransporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        }
-      });
-      console.log('Created fallback ethereal email account', testAccount);
+    emailTransporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT, 10),
+      secure: process.env.EMAIL_PORT === '465',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      debug: process.env.NODE_ENV !== 'production',
+      logger: process.env.NODE_ENV !== 'production'
     });
-  } catch (fallbackErr) {
-    console.error('Failed to create fallback email account:', fallbackErr);
+
+    emailTransporter.verify(function(error) {
+      if (error) {
+        console.error('Email transporter verification failed:', error);
+      } else {
+        console.log('✅ SMTP email server is ready');
+      }
+    });
+  } catch (err) {
+    console.error('Failed to create email transporter:', err);
   }
+} else {
+  console.log('✅ Resend email client ready (RESEND_API_KEY set)');
 }
 
-// Function to send emails with retries
-async function sendEmail({ to, subject, html, text, from = `"BilloAI" <${process.env.EMAIL_USER}>`, maxRetries = 3 }) {
+// Function to send emails with retries (Resend preferred, SMTP fallback)
+async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  from = defaultFromAddress,
+  maxRetries = 3,
+  listUnsubscribeUrl
+}) {
   let retries = 0;
-  
+  const headers = {};
+  if (listUnsubscribeUrl) {
+    headers['List-Unsubscribe'] = `<${listUnsubscribeUrl}>`;
+    headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+  }
+
   while (retries < maxRetries) {
     try {
+      console.log(`Attempting to send email to ${to} with subject: ${subject} (Attempt ${retries + 1}/${maxRetries})`);
+
+      if (resendClient) {
+        const { data, error } = await resendClient.emails.send({
+          from,
+          to: Array.isArray(to) ? to : [to],
+          subject,
+          html,
+          text,
+          headers: Object.keys(headers).length ? headers : undefined
+        });
+        if (error) {
+          throw new Error(error.message || JSON.stringify(error));
+        }
+        console.log('Email sent via Resend:', data?.id);
+        return {
+          success: true,
+          messageId: data?.id,
+          provider: 'resend'
+        };
+      }
+
       if (!emailTransporter) {
         console.error('Email transporter not initialized');
         return { success: false, error: 'Email transporter not initialized' };
       }
-      
-      console.log(`Attempting to send email to ${to} with subject: ${subject} (Attempt ${retries + 1}/${maxRetries})`);
-      
-      const mailOptions = {
+
+      const info = await emailTransporter.sendMail({
         from,
         to,
         subject,
         html,
-        text
-      };
-      
-      console.log('Email options:', {
-        from: mailOptions.from,
-        to: mailOptions.to,
-        subject: mailOptions.subject,
-        textLength: mailOptions.text?.length || 0,
-        htmlLength: mailOptions.html?.length || 0
+        text,
+        headers: Object.keys(headers).length ? headers : undefined
       });
-      
-      const info = await emailTransporter.sendMail(mailOptions);
-      console.log('Email sent successfully:', info);
-      console.log('Message ID:', info.messageId);
-      console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
-      
-      return { 
-        success: true, 
+      console.log('Email sent via SMTP:', info.messageId);
+      return {
+        success: true,
         messageId: info.messageId,
         previewUrl: nodemailer.getTestMessageUrl(info),
-        response: info.response
+        response: info.response,
+        provider: 'smtp'
       };
     } catch (error) {
       retries++;
       console.error(`Error sending email (Attempt ${retries}/${maxRetries}):`, error);
-      
+
       if (retries >= maxRetries) {
-        console.error('Email sending failed after maximum retries:', {
-          code: error.code,
-          command: error.command,
-          response: error.response,
-          responseCode: error.responseCode,
-          stack: error.stack
-        });
-        
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: error.message,
           code: error.code,
-          command: error.command,
-          responseCode: error.responseCode,
           attempts: retries
         };
       }
-      
-      // Wait before retrying (exponential backoff)
+
       const delay = Math.min(1000 * Math.pow(2, retries), 10000);
-      console.log(`Waiting ${delay}ms before retry...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -360,6 +427,27 @@ async function sendSubscriptionCancellationEmail(userEmail, plan, endDate) {
   });
 }
 
+async function sendPaymentFailedEmail(userEmail, plan, invoiceUrl) {
+  const planName = plan === 'PRO' ? 'Pro' : plan === 'BASIC' ? 'Basic' : 'your';
+  const html = `
+    <div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;padding:24px;color:#111827;">
+      <p style="margin:0 0 20px;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;color:#0f766e;">BilloAI</p>
+      <h1 style="font-size:22px;line-height:1.3;margin:0 0 12px;">We couldn’t process a payment</h1>
+      <p style="color:#374151;font-size:16px;line-height:1.5;">Your ${planName} subscription payment didn’t go through. Stripe usually retries automatically — you can also update your card when convenient.</p>
+      ${invoiceUrl ? `<p style="margin:24px 0;"><a href="${invoiceUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">Review invoice</a></p>` : ''}
+      <p style="margin:24px 0 0;color:#6b7280;font-size:13px;">This is a billing notice, not a marketing email.</p>
+      <p style="margin:28px 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} BilloAI</p>
+    </div>
+  `;
+  const text = `We couldn’t process a payment for your BilloAI ${planName} plan.${invoiceUrl ? ` Review invoice: ${invoiceUrl}` : ''} Stripe may retry automatically.`;
+  return sendEmail({
+    to: userEmail,
+    subject: 'BilloAI — payment needs attention',
+    html,
+    text
+  });
+}
+
 const expressApp = express();
 
 expressApp.use(cors());
@@ -376,15 +464,21 @@ expressApp.use((req, res, next) => {
   }
 });
 
-// Create subscription endpoint
+// Create subscription endpoint (auth required — userId from token)
 expressApp.post('/api/subscription/create', async (req, res) => {
   try {
+    const decoded = await requireFirebaseUser(req);
     console.log('Received subscription creation request:', req.body);
-    const { plan, billingCycle, userId, email, successUrl, cancelUrl } = req.body;
+    const { plan, billingCycle, email, successUrl, cancelUrl } = req.body;
+    const userId = decoded.uid;
 
     if (!plan || !billingCycle || !userId || !email || !successUrl || !cancelUrl) {
       console.log('Missing fields:', { plan, billingCycle, userId, email, successUrl, cancelUrl });
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (req.body.userId && req.body.userId !== userId) {
+      return res.status(403).json({ error: 'userId does not match authenticated user' });
     }
 
     // Get price ID based on plan and billing cycle
@@ -467,21 +561,28 @@ expressApp.post('/api/subscription/create', async (req, res) => {
     console.log('Checkout session created:', session.id);
     res.json({ url: session.url });
   } catch (error) {
+    const status = error.status || 500;
     console.error('Error creating subscription:', error);
-    res.status(500).json({ error: error.message });
+    res.status(status).json({ error: error.message });
   }
 });
 
 // Handle subscription cancellation
 expressApp.post('/api/subscription/cancel', async (req, res) => {
   try {
-    const { userId, subscriptionId, userEmail } = req.body;
+    const decoded = await requireFirebaseUser(req);
+    const userId = decoded.uid;
+    const { subscriptionId, userEmail } = req.body;
     console.log('Received cancellation request for userId:', userId, 'subscriptionId:', subscriptionId);
     debugLog('Cancellation request', { userId, subscriptionId, userEmail });
     
     if (!userId) {
       console.error('Missing userId in request body');
       return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    if (req.body.userId && req.body.userId !== userId) {
+      return res.status(403).json({ error: 'userId does not match authenticated user' });
     }
 
     // Get the user's subscription from Stripe
@@ -616,12 +717,16 @@ expressApp.post('/api/subscription/cancel', async (req, res) => {
   }
 });
 
-// Check subscription status and access
+// Check subscription status and access (self only)
 expressApp.get('/api/subscription/status/:userId', async (req, res) => {
   try {
+    const decoded = await requireFirebaseUser(req);
     const { userId } = req.params;
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
+    }
+    if (userId !== decoded.uid) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     const userRef = db.collection('users').doc(userId);
@@ -927,6 +1032,54 @@ expressApp.post('/api/webhook', async (req, res) => {
         break;
       }
 
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        let userId = invoice.metadata?.userId || null;
+        let userEmail = invoice.customer_email || null;
+        let plan = 'BASIC';
+
+        if (customerId) {
+          try {
+            const customer = await stripe.customers.retrieve(customerId);
+            userId = userId || customer.metadata?.userId || null;
+            userEmail = userEmail || customer.email || null;
+          } catch (custErr) {
+            console.error('Could not load Stripe customer for payment_failed:', custErr.message);
+          }
+        }
+
+        if (userId) {
+          const userDoc = await db.collection('users').doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            plan = userData.plan || plan;
+            userEmail = userEmail || userData.email || userData.subscriptionEmail;
+            const lastFailed = userData.lastPaymentFailedEmailAt?.toDate
+              ? userData.lastPaymentFailedEmailAt.toDate()
+              : userData.lastPaymentFailedEmailAt
+                ? new Date(userData.lastPaymentFailedEmailAt)
+                : null;
+            // At most one payment-failed email per 3 days
+            if (lastFailed && Date.now() - lastFailed.getTime() < 3 * 24 * 60 * 60 * 1000) {
+              console.log(`Skipping payment_failed email for ${userId} (recently notified)`);
+              break;
+            }
+            if (userEmail) {
+              await sendPaymentFailedEmail(userEmail, plan, invoice.hosted_invoice_url);
+              await userDoc.ref.update({
+                lastPaymentFailedEmailAt: new Date(),
+                lastPaymentFailedInvoiceId: invoice.id || null,
+                updatedAt: new Date()
+              });
+            }
+          }
+        } else if (userEmail) {
+          await sendPaymentFailedEmail(userEmail, plan, invoice.hosted_invoice_url);
+        }
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -1018,9 +1171,13 @@ const EXTENDED_SUBSCRIPTION_PLANS = {
 // Get current period end directly from Stripe
 expressApp.get('/api/subscription/period-end/:userId', async (req, res) => {
   try {
+    const decoded = await requireFirebaseUser(req);
     const { userId } = req.params;
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
+    }
+    if (userId !== decoded.uid) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     const userRef = db.collection('users').doc(userId);
@@ -1129,7 +1286,6 @@ expressApp.post('/api/test-email', async (req, res) => {
       default:
         // Custom email
         result = await sendEmail({
-          from:'BilloAI <contact@billoai.com>',
           to,
           subject: subject || 'Test Email from BilloAI',
           html: `
@@ -1162,10 +1318,12 @@ expressApp.post('/api/test-email', async (req, res) => {
 // Manual endpoint to resend confirmation emails
 expressApp.post('/api/subscription/resend-email', async (req, res) => {
   try {
-    const { userId, emailType } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
+    const decoded = await requireFirebaseUser(req);
+    const userId = decoded.uid;
+    const { emailType } = req.body;
+
+    if (req.body.userId && req.body.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
     
     // Get the user data
@@ -1243,6 +1401,247 @@ expressApp.post('/api/subscription/resend-email', async (req, res) => {
   }
 });
 
+/**
+ * Issue a short-lived SAS URL so the browser can PUT an image to Azure Blob
+ * without exposing the storage account key. Containers: profile-images | custom-icons
+ */
+expressApp.post('/api/uploads/sas', async (req, res) => {
+  try {
+    const decoded = await requireFirebaseUser(req);
+    const { container, fileName, contentType } = req.body || {};
+
+    if (!AZURE_UPLOAD_CONTAINERS.has(container)) {
+      return res.status(400).json({ error: 'Invalid upload container' });
+    }
+    if (!contentType || !String(contentType).startsWith('image/')) {
+      return res.status(400).json({ error: 'Only image uploads are allowed' });
+    }
+
+    const { accountName, credential } = createAzureCredential();
+    const safeName = sanitizeUploadFileName(fileName);
+    const blobName = `${decoded.uid}/${Date.now()}-${safeName}`;
+    const expiresOn = new Date(Date.now() + 10 * 60 * 1000);
+
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName: container,
+        blobName,
+        permissions: BlobSASPermissions.parse('cw'),
+        startsOn: new Date(Date.now() - 60 * 1000),
+        expiresOn,
+        protocol: SASProtocol.Https,
+        contentType
+      },
+      credential
+    ).toString();
+
+    const blobUrl = `https://${accountName}.blob.core.windows.net/${container}/${blobName}`;
+    res.json({
+      uploadUrl: `${blobUrl}?${sas}`,
+      blobUrl,
+      expiresOn: expiresOn.toISOString()
+    });
+  } catch (error) {
+    console.error('Error creating upload SAS:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to create upload URL' });
+  }
+});
+
+// --- AI (server-side OpenAI; auth required) ---
+expressApp.post('/api/ai/scan-extract', async (req, res) => {
+  try {
+    await requireFirebaseUser(req);
+    const { imageDataUrl } = req.body || {};
+    const result = await runScanExtract(imageDataUrl);
+    res.json(result);
+  } catch (error) {
+    console.error('scan-extract failed:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Scan failed' });
+  }
+});
+
+expressApp.post('/api/ai/follow-up-draft', async (req, res) => {
+  try {
+    await requireFirebaseUser(req);
+    const { sender, recipient, eventContext, metNote } = req.body || {};
+    if (!recipient || typeof recipient !== 'object') {
+      return res.status(400).json({ error: 'recipient is required' });
+    }
+    const result = await runFollowUpDraft({ sender, recipient, eventContext, metNote });
+    res.json(result);
+  } catch (error) {
+    console.error('follow-up-draft failed:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Draft failed' });
+  }
+});
+
+// Stripe Customer Portal
+expressApp.post('/api/subscription/portal', async (req, res) => {
+  try {
+    const decoded = await requireFirebaseUser(req);
+    const userId = decoded.uid;
+    const returnUrl =
+      (req.body && req.body.returnUrl) ||
+      `${(process.env.APP_URL || 'https://www.billoai.com').replace(/\/$/, '')}/subscription`;
+
+    const customerDoc = await db.collection('stripe_customers').doc(userId).get();
+    if (!customerDoc.exists) {
+      return res.status(400).json({ error: 'No Stripe customer found. Subscribe once first.' });
+    }
+    const customerId = customerDoc.data().customerId;
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl
+    });
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('portal session failed:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to open billing portal' });
+  }
+});
+
+// One-click unsubscribe (signed token)
+expressApp.get('/api/email/unsubscribe', async (req, res) => {
+  try {
+    const uid = String(req.query.u || '');
+    const token = String(req.query.t || '');
+    if (!uid || !verifyUnsubscribeToken(uid, token)) {
+      return res.status(400).send('Invalid or expired unsubscribe link.');
+    }
+    await db.collection('users').doc(uid).set(
+      {
+        emailUnsubscribed: true,
+        productEmailsOptOut: true,
+        emailSubscribed: false,
+        unsubscribedAt: new Date(),
+        updatedAt: new Date()
+      },
+      { merge: true }
+    );
+    const appUrl = (process.env.APP_URL || 'https://www.billoai.com').replace(/\/$/, '');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!doctype html><html><body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto;">
+      <h1>You're unsubscribed</h1>
+      <p>You won't get BilloAI product emails (nudges, wrap-ups, reminders). Billing receipts may still arrive from Stripe.</p>
+      <p><a href="${appUrl}/profile-setup#email-prefs">Manage email preferences</a></p>
+    </body></html>`);
+  } catch (error) {
+    console.error('unsubscribe failed:', error);
+    res.status(500).send('Could not unsubscribe. Try again from Profile & settings.');
+  }
+});
+
+expressApp.post('/api/email/preferences', async (req, res) => {
+  try {
+    const decoded = await requireFirebaseUser(req);
+    const optOut = Boolean(req.body?.productEmailsOptOut);
+    await db.collection('users').doc(decoded.uid).set(
+      {
+        productEmailsOptOut: optOut,
+        emailUnsubscribed: optOut,
+        emailSubscribed: !optOut,
+        updatedAt: new Date()
+      },
+      { merge: true }
+    );
+    res.json({ ok: true, productEmailsOptOut: optOut });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || 'Failed to update preferences' });
+  }
+});
+
+// Account data export
+expressApp.get('/api/account/export', async (req, res) => {
+  try {
+    const decoded = await requireFirebaseUser(req);
+    const uid = decoded.uid;
+    const [userDoc, cardsSnap, draftsSnap, eventsSnap, usageDoc] = await Promise.all([
+      db.collection('users').doc(uid).get(),
+      db.collection('business-cards').where('userId', '==', uid).get(),
+      db.collection('email-drafts').where('userId', '==', uid).get(),
+      db.collection('events').where('userId', '==', uid).get(),
+      db.collection('usage_stats').doc(uid).get()
+    ]);
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      user: userDoc.exists ? userDoc.data() : null,
+      usage: usageDoc.exists ? usageDoc.data() : null,
+      businessCards: cardsSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+      emailDrafts: draftsSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+      events: eventsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    };
+    res.setHeader('Content-Disposition', 'attachment; filename="billoai-export.json"');
+    res.json(payload);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || 'Export failed' });
+  }
+});
+
+// Account deletion (Auth + Firestore user data)
+expressApp.post('/api/account/delete', async (req, res) => {
+  try {
+    const decoded = await requireFirebaseUser(req);
+    const uid = decoded.uid;
+    const confirm = String(req.body?.confirm || '');
+    if (confirm !== 'DELETE') {
+      return res.status(400).json({ error: 'Send { confirm: "DELETE" } to proceed' });
+    }
+
+    const batchDelete = async (snap) => {
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += 400) {
+        const batch = db.batch();
+        docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    };
+
+    const [cardsSnap, draftsSnap, eventsSnap] = await Promise.all([
+      db.collection('business-cards').where('userId', '==', uid).get(),
+      db.collection('email-drafts').where('userId', '==', uid).get(),
+      db.collection('events').where('userId', '==', uid).get()
+    ]);
+    await batchDelete(cardsSnap);
+    await batchDelete(draftsSnap);
+    await batchDelete(eventsSnap);
+    await db.collection('usage_stats').doc(uid).delete().catch(() => {});
+    await db.collection('stripe_customers').doc(uid).delete().catch(() => {});
+    await db.collection('users').doc(uid).delete().catch(() => {});
+    await admin.auth().deleteUser(uid);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('account delete failed:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Delete failed' });
+  }
+});
+
+async function handleCron(req, res, runner) {
+  try {
+    assertCronAuthorized(req);
+    const result = await runner({
+      db,
+      stripe,
+      auth: admin.auth(),
+      sendEmail,
+      now: new Date()
+    });
+    console.log('Cron completed:', JSON.stringify(result));
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Cron failed:', error);
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.message || 'Cron failed'
+    });
+  }
+}
+
+// Vercel Cron: product emails (nudges, wrap-ups, renewals) — once daily (Hobby-safe)
+expressApp.get('/api/cron/daily', (req, res) => handleCron(req, res, runDailyCrons));
+
+// Vercel Cron: subscription expiry + Stripe reconcile — once daily
+expressApp.get('/api/cron/maintenance', (req, res) => handleCron(req, res, runMaintenanceCrons));
+
 // Export the Express API for Vercel
 export default expressApp;
 
@@ -1255,20 +1654,22 @@ if (process.env.NODE_ENV !== 'production') {
     
     // Print email configuration on startup
     debugLog('Email Configuration', {
+      provider: useResend ? 'resend' : 'smtp',
+      from: defaultFromAddress,
       host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS ? '[PROVIDED]' : '[NOT PROVIDED]',
-      transporterInitialized: !!emailTransporter
+      resendConfigured: useResend,
+      smtpConfigured: !!emailTransporter
     });
-    
-    // Test the email configuration
-    if (emailTransporter) {
+
+    if (useResend) {
+      console.log('✅ Resend configured — app emails will use RESEND_API_KEY');
+    } else if (emailTransporter) {
       emailTransporter.verify()
         .then(() => console.log('✅ Email verification passed'))
         .catch(err => console.error('❌ Email verification failed:', err));
     } else {
-      console.error('❌ Email transporter not initialized');
+      console.error('❌ No email provider configured (set RESEND_API_KEY or SMTP EMAIL_*)');
     }
   });
 } 
