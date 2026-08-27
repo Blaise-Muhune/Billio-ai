@@ -119,11 +119,16 @@ export const businessCardService = {
         
         // Save extracted text/style only — scan image is not persisted
         const note = String(metNote || '').trim();
+        const meetingType =
+          !eventId || eventId === 'null'
+            ? String(options.meetingType || '').trim()
+            : '';
         const cardData = {
           ...extracted.info,
           style: extracted.style,
           eventId: eventId && eventId !== 'null' ? eventId : null,
           metNote: note,
+          meetingType,
           source: source || SCAN_SOURCES.CARD,
           confidence: extracted.confidence,
           extractWarnings: extracted.warnings,
@@ -799,7 +804,10 @@ export const businessCardService = {
               if (onStatusUpdate) onStatusUpdate(`${i + 1} of ${files.length}: ${status}`);
             },
             metNote,
-            perFileSource ? { source: perFileSource } : {}
+            {
+              ...options,
+              ...(perFileSource ? { source: perFileSource } : {})
+            }
           );
           
           results.push(result);

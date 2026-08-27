@@ -161,8 +161,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                     VaIcon(name="check" size="16px")
                     span Upload All
             
-            //- Event Selection
-            .bg-gradient-to-r.from-emerald-50.to-teal-50.p-3.rounded-lg.mb-4.border.border-emerald-200
+            //- Event Selection (single file — multi uses confirm popup)
+            .bg-gradient-to-r.from-emerald-50.to-teal-50.p-3.rounded-lg.mb-4.border.border-emerald-200(
+              v-if="selectedFiles.length === 1"
+            )
               .flex.flex-col.sm_flex-row.items-center.gap-3
                 .flex.items-center.gap-2.min-w-max
                   VaIcon(name="event" size="18px" class="text-emerald-500")
@@ -174,11 +176,18 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   )
                     option(value="") -- Select Event (Optional) --
                     option(value="null") No event tagged
-                    option(
-                      v-for="event in realEvents"
-                      :key="event.id"
-                      :value="event.id"
-                    ) {{ event.name }} ({{ formatDate(event.date) }})
+                    optgroup(v-if="meetingTypes.length" label="Defaults")
+                      option(
+                        v-for="type in meetingTypes"
+                        :key="'mt-' + type.id"
+                        :value="'mt:' + type.id"
+                      ) {{ type.label }}
+                    optgroup(v-if="realEvents.length" label="Your events")
+                      option(
+                        v-for="event in realEvents"
+                        :key="event.id"
+                        :value="event.id"
+                      ) {{ event.name }} ({{ formatDate(event.date) }})
                   
                   button(
                     class="text-sm px-3 py-1.5 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-50 transition-all flex items-center gap-1 text-emerald-600"
@@ -187,8 +196,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                     VaIcon(name="add" size="14px")  
                     span New Event
 
-            //- Conversation context for better follow-ups
-            .mb-4.rounded-lg.border.border-slate-200.bg-white.p-3
+            //- Conversation context — single card only (batch notes don't apply cleanly)
+            .mb-4.rounded-lg.border.border-slate-200.bg-white.p-3(
+              v-if="selectedFiles.length === 1"
+            )
               label.block.text-sm.font-medium.text-slate-700.mb-1 What did you talk about? (optional)
               textarea(
                 v-model="scanMetNote"
@@ -198,6 +209,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                 class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               )
               p.text-xs.text-slate-500.mt-1 Used in the follow-up so it sounds like you were there.
+
+            p.text-sm.text-slate-600.mb-4(
+              v-else
+            ) You’ll confirm where you met these people before upload.
 
           //- Preview grid
           .grid.grid-cols-2.sm_grid-cols-3.md_grid-cols-4.lg_grid-cols-6.gap-3
@@ -256,11 +271,18 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   )
                     option(value="") -- Select Event (Optional) --
                     option(value="null") No event tagged
-                    option(
-                      v-for="event in realEvents"
-                      :key="event.id"
-                      :value="event.id"
-                    ) {{ event.name }} ({{ formatDate(event.date) }})
+                    optgroup(v-if="meetingTypes.length" label="Defaults")
+                      option(
+                        v-for="type in meetingTypes"
+                        :key="'mt-contact-' + type.id"
+                        :value="'mt:' + type.id"
+                      ) {{ type.label }}
+                    optgroup(v-if="realEvents.length" label="Your events")
+                      option(
+                        v-for="event in realEvents"
+                        :key="event.id"
+                        :value="event.id"
+                      ) {{ event.name }} ({{ formatDate(event.date) }})
                   
                   button(
                     class="text-sm px-3 py-1.5 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-50 transition-all flex items-center gap-1 text-emerald-600"
@@ -545,9 +567,6 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                         aria-hidden="true"
                       )
                       .flex.items-start.gap-3.p-4(class="pl-5")
-                        .flex.h-12.w-12.shrink-0.items-center.justify-center.rounded-2xl.bg-emerald-50.text-base.font-bold.text-emerald-800(
-                          aria-hidden="true"
-                        ) {{ displayNameInitials(card.name) }}
                         .min-w-0.flex-1
                           .flex.min-w-0.items-start.justify-between.gap-2
                             h3.truncate.text-base.font-semibold.leading-snug.text-slate-900 {{ card.name || 'Unnamed' }}
@@ -600,6 +619,54 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
 
     // Modals section
     template(v-if="user")
+      // Multi-upload: confirm event before scanning
+      VaModal(
+        v-model="showUploadEventConfirm"
+        :hide-default-actions="true"
+        class="billio-modal modal-container rounded-2xl z-[120]"
+      )
+        .p-5(class="sm:p-6")
+          h3.text-lg.font-semibold.text-slate-900.mb-1 Confirm where you met
+          p.text-sm.text-slate-600.mb-4
+            | You’re uploading {{ selectedFiles.length }} contacts. Pick one place for all of them — you can still edit per person later.
+          label.block.text-sm.font-medium.text-slate-700(class="mb-1.5") Event
+          select.w-full.rounded-xl.border.border-slate-200.bg-white.px-3.text-sm(
+            v-model="uploadConfirmPlace"
+            class="py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          )
+            option(value="") -- Select Event (Optional) --
+            option(value="null") No event tagged
+            optgroup(v-if="meetingTypes.length" label="Defaults")
+              option(
+                v-for="type in meetingTypes"
+                :key="'mt-confirm-' + type.id"
+                :value="'mt:' + type.id"
+              ) {{ type.label }}
+            optgroup(v-if="realEvents.length" label="Your events")
+              option(
+                v-for="event in realEvents"
+                :key="'confirm-' + event.id"
+                :value="event.id"
+              ) {{ event.name }} ({{ formatDate(event.date) }})
+          button.mt-3.inline-flex.items-center.gap-1.text-sm.font-medium.text-emerald-700(
+            type="button"
+            class="hover:text-emerald-800"
+            @click="handleCreateEvent"
+          )
+            VaIcon(name="add" size="16px")
+            span New event
+          .mt-5.flex.flex-wrap.justify-end.gap-2
+            button(
+              type="button"
+              class="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              @click="showUploadEventConfirm = false"
+            ) Cancel
+            button(
+              type="button"
+              class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
+              @click="confirmMultiUpload"
+            ) Upload {{ selectedFiles.length }} contacts
+
       // Contact detail sheet
       VaModal(
         v-model="showContactSheet"
@@ -608,14 +675,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
       )
         .p-5(class="sm:p-6" v-if="contactSheetCard")
           .flex.items-start.justify-between.gap-3.mb-5
-            .flex.min-w-0.items-center.gap-3
-              .flex.h-14.w-14.shrink-0.items-center.justify-center.rounded-2xl.bg-emerald-50.text-lg.font-bold.text-emerald-800(
-                aria-hidden="true"
-              ) {{ displayNameInitials(contactSheetCard.name) }}
-              .min-w-0
-                h3.text-xl.font-semibold.leading-snug.text-slate-900.truncate {{ contactSheetCard.name || 'Contact' }}
-                p.text-sm.text-slate-500.truncate(v-if="contactSheetCard.title || contactSheetCard.company")
-                  | {{ [contactSheetCard.title, contactSheetCard.company].filter(Boolean).join(' · ') }}
+            .min-w-0.flex-1
+              h3.text-xl.font-semibold.leading-snug.text-slate-900.truncate {{ contactSheetCard.name || 'Contact' }}
+              p.text-sm.text-slate-500.truncate(v-if="contactSheetCard.title || contactSheetCard.company")
+                | {{ [contactSheetCard.title, contactSheetCard.company].filter(Boolean).join(' · ') }}
             button.rounded-lg.p-2.text-slate-400.transition-colors(
               type="button"
               class="hover:bg-slate-100 hover:text-slate-700"
@@ -1551,7 +1614,7 @@ import QrcodeVue from 'qrcode.vue';
 import PlanLimitModal from '../../components/PlanLimitModal.vue';
 // Import formatDate from dateUtils
 import { formatDate } from '../../utils/dateUtils';
-import { buildLiveProfileShareUrl, displayNameInitials, isPublicProfileLive } from '../../utils/publicProfile';
+import { buildLiveProfileShareUrl, isPublicProfileLive } from '../../utils/publicProfile';
 import { buildFollowUpMessage, openFollowUpCompose } from '../../utils/followUpSend';
 import { compressImageForScan } from '../../utils/compressImageForScan';
 import {
@@ -1579,6 +1642,8 @@ const error = ref('');
 const fileInput = ref(null);
 const cameraInput = ref(null);
 const scanMetNote = ref('');
+const showUploadEventConfirm = ref(false);
+const uploadConfirmPlace = ref('');
 const scanSourceMode = ref('auto');
 const selectedEventFilter = ref('all');
 const showEmailModal = ref(false);
@@ -2105,19 +2170,63 @@ function previewSelectedContactFiles(files) {
   showContactPreview.value = true;
 }
 
+function parsePreviewPlace(value) {
+  const raw = value == null ? '' : String(value);
+  if (!raw || raw === 'null') {
+    return { eventId: null, meetingType: '' };
+  }
+  if (raw.startsWith('mt:')) {
+    const meetingType = raw.slice(3);
+    return { eventId: null, meetingType };
+  }
+  return { eventId: raw, meetingType: '' };
+}
+
+function resolveUploadPlace(preferred = '') {
+  const fromPreferred = parsePreviewPlace(preferred);
+  if (fromPreferred.eventId || fromPreferred.meetingType) return fromPreferred;
+
+  const fromPreview = parsePreviewPlace(selectedPreviewEvent.value);
+  if (fromPreview.eventId || fromPreview.meetingType) return fromPreview;
+
+  if (
+    selectedEventFilter.value &&
+    selectedEventFilter.value !== 'all' &&
+    selectedEventFilter.value !== 'null' &&
+    realEvents.value.some((e) => e.id === selectedEventFilter.value)
+  ) {
+    return { eventId: selectedEventFilter.value, meetingType: '' };
+  }
+
+  return { eventId: null, meetingType: '' };
+}
+
 async function processSelectedFiles() {
   if (selectedFiles.value.length === 0) return;
-  
-  // Prefer preview event; else active filter if it's a real event id
-  let eventId = selectedPreviewEvent.value || null;
-  if (!eventId && selectedEventFilter.value && selectedEventFilter.value !== 'all' && selectedEventFilter.value !== 'null') {
-    eventId = selectedEventFilter.value;
+
+  if (selectedFiles.value.length > 1) {
+    uploadConfirmPlace.value = selectedPreviewEvent.value || '';
+    showUploadEventConfirm.value = true;
+    return;
   }
-  
-  await uploadFiles(selectedFiles.value, eventId, scanMetNote.value, {
-    source: scanSourceMode.value === 'auto' ? undefined : scanSourceMode.value
+
+  await runSelectedFilesUpload(selectedPreviewEvent.value);
+}
+
+async function confirmMultiUpload() {
+  selectedPreviewEvent.value = uploadConfirmPlace.value;
+  showUploadEventConfirm.value = false;
+  await runSelectedFilesUpload(uploadConfirmPlace.value);
+}
+
+async function runSelectedFilesUpload(placeValue) {
+  const { eventId, meetingType } = resolveUploadPlace(placeValue);
+  const note = selectedFiles.value.length === 1 ? scanMetNote.value : '';
+
+  await uploadFiles(selectedFiles.value, eventId, note, {
+    source: scanSourceMode.value === 'auto' ? undefined : scanSourceMode.value,
+    meetingType
   });
-  // Clear the selection after upload (successful or not)
   clearSelectedFiles();
 }
 
@@ -2144,6 +2253,8 @@ function clearSelectedFiles() {
   previewUrls.value = [];
   scanMetNote.value = '';
   scanSourceMode.value = 'auto';
+  showUploadEventConfirm.value = false;
+  uploadConfirmPlace.value = '';
   
   // Reset file input
   if (fileInput.value) {
@@ -2640,6 +2751,11 @@ async function createEvent() {
     
     // Close modal
     showCreateEventModal.value = false;
+
+    selectedPreviewEvent.value = newEvent.id;
+    if (showUploadEventConfirm.value) {
+      uploadConfirmPlace.value = newEvent.id;
+    }
     
     // If there's a callback from creating an event within card modal, execute it
     if (typeof eventCreationCallback === 'function') {
