@@ -499,13 +499,15 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                       v-for="card in paginatedCards"
                       :key="card.id"
                       class="transition-shadow duration-200 hover:shadow-lg"
+                      :class="{ 'billo-contact-card--styled': !!card.style?.backgroundColor }"
+                      :style="cardChromeStyle(card)"
                     )
                       .flex.min-h-0.flex-1.flex-col.px-4.pb-3.pt-4(class="sm:px-5 sm:pt-5")
                         header.min-w-0
                           .flex.min-w-0.flex-wrap.items-center.gap-2
-                            h3.text-lg.font-semibold.leading-snug.text-slate-900(
+                            h3.text-lg.font-semibold.leading-snug(
                               class="billo-type-display sm:text-xl"
-                              :style="{ fontFamily: getFontFamily(card.style?.fontStyle) || undefined }"
+                              :style="cardNameStyle(card)"
                             ) {{ card.name }}
                             span.inline-flex.items-center.rounded-md.border.font-semibold.uppercase.tracking-wide(
                               v-if="card.source === 'screenshot'"
@@ -515,31 +517,33 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                               v-else-if="card.source === 'manual' || card.importedContact"
                               class="border-slate-200 bg-slate-50 text-slate-600 px-1.5 py-0.5 text-[10px]"
                             ) Imported
-                          p.text-sm.leading-snug.text-slate-600(class="mt-0.5") {{ card.title }}
+                          p.text-sm.leading-snug(class="mt-0.5" :style="{ color: cardSecondaryColor(card) }") {{ card.title }}
                           p.text-xs.text-amber-700.mt-1(
                             v-if="card.extractWarnings?.length || (card.confidence?.overall != null && card.confidence.overall < 0.55)"
                           ) {{ card.extractWarnings?.[0] || 'Some fields may need a quick check before you send.' }}
 
                         //- One column, full width — text wraps instead of truncating
                         .mt-4.min-w-0.border-t.pt-3(
-                          class="border-slate-100"
+                          :style="{ borderColor: cardDividerColor(card) }"
                         )
                           .relative.flex.min-w-0.gap-3.border-b.py-3(
                             v-if="card.emails?.length > 0"
-                            class="border-slate-100"
+                            :style="{ borderColor: cardDividerColor(card) }"
                           )
-                            VaIcon.shrink-0.text-slate-400(name="email" size="18px" class="mt-0.5")
+                            VaIcon.shrink-0(name="email" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
                             .min-w-0.flex-1
-                              p.text-xs.font-medium.text-slate-500(class="mb-0.5") Email
+                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Email
                               .flex.min-w-0.items-start(class="gap-1")
-                                a.min-w-0.flex-1.text-sm.leading-snug.text-emerald-700(
+                                a.min-w-0.flex-1.text-sm.leading-snug(
                                   class="break-words underline-offset-2 hover:underline"
+                                  :style="{ color: cardPrimaryColor(card) }"
                                   :href="'mailto:' + card.emails[0]"
                                 ) {{ card.emails[0] }}
-                                button.mt-0.shrink-0.rounded.p-1.text-slate-500(
+                                button.mt-0.shrink-0.rounded.p-1(
                                   v-if="card.emails.length > 1"
                                   type="button"
-                                  class="hover:bg-slate-100"
+                                  class="hover:bg-black/5"
+                                  :style="{ color: cardSecondaryColor(card) }"
                                   :aria-expanded="expandedContact.type === 'email' && expandedContact.cardId === card.id ? 'true' : 'false'"
                                   aria-label="More email addresses"
                                   @click="toggleContactDropdown('email', card.id)"
@@ -547,73 +551,83 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                                   VaIcon(name="expand_more" size="20px")
                               div(
                                 v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id"
-                                class="relative z-20 mt-2 rounded-lg border border-slate-200 bg-white p-2 shadow-md"
+                                class="relative z-20 mt-2 rounded-lg border bg-white/95 p-2 shadow-md"
+                                :style="{ borderColor: cardDividerColor(card) }"
                               )
                                 div(v-for="(email, idx) in card.emails.slice(1)")
-                                  a.block.break-words.py-1.text-sm.text-emerald-700(
-                                    class="rounded px-1 hover:bg-slate-50"
+                                  a.block.break-words.py-1.text-sm(
+                                    class="rounded px-1 hover:bg-black/5"
+                                    :style="{ color: cardPrimaryColor(card) }"
                                     :href="'mailto:' + email"
                                   ) {{ email }}
 
                           .relative.flex.min-w-0.gap-3.border-b.py-3(
                             v-if="card.phones?.length > 0"
-                            class="border-slate-100"
+                            :style="{ borderColor: cardDividerColor(card) }"
                           )
-                            VaIcon.shrink-0.text-slate-400(name="phone" size="18px" class="mt-0.5")
+                            VaIcon.shrink-0(name="phone" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
                             .min-w-0.flex-1
-                              p.text-xs.font-medium.text-slate-500(class="mb-0.5") Phone
+                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Phone
                               .flex.min-w-0.items-start(class="gap-1")
-                                a.min-w-0.flex-1.text-sm.leading-snug.text-slate-900(
+                                a.min-w-0.flex-1.text-sm.leading-snug(
                                   class="break-words underline-offset-2 hover:underline"
+                                  :style="{ color: cardPrimaryColor(card) }"
                                   :href="'tel:' + card.phones[0]"
                                 ) {{ card.phones[0] }}
-                                button.mt-0.shrink-0.rounded.p-1.text-slate-500(
+                                button.mt-0.shrink-0.rounded.p-1(
                                   v-if="card.phones.length > 1"
                                   type="button"
-                                  class="hover:bg-slate-100"
+                                  class="hover:bg-black/5"
+                                  :style="{ color: cardSecondaryColor(card) }"
                                   aria-label="More phone numbers"
                                   @click="toggleContactDropdown('phone', card.id)"
                                 )
                                   VaIcon(name="expand_more" size="20px")
                               div(
                                 v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id"
-                                class="relative z-20 mt-2 rounded-lg border border-slate-200 bg-white p-2 shadow-md"
+                                class="relative z-20 mt-2 rounded-lg border bg-white/95 p-2 shadow-md"
+                                :style="{ borderColor: cardDividerColor(card) }"
                               )
                                 div(v-for="(phone, idx) in card.phones.slice(1)")
-                                  a.block.break-words.py-1.text-sm.text-slate-900(
-                                    class="rounded px-1 hover:bg-slate-50"
+                                  a.block.break-words.py-1.text-sm(
+                                    class="rounded px-1 hover:bg-black/5"
+                                    :style="{ color: cardPrimaryColor(card) }"
                                     :href="'tel:' + phone"
                                   ) {{ phone }}
 
                           .relative.flex.min-w-0.gap-3.border-b.py-3(
                             v-if="card.websites?.length > 0"
-                            class="border-slate-100"
+                            :style="{ borderColor: cardDividerColor(card) }"
                           )
-                            VaIcon.shrink-0.text-slate-400(name="language" size="18px" class="mt-0.5")
+                            VaIcon.shrink-0(name="language" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
                             .min-w-0.flex-1
-                              p.text-xs.font-medium.text-slate-500(class="mb-0.5") Website
+                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Website
                               .flex.min-w-0.items-start(class="gap-1")
-                                a.min-w-0.flex-1.text-sm.leading-snug.text-emerald-700(
+                                a.min-w-0.flex-1.text-sm.leading-snug(
                                   class="break-words underline-offset-2 hover:underline"
+                                  :style="{ color: cardPrimaryColor(card) }"
                                   :href="formatWebsiteUrl(card.websites[0])"
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 ) {{ card.websites[0] }}
-                                button.mt-0.shrink-0.rounded.p-1.text-slate-500(
+                                button.mt-0.shrink-0.rounded.p-1(
                                   v-if="card.websites.length > 1"
                                   type="button"
-                                  class="hover:bg-slate-100"
+                                  class="hover:bg-black/5"
+                                  :style="{ color: cardSecondaryColor(card) }"
                                   aria-label="More websites"
                                   @click="toggleContactDropdown('website', card.id)"
                                 )
                                   VaIcon(name="expand_more" size="20px")
                               div(
                                 v-if="expandedContact.type === 'website' && expandedContact.cardId === card.id"
-                                class="relative z-20 mt-2 rounded-lg border border-slate-200 bg-white p-2 shadow-md"
+                                class="relative z-20 mt-2 rounded-lg border bg-white/95 p-2 shadow-md"
+                                :style="{ borderColor: cardDividerColor(card) }"
                               )
                                 div(v-for="(website, idx) in card.websites.slice(1)")
-                                  a.block.break-words.py-1.text-sm.text-emerald-700(
-                                    class="rounded px-1 hover:bg-slate-50"
+                                  a.block.break-words.py-1.text-sm(
+                                    class="rounded px-1 hover:bg-black/5"
+                                    :style="{ color: cardPrimaryColor(card) }"
                                     :href="formatWebsiteUrl(website)"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -622,23 +636,25 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                           .flex.min-w-0.gap-3.py-3(
                             v-if="card.company && String(card.company).trim().length > 1"
                           )
-                            VaIcon.shrink-0.text-slate-400(name="business" size="18px" class="mt-0.5")
+                            VaIcon.shrink-0(name="business" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
                             .min-w-0.flex-1
-                              p.text-xs.font-medium.text-slate-500(class="mb-0.5") Company
-                              p.text-sm.leading-snug.text-slate-800(class="break-words") {{ card.company }}
+                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Company
+                              p.text-sm.leading-snug(class="break-words" :style="{ color: cardPrimaryColor(card) }") {{ card.company }}
 
                         button.mt-1.flex.w-full.items-start.gap-3.rounded-lg.border.px-3.text-left.transition-colors(
                           type="button"
-                          class="border-slate-200 bg-slate-50 py-2.5 hover:border-slate-300 hover:bg-slate-100"
+                          class="bg-black/5 py-2.5 hover:bg-black/10"
+                          :style="{ borderColor: cardDividerColor(card) }"
                           @click="openMoveToEventModal(card)"
                         )
-                          VaIcon.shrink-0(name="event" size="20px" class="text-slate-500 mt-0.5")
+                          VaIcon.shrink-0(name="event" size="20px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
                           .min-w-0.flex-1
-                            p.text-xs.font-medium.text-slate-500 Event
+                            p.text-xs.font-medium(:style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Event
                             p.text-sm.font-medium.leading-snug(
-                              class="break-words text-slate-900"
+                              class="break-words"
+                              :style="{ color: cardPrimaryColor(card) }"
                             ) {{ getEventName(card.eventId) || getMeetingTypeLabel(card.meetingType) || 'Tap to choose an event' }}
-                          VaIcon.shrink-0.text-slate-400(name="chevron_right" size="22px" class="mt-0.5")
+                          VaIcon.shrink-0(name="chevron_right" size="22px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
 
                         .mt-2.rounded-lg.border.px-3(
                           class="border-emerald-100 bg-emerald-50/50 py-2.5"
@@ -653,10 +669,11 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                         )
                           p.text-xs.font-medium.text-amber-800/80 What you talked about
                           p.text-sm.leading-snug.text-slate-800(class="mt-0.5 break-words") {{ card.metNote }}
-                        button.mt-2.flex.w-full.items-center.gap-2.rounded-lg.border.border-dashed.px-3.py-2.text-left.text-sm.text-slate-600.transition-colors(
+                        button.mt-2.flex.w-full.items-center.gap-2.rounded-lg.border.border-dashed.px-3.py-2.text-left.text-sm.transition-colors(
                           v-else
                           type="button"
-                          class="border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 hover:text-emerald-900"
+                          class="hover:bg-black/5"
+                          :style="{ borderColor: cardDividerColor(card), color: cardSecondaryColor(card) }"
                           @click.stop="openEditCardModal(card)"
                         )
                           VaIcon(name="chat" size="18px" class="shrink-0")
@@ -664,7 +681,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
 
                         //- Primary action first, then one clear row for the rest
                         footer.mt-4.space-y-2.border-t.pt-3(
-                          class="border-slate-100"
+                          :style="{ borderColor: cardDividerColor(card) }"
                         )
                           button.flex.h-11.w-full.items-center.justify-center.gap-2.rounded-lg.bg-emerald-600.text-sm.font-semibold.text-white.shadow-sm.transition-colors(
                             type="button"
@@ -675,23 +692,23 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                             VaIcon(name="send" size="20px" class="shrink-0")
                             span {{ generatingDraft === card.id ? 'Writing follow-up…' : (cardDrafts[card.id]?.length ? 'Send follow-up' : 'Write follow-up') }}
                           .flex.min-w-0.gap-2
-                            button.flex.h-10.min-w-0.flex-1.items-center.justify-center.gap-2.rounded-lg.border.text-sm.font-medium.text-slate-800.transition-colors(
-                              class="border-slate-200 bg-white hover:bg-slate-50"
+                            button.flex.h-10.min-w-0.flex-1.items-center.justify-center.gap-2.rounded-lg.border.text-sm.font-medium.transition-colors(
+                              class="border-white/70 bg-white/90 text-slate-800 hover:bg-white"
                               type="button"
                               @click="saveContact(card)"
                             )
                               VaIcon(name="person_add" size="18px" class="shrink-0 text-slate-600")
                               span.truncate Save contact
-                            button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.text-slate-600.transition-colors(
-                              class="border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+                            button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.transition-colors(
+                              class="border-white/70 bg-white/90 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
                               type="button"
                               title="Edit this card"
                               aria-label="Edit card"
                               @click.stop="openEditCardModal(card)"
                             )
                               VaIcon(name="edit" size="20px")
-                            button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.text-slate-600.transition-colors(
-                              class="border-slate-200 bg-white hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                            button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.transition-colors(
+                              class="border-white/70 bg-white/90 text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                               type="button"
                               title="Delete this card"
                               aria-label="Delete card"
@@ -937,13 +954,13 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               :class="contextSheet.namingNewEvent ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 text-slate-600 hover:border-emerald-300'"
               @click="startNamingNewEvent"
             ) + Name a new event
-            input.mt-2.w-full.rounded-xl.border.border-slate-200.px-4.text-base.focus:outline-none.focus:ring-2.focus:ring-emerald-500(
+            input.mt-2.w-full.rounded-xl.border.border-slate-200.px-4.text-base(
               v-if="contextSheet.namingNewEvent"
               v-model="contextSheet.newEventName"
               type="text"
               maxlength="80"
               placeholder="e.g. SaaStr 2026"
-              class="py-2.5"
+              class="py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             )
 
           .mb-5
@@ -2741,20 +2758,60 @@ watch(selectedEventFilter, (newValue) => {
   loadCards();
 });
 
+function normalizeHexColor(color, fallback = '#ffffff') {
+  const raw = String(color || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`;
+  }
+  return fallback;
+}
+
+function cardPrimaryColor(card) {
+  return normalizeHexColor(card?.style?.primaryColor, '#1f2937');
+}
+
+function cardSecondaryColor(card) {
+  return normalizeHexColor(card?.style?.secondaryColor, '#4B5563');
+}
+
+function cardDividerColor(card) {
+  const secondary = cardSecondaryColor(card);
+  // Soften divider against the card background
+  return `${secondary}55`;
+}
+
+function cardChromeStyle(card) {
+  const bg = normalizeHexColor(card?.style?.backgroundColor, '#ffffff');
+  const border = normalizeHexColor(card?.style?.secondaryColor, '#e5e7eb');
+  return {
+    backgroundColor: bg,
+    color: getContrastColor(bg),
+    fontFamily: getFontFamily(card?.style?.fontStyle) || undefined,
+    borderColor: border,
+    borderWidth: '1px',
+    borderStyle: 'solid'
+  };
+}
+
+function cardNameStyle(card) {
+  return {
+    color: cardPrimaryColor(card),
+    fontFamily: getFontFamily(card?.style?.fontStyle) || undefined
+  };
+}
+
 function getContrastColor(hexcolor) {
-  // Remove the hash if present
-  hexcolor = hexcolor.replace('#', '');
-  
-  // Convert hex to RGB
-  const r = parseInt(hexcolor.substr(0, 2), 16);
-  const g = parseInt(hexcolor.substr(2, 2), 16);
-  const b = parseInt(hexcolor.substr(4, 2), 16);
-  
-  // Calculate luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
-  // Return black or white based on luminance
-  return luminance > 0.5 ? '#1f2937' : '#ffffff';
+  try {
+    const hex = normalizeHexColor(hexcolor, '#ffffff').replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#1f2937' : '#ffffff';
+  } catch {
+    return '#1f2937';
+  }
 }
 
 function confirmDeleteCard(card) {
@@ -3587,7 +3644,11 @@ main {
 
 /* Add these styles to the existing <style> section */
 .page-home .billo-contact-card {
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
+}
+
+.page-home .billo-contact-card.billo-contact-card--styled {
+  background-image: none;
 }
 
 .page-home .billo-contact-card:hover {
