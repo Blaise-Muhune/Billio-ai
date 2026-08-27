@@ -636,6 +636,9 @@ export const businessCardService = {
       if (!db) {
         throw new Error('Firebase not initialized');
       }
+      if (!cardId) {
+        throw new Error('Card id is required');
+      }
 
       const user = authService.getCurrentUser();
       if (!user) {
@@ -652,6 +655,19 @@ export const businessCardService = {
 
       if (cardDoc.data().userId !== user.uid) {
         throw new Error('You do not have permission to delete this card');
+      }
+
+      // Delete related drafts first (best-effort)
+      try {
+        const draftsQuery = query(
+          collection(db, 'email-drafts'),
+          where('cardId', '==', cardId),
+          where('userId', '==', user.uid)
+        );
+        const draftsSnap = await getDocs(draftsQuery);
+        await Promise.all(draftsSnap.docs.map((d) => deleteDoc(d.ref)));
+      } catch (draftErr) {
+        console.warn('Could not delete related drafts:', draftErr);
       }
 
       // Delete the card (scan images are not stored in cloud storage)

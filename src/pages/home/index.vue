@@ -688,7 +688,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                               type="button"
                               title="Delete this card"
                               aria-label="Delete card"
-                              @click.stop="confirmDeleteCard(card.id)"
+                              @click.stop="confirmDeleteCard(card)"
                             )
                               VaIcon(name="delete" size="20px")
 
@@ -1053,14 +1053,16 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
       )
         .p-8
           h3.text-2xl.font-bold.mb-4 Delete Business Card
-          p.text-gray-600.mb-6.text-lg(class="font-light") Are you sure you want to delete this business card? This action cannot be undone.
+          p.text-gray-600.mb-4.text-lg(class="font-light") Are you sure you want to delete {{ selectedCardForDelete?.name || 'this contact' }}? This action cannot be undone.
+          p.text-sm.text-red-600.mb-4(v-if="error && deletingCard === false && showDeleteModal") {{ error }}
           .flex.justify-end.gap-4
             button(
               class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
-              @click="showDeleteModal = false"
+              @click="showDeleteModal = false; error = ''"
+              :disabled="deletingCard"
             ) Cancel
             button(
-              class="bg-red-500 text-white px-6 py-3 rounded-xl hover:bg-red-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+              class="bg-red-500 text-white px-6 py-3 rounded-xl hover:bg-red-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
               @click="deleteCard"
               :disabled="deletingCard"
             )
@@ -2364,30 +2366,35 @@ function getContrastColor(hexcolor) {
 }
 
 function confirmDeleteCard(card) {
+  if (!card?.id) return;
   selectedCardForDelete.value = card;
   showDeleteModal.value = true;
 }
 
 async function deleteCard() {
-  if (!selectedCardForDelete.value) return;
-  
+  const card = selectedCardForDelete.value;
+  if (!card?.id) return;
+
   try {
     deletingCard.value = true;
     error.value = '';
-    
-    await businessCardService.deleteCard(selectedCardForDelete.value.id);
-    
+
+    await businessCardService.deleteCard(card.id);
+
     // Remove the card from the local state
-    const index = businessCards.value.findIndex(c => c.id === selectedCardForDelete.value.id);
+    const index = businessCards.value.findIndex((c) => c.id === card.id);
     if (index !== -1) {
       businessCards.value.splice(index, 1);
     }
-    
+    if (cardDrafts.value[card.id]) {
+      delete cardDrafts.value[card.id];
+    }
+
     // Close the modal
     showDeleteModal.value = false;
     selectedCardForDelete.value = null;
   } catch (err) {
-    error.value = 'Error deleting business card';
+    error.value = err?.message || 'Error deleting business card';
     console.error(err);
   } finally {
     deletingCard.value = false;
