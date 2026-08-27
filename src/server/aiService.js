@@ -16,7 +16,7 @@ const OPENAI_CHAT_MODEL =
   (process.env.OPENAI_MODEL && String(process.env.OPENAI_MODEL).trim()) ||
   (process.env.OPENAI_CHAT_MODEL && String(process.env.OPENAI_CHAT_MODEL).trim()) ||
   (process.env.VITE_OPENAI_MODEL && String(process.env.VITE_OPENAI_MODEL).trim()) ||
-  'gpt-5.5';
+  'gpt-4o';
 
 let client;
 function getClient() {

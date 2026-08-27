@@ -931,12 +931,15 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
 
           // Bottom Actions
           .flex.justify-end.gap-4.mt-6.pt-4.border-t.border-gray-100
+            p.text-sm.text-red-600.mr-auto.max-w-xs(
+              v-if="draftGenError"
+            ) {{ draftGenError }}
             button(
               class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300"
-              @click="showConfirmModal = false"
+              @click="showConfirmModal = false; draftGenError = ''"
             ) Close
             button(
-              class="bg-emerald-500 text-white hover:bg-emerald-600 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center gap-2"
+              class="bg-emerald-500 text-white hover:bg-emerald-600 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center gap-2 disabled:opacity-50"
               @click="proceedWithGeneration"
               :disabled="generatingDraft === selectedCardForGeneration?.id"
             )
@@ -1407,6 +1410,7 @@ const showDraftsModal = ref(false);
 const emailDrafts = ref({});
 const cardDrafts = ref({});
 const generatingDraft = ref(null);
+const draftGenError = ref('');
 const loadingDrafts = ref({});
 const expandedDrafts = ref({});
 const showConfirmModal = ref(false);
@@ -1983,6 +1987,7 @@ async function generateEmailDraft(card) {
   try {
     generatingDraft.value = card.id;
     error.value = '';
+    draftGenError.value = '';
     
     const draft = await businessCardService.generateEmailDraft(card);
     if(import.meta.env.VITE_APP_ENV === 'development') {
@@ -2005,11 +2010,12 @@ async function generateEmailDraft(card) {
     if (err.type === 'PLAN_LIMIT') {
       showPlanLimitError(err.message);
     } else {
-      error.value = 'Error generating email draft';
+      const msg = err?.message || 'Error generating email draft';
+      draftGenError.value = msg;
+      error.value = msg;
     }
   } finally {
     generatingDraft.value = null;
-    selectedCardForGeneration.value = null;
   }
 }
 
@@ -2069,6 +2075,7 @@ function toggleDrafts(cardId) {
 
 function confirmGenerateEmail(card) {
   selectedCardForGeneration.value = card;
+  draftGenError.value = '';
   showConfirmModal.value = true;
 }
 
@@ -2077,6 +2084,7 @@ async function proceedWithGeneration() {
     try {
       generatingDraft.value = selectedCardForGeneration.value.id;
       error.value = '';
+      draftGenError.value = '';
       
       const draft = await businessCardService.generateEmailDraft(selectedCardForGeneration.value);
       if(import.meta.env.VITE_APP_ENV === 'development') {
@@ -2098,12 +2106,14 @@ async function proceedWithGeneration() {
       console.error('Error generating draft:', err);
       if (err.type === 'PLAN_LIMIT') {
         showPlanLimitError(err.message);
+        showConfirmModal.value = false;
       } else {
-        error.value = 'Error generating email draft';
+        const msg = err?.message || 'Error generating email draft';
+        draftGenError.value = msg;
+        error.value = msg;
       }
     } finally {
       generatingDraft.value = null;
-      selectedCardForGeneration.value = null;
     }
   }
 }

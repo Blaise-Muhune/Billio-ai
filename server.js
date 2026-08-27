@@ -1456,7 +1456,12 @@ expressApp.post('/api/ai/scan-extract', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('scan-extract failed:', error);
-    res.status(error.status || 500).json({ error: error.message || 'Scan failed' });
+    const status = error.status || (error.code === 'invalid_api_key' ? 503 : 500);
+    const message =
+      error.code === 'invalid_api_key' || error.status === 401
+        ? 'AI is misconfigured (invalid OpenAI API key). Update OPENAI_API_KEY on the server.'
+        : error.message || 'Scan failed';
+    res.status(status).json({ error: message });
   }
 });
 
@@ -1471,7 +1476,12 @@ expressApp.post('/api/ai/follow-up-draft', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('follow-up-draft failed:', error);
-    res.status(error.status || 500).json({ error: error.message || 'Draft failed' });
+    const status = error.status || (error.code === 'invalid_api_key' ? 503 : 500);
+    const message =
+      error.code === 'invalid_api_key' || error.status === 401
+        ? 'AI is misconfigured (invalid OpenAI API key). Update OPENAI_API_KEY on the server.'
+        : error.message || 'Draft failed';
+    res.status(status).json({ error: message });
   }
 });
 
