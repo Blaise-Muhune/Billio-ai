@@ -18,6 +18,12 @@ import { assertCronAuthorized } from './src/server/crons/helpers.js';
 import { runDailyCrons, runMaintenanceCrons } from './src/server/crons/index.js';
 import { runScanExtract, runFollowUpDraft } from './src/server/aiService.js';
 import crypto from 'crypto';
+import {
+  looksLikeFirebaseUid,
+  normalizePublicProfileSlug,
+  toPublicProfileDTO
+} from './src/utils/publicProfile.js';
+import { escapeHtml } from './src/server/crons/helpers.js';
 
 // Get the directory path of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -1490,6 +1496,107 @@ expressApp.post('/api/ai/follow-up-draft', async (req, res) => {
         ? 'AI is misconfigured (invalid OpenAI API key). Update OPENAI_API_KEY on the server.'
         : error.message || 'Draft failed';
     res.status(status).json({ error: message });
+  }
+});
+
+async function loadPublicProfileByParam(paramRaw) {
+  const param = String(paramRaw || '').trim();
+  if (!param) return null;
+
+  const slug = normalizePublicProfileSlug(param.toLowerCase());
+  if (slug) {
+    const slugSnap = await db
+      .collection('users')
+      .where('publicProfileSlug', '==', slug)
+      .limit(1)
+      .get();
+    if (!slugSnap.empty) {
+      const doc = slugSnap.docs[0];
+      return toPublicProfileDTO(doc.id, doc.data());
+    }
+  }
+
+  if (looksLikeFirebaseUid(param)) {
+    const byId = await db.collection('users').doc(param).get();
+    if (byId.exists) {
+      return toPublicProfileDTO(byId.id, byId.data());
+    }
+  }
+
+  return null;
+}
+
+/** Visitor-safe public profile JSON (no auth). */
+expressApp.get('/api/public-profile/:param', async (req, res) => {
+  try {
+    const profile = await loadPublicProfileByParam(req.params.param);
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+    res.json(profile);
+  } catch (error) {
+    console.error('public-profile failed:', error);
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
+});
+
+/** Open Graph HTML for crawlers / link previews. */
+expressApp.get('/api/og/profile/:param', async (req, res) => {
+  try {
+    const profile = await loadPublicProfileByParam(req.params.param);
+    const appUrl = (process.env.APP_URL || process.env.VITE_APP_URL || 'https://www.billoai.com').replace(
+      /\/$/,
+      ''
+    );
+    if (!profile) {
+      return res.status(404).type('html').send(`<!doctype html><html><head>
+        <meta charset="utf-8"/>
+        <title>Profile not found · BilloAI</title>
+        <meta name="robots" content="noindex"/>
+      </head><body><p>Profile not found.</p></body></html>`);
+    }
+
+    const pageUrl = `${appUrl}/profile/${profile.slug}`;
+    const name = profile.displayName || 'Profile';
+    const roleBits = [profile.title, profile.company].filter(Boolean).join(' · ');
+    const title = escapeHtml(roleBits ? `${name} · ${roleBits}` : `${name} · BilloAI`);
+    const description = escapeHtml(
+      (profile.bio && String(profile.bio).slice(0, 160)) ||
+        (roleBits ? `${name} — ${roleBits}` : `Connect with ${name} on BilloAI`)
+    );
+    const image = escapeHtml(profile.photoURL || '');
+    const safePage = escapeHtml(pageUrl);
+
+    res
+      .status(200)
+      .type('html')
+      .set('Cache-Control', 'public, max-age=120, s-maxage=600')
+      .send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>${title}</title>
+  <meta name="description" content="${description}"/>
+  <meta property="og:type" content="profile"/>
+  <meta property="og:title" content="${title}"/>
+  <meta property="og:description" content="${description}"/>
+  <meta property="og:url" content="${safePage}"/>
+  ${image ? `<meta property="og:image" content="${image}"/>` : ''}
+  <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}"/>
+  <meta name="twitter:title" content="${title}"/>
+  <meta name="twitter:description" content="${description}"/>
+  ${image ? `<meta name="twitter:image" content="${image}"/>` : ''}
+  <link rel="canonical" href="${safePage}"/>
+  <meta http-equiv="refresh" content="0;url=${safePage}"/>
+</head>
+<body>
+  <p><a href="${safePage}">View ${escapeHtml(name)} on BilloAI</a></p>
+</body>
+</html>`);
+  } catch (error) {
+    console.error('og profile failed:', error);
+    res.status(500).type('html').send('<!doctype html><title>Error</title>');
   }
 });
 

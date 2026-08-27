@@ -4,590 +4,109 @@ meta:
 </route>
 
 <template lang="pug">
-main.billo-app-bg.font-sans
-  .max-w-2xl.mx-auto(class="px-4 sm:px-6 lg:px-8 py-8")
-    //- Loading State
-    .flex.justify-center.items-center(class="min-h-[60vh]" v-if="loading")
+main.public-profile.min-h-screen.font-sans
+  .mx-auto.max-w-lg(class="px-4 py-10 sm:px-6 sm:py-14")
+    .flex.min-h-60.items-center.justify-center(v-if="loading")
       .loading-spinner
 
-    //- Error State
     .text-center.py-12(v-else-if="error")
-      VaIcon(name="error" size="48px" class="text-red-500 mx-auto mb-4")
-      h2.mb-2.text-2xl.font-bold.text-slate-900 {{ error }}
-      p.mb-6.text-slate-600 We couldn't find this profile. It might have been removed or is no longer available.
-      button(
-        class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 mx-auto"
-        @click="router.push('/home')"
-      )
-        VaIcon(name="home" size="18px")
-        span(class="font-medium") Return Home
-
-    //- Profile Content
-    .mt-8(v-else-if="profile")
-      //- Profile Header Card
-      .billo-card-elevated.billo-motion.overflow-hidden
-        //- Profile Header with Image
-        .relative.bg-gradient-to-r.from-emerald-500.to-teal-500.px-6.pt-12.pb-24(class="sm:px-8")
-          .absolute.inset-0.bg-black.opacity-10
-          .relative.z-10.flex.flex-col.items-center
-            //- Profile image (initials fallback when missing or broken — no dead /default-avatar.png)
-            .relative.mb-4.group
-              div(class="w-32 h-32 rounded-2xl overflow-hidden shadow-lg border-4 border-white transition-transform duration-200 group-hover:scale-105 bg-gradient-to-br from-emerald-900 to-teal-950 flex items-center justify-center")
-                img(
-                  v-if="showProfilePhoto"
-                  :src="profile.photoURL"
-                  class="w-full h-full object-cover min-h-full min-w-full"
-                  alt="Profile picture"
-                  referrerpolicy="no-referrer"
-                  @error="onProfileAvatarError"
-                )
-                span(
-                  v-else
-                  class="text-3xl font-bold text-white/95 tracking-tight select-none"
-                  role="img"
-                  :aria-label="'Profile initials: ' + profileInitials"
-                ) {{ profileInitials }}
-              //- Verified Badge
-              .absolute(
-                class="-bottom-2 -right-2 bg-white text-emerald-500 p-1.5 rounded-xl shadow-lg"
-                v-if="profile.profileCompleted"
-              )
-                VaIcon(name="verified" size="24px")
-            
-            //- Name and Title Section
-            h1.text-3xl.font-bold.text-white.mb-2(v-if="isOwner || profile.visibility?.nameTitle") {{ profile.displayName }}
-            .flex.items-center.gap-2.text-white.bg-black.bg-opacity-20.px-4.py-2.rounded-full(
-              v-if="(profile.company || profile.title) && (isOwner || profile.visibility?.nameTitle)"
-            )
-              VaIcon(name="business" size="20px")
-              span {{ [profile.title, profile.company].filter(Boolean).join(' at ') }}
-              // Add visibility toggle for name/title
-              button(
-                v-if="isOwner"
-                @click.stop.prevent="toggleVisibility('nameTitle')"
-                class="ml-2 p-1 rounded-full hover:bg-white/10 transition-colors"
-                :title="profile.visibility?.nameTitle ? 'Hide from public' : 'Show to public'"
-              )
-                VaIcon(
-                  :name="profile.visibility?.nameTitle ? 'visibility' : 'visibility_off'"
-                  size="16px"
-                  class="text-white"
-                )
-            
-            //- Bio Section - Moved next to name and title
-            .text-white.text-center.mt-4.mb-4.max-w-xl.mx-auto(v-if="profile.bio && (isOwner || profile.visibility?.bio)")
-              .flex.items-center.justify-center.gap-2
-                p.text-sm.leading-relaxed {{ profile.bio }}
-                // Add visibility toggle for bio
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('bio')"
-                  class="p-1 rounded-full hover:bg-white/10 transition-colors"
-                  :title="profile.visibility?.bio ? 'Hide from public' : 'Show to public'"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.bio ? 'visibility' : 'visibility_off'"
-                    size="16px"
-                    class="text-white"
-                  )
-
-            //- Contact Information - Integrated with header
-            .flex.flex-wrap.justify-center.gap-3.mt-3.max-w-lg.w-full(
-              v-if="isOwner || (profile.email && profile.visibility?.email) || (profile.phone && profile.visibility?.phone) || (hasAddress && profile.visibility?.address)"
-            )
-              //- Email
-              .flex.items-center.gap-2.rounded-full(
-                class="px-3 py-1.5 bg-white bg-opacity-20"
-                v-if="profile.email && (isOwner || profile.visibility?.email)"
-              )
-                VaIcon(name="email" size="16px" class="text-white")
-                a.text-xs.text-white.truncate(:href="'mailto:' + profile.email") {{ profile.email }}
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('email')"
-                  class="p-1 rounded-full hover:bg-white/10"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.email ? 'visibility' : 'visibility_off'"
-                    size="14px"
-                    class="text-white"
-                  )
-
-              //- Phone
-              .flex.items-center.gap-2.rounded-full(
-                class="px-3 py-1.5 bg-white bg-opacity-20"
-                v-if="profile.phone && (isOwner || profile.visibility?.phone)"
-              )
-                VaIcon(name="phone" size="16px" class="text-white")
-                a.text-xs.text-white.truncate(:href="'tel:' + profile.phone") {{ profile.phone }}
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('phone')"
-                  class="p-1 rounded-full hover:bg-white/10"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.phone ? 'visibility' : 'visibility_off'"
-                    size="14px"
-                    class="text-white"
-                  )
-                
-              //- Address
-              .flex.items-center.gap-2.rounded-full(
-                class="px-3 py-1.5 bg-white bg-opacity-20"
-                v-if="hasAddress && (isOwner || profile.visibility?.address)"
-              )
-                VaIcon(name="location_on" size="16px" class="text-white")
-                span.text-xs.text-white.truncate {{ formattedAddress }}
-                button(
-                  v-if="isOwner"
-                  @click.stop.prevent="toggleVisibility('address')"
-                  class="p-1 rounded-full hover:bg-white/10"
-                )
-                  VaIcon(
-                    :name="profile.visibility?.address ? 'visibility' : 'visibility_off'"
-                    size="14px"
-                    class="text-white"
-                  )
-            
-            //- Save Contact Button
-            button(
-              class="mt-5 w-full sm:w-auto bg-white text-emerald-700 px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 mx-auto font-medium"
-              @click="saveContact"
-            )
-              VaIcon(name="person_add" size="20px")
-              span.text-base Save to Contacts
-              VaIcon(name="download" size="18px" class="ml-1")
-
-        //- Remove the divider and adjust spacing
-        .px-6.pt-6.pb-8(
-          class="sm:px-8" 
-          v-if="hasSocialLinks || hasMusicLinks || (profile.github && (isOwner || profile.visibility?.github)) || (profile.otherLink && (isOwner || profile.visibility?.otherLink))"
-        )
-          .max-w-2xl.mx-auto
-            //- Remove the section headers with "My Links" title
-            .flex.items-center.justify-end.mb-2(v-if="isOwner")
-              button(
-                @click="router.push('/profile-setup')"
-                class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              )
-                VaIcon(name="edit" size="18px" class="text-gray-600")
-
-            //- Links Grid - Redesigned for better compact layout
-            .grid(class="grid-cols-2 sm:grid-cols-3 gap-3 max-w-xl mx-auto")
-              //- LinkedIn Link
-              .rounded-lg.bg-white.border(
-                class="border-[#0A66C2]/30 shadow-sm overflow-hidden"
-                v-if="profile.linkedin && (isOwner || profile.visibility?.linkedin)"
-              )
-                a(:href="formatSocialLink(profile.linkedin, 'linkedin')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#0A66C2]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#0A66C2]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z")
-                    .text-xs.font-medium.text-gray-900 LinkedIn
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('linkedin')"
-                      class="bg-[#0A66C2]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.linkedin ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.linkedin ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#0A66C2]"
-                      )
-
-              //- Twitter Link
-              .rounded-lg.bg-white.border(
-                class="border-black/30 shadow-sm overflow-hidden"
-                v-if="profile.twitter && (isOwner || profile.visibility?.twitter)"
-              )
-                a(:href="formatSocialLink(profile.twitter, 'twitter')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-black/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z")
-                    .text-xs.font-medium.text-gray-900 Twitter
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('twitter')"
-                      class="bg-black/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.twitter ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.twitter ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-gray-700"
-                      )
-
-              //- TikTok Link
-              .rounded-lg.bg-white.border(
-                class="border-black/30 shadow-sm overflow-hidden"
-                v-if="profile.tiktok && (isOwner || profile.visibility?.tiktok)"
-              )
-                a(:href="formatSocialLink(profile.tiktok, 'tiktok')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-black/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(
-                          fill="currentColor"
-                          d="M19.321 5.562a5.122 5.122 0 0 1-.443-.258 6.228 6.228 0 0 1-1.138-1.009 6.268 6.268 0 0 1-1.362-2.638h.004C16.326.924 16.322.5 16.322.5h-3.217v15.093c0 .42-.003 1.685-.987 2.621-.616.585-1.417.875-2.369.875-2.362 0-3.571-2.017-3.571-3.938 0-1.967 1.268-3.865 3.479-3.865.365 0 .758.05 1.137.153v-3.325c-.375-.055-.752-.082-1.127-.083-2.358 0-4.125.871-5.261 2.355C3.18 11.668 2.6 13.397 2.6 15.129c0 1.719.574 3.336 1.617 4.552 1.276 1.487 3.093 2.319 5.11 2.319 1.815 0 3.505-.647 4.769-1.822 1.369-1.271 2.127-3.033 2.127-4.951V8.456c1.123.778 2.434 1.193 3.778 1.193V6.5c-.006 0-1.11.052-1.68-.938z"
-                        )
-                    .text-xs.font-medium.text-gray-900 TikTok
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('tiktok')"
-                      class="bg-black/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.tiktok ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.tiktok ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-gray-700"
-                      )
-
-              //- Instagram Link
-              .rounded-lg.bg-white.border(
-                class="border-[#E4405F]/30 shadow-sm overflow-hidden"
-                v-if="profile.instagram && (isOwner || profile.visibility?.instagram)"
-              )
-                a(:href="formatSocialLink(profile.instagram, 'instagram')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#E4405F]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#E4405F]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z")
-                    .text-xs.font-medium.text-gray-900 Instagram
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('instagram')"
-                      class="bg-[#E4405F]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.instagram ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.instagram ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#E4405F]"
-                      )
-
-              //- Facebook Link
-              .rounded-lg.bg-white.border(
-                class="border-[#1877F2]/30 shadow-sm overflow-hidden"
-                v-if="profile.facebook && (isOwner || profile.visibility?.facebook)"
-              )
-                a(:href="formatSocialLink(profile.facebook, 'facebook')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#1877F2]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#1877F2]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z")
-                    .text-xs.font-medium.text-gray-900 Facebook
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('facebook')"
-                      class="bg-[#1877F2]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.facebook ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.facebook ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#1877F2]"
-                      )
-
-              //- GitHub Link
-              .rounded-lg.bg-white.border(
-                class="border-gray-900/30 shadow-sm overflow-hidden"
-                v-if="profile.github && (isOwner || profile.visibility?.github)"
-              )
-                a(:href="formatSocialLink(profile.github, 'github')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-gray-900/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-gray-900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.022A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.291 2.747-1.022 2.747-1.022.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z")
-                    .text-xs.font-medium.text-gray-900 GitHub
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('github')"
-                      class="bg-gray-900/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.github ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.github ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-gray-700"
-                      )
-
-              //- Spotify Link
-              .rounded-lg.bg-white.border(
-                class="border-[#1DB954]/30 shadow-sm overflow-hidden"
-                v-if="profile.spotify && (isOwner || profile.visibility?.spotify)"
-              )
-                a(:href="formatSocialLink(profile.spotify, 'spotify')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#1DB954]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#1DB954]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.201.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z")
-                    .text-xs.font-medium.text-gray-900 Spotify
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('spotify')"
-                      class="bg-[#1DB954]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.spotify ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.spotify ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#1DB954]"
-                      )
-
-              //- SoundCloud Link
-              .rounded-lg.bg-white.border(
-                class="border-[#FF3300]/30 shadow-sm overflow-hidden"
-                v-if="profile.soundcloud && (isOwner || profile.visibility?.soundcloud)"
-              )
-                a(:href="formatSocialLink(profile.soundcloud, 'soundcloud')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#FF3300]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#FF3300]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.042.099-.098l.255-2.105-.255-2.154c-.009-.06-.049-.1-.099-.1m-.899-1.574c-.05 0-.091.042-.096.1l-.169 3.728.169 3.674c.005.058.046.1.096.1.049 0 .092-.042.097-.1l.192-3.674-.192-3.728c-.005-.058-.048-.1-.097-.1m2.85-2.375c-.062 0-.112.051-.119.116l-.203 6.08.203 6.016c.007.065.057.116.119.116.061 0 .111-.051.117-.116l.23-6.016-.23-6.08c-.006-.065-.056-.116-.117-.116m.994-1.147c-.076 0-.138.062-.14.144l-.187 7.198.187 7.128c.002.082.064.144.14.144.075 0 .136-.062.138-.144l.213-7.128-.213-7.198c-.002-.082-.063-.144-.138-.144m1.093-1.021c-.086 0-.155.07-.158.162l-.174 8.37.174 8.298c.003.092.072.162.158.162.086 0 .155-.07.157-.162l.199-8.298-.199-8.37c-.002-.092-.071-.162-.157-.162m1.192-1.115c-.098 0-.176.079-.18.18l-.16 9.467.16 9.398c.004.102.082.18.18.18.097 0 .175-.078.178-.18l.183-9.398-.183-9.467c-.003-.101-.081-.18-.178-.18m1.288-1.209c-.008-.104-.085-.183-.19-.183-.103 0-.183.079-.189.183l-.148 11.543.148 11.47c.006.104.086.183.189.183.104 0 .182-.079.19-.183l.169-11.47-.169-11.543m.837 23.198c.115 0 .208-.093.215-.208l.157-11.447-.157-11.55c-.007-.115-.1-.208-.215-.208-.116 0-.21.093-.217.208l-.139 11.55.139 11.447c.007.115.101.208.217.208m1.045 0c.125 0 .228-.1.236-.224l.146-11.431-.146-11.52c-.008-.124-.111-.224-.236-.224-.127 0-.231.1-.239.224l-.129 11.52.129 11.431c.008.124.112.224.239.224m1.057-.015c.137 0 .248-.111.256-.248l.135-11.392-.135-11.494c-.008-.137-.119-.248-.256-.248-.139 0-.25.111-.258.248l-.119 11.494.119 11.392c.008.137.119.248.258.248m1.063-.017c.148 0 .266-.119.275-.268l.124-11.355-.124-11.454c-.009-.149-.127-.268-.275-.268-.149 0-.268.119-.277.268l-.109 11.454.109 11.355c.009.149.128.268.277.268m1.076-.021c.159 0 .287-.128.296-.288l.114-11.314-.114-11.426c-.009-.16-.137-.288-.308-.296-.16 0-.288.128-.298.288l-.1 11.426.1 11.314c.01.16.138.288.298.288m1.086-.024c.17 0 .307-.137.315-.308l.104-11.271-.104-11.389c-.008-.171-.145-.308-.315-.308-.172 0-.31.137-.318.308l-.091 11.389.091 11.271c.008.171.146.308.318.308m1.099-.029c.181 0 .326-.146.336-.327l.094-11.227-.094-11.361c-.01-.181-.155-.327-.336-.327-.18 0-.327.146-.337.327l-.082 11.361.082 11.227c.01.181.157.327.337.327m1.107-.033c.192 0 .347-.154.357-.348l.084-11.173-.084-11.322c-.01-.193-.165-.348-.357-.348-.19 0-.346.155-.356.348l-.073 11.322.073 11.173c.01.194.166.348.356.348m1.118-.037c.202 0 .367-.164.377-.369l.074-11.115-.074-11.295c-.01-.204-.175-.368-.377-.368-.203 0-.368.164-.378.368l-.064 11.295.064 11.115c.01.205.175.369.378.369m1.127-.042c.213 0 .386-.173.397-.388l.065-11.054-.065-11.255c-.011-.214-.184-.387-.397-.397-.214 0-.387.173-.397.387l-.055 11.255.055 11.054c.01.215.183.388.397.388m1.137-.046c.224 0 .405-.182.416-.407l.055-10.989-.055-11.227c-.011-.225-.192-.407-.416-.407-.224 0-.407.182-.418.407l-.045 11.227.045 10.989c.011.225.194.407.418.407m1.148-.05c.234 0 .424-.19.435-.427l.046-10.919-.046-11.197c-.01-.236-.201-.426-.435-.426-.234 0-.426.19-.437.426l-.037 11.197.037 10.919c.01.237.203.427.437.427m1.735-.785l.001-10.612-.001-11.151c-.012-.247-.21-.445-.457-.445-.247 0-.445.198-.457.445l-.037 11.151.037 10.612c.012.248.21.445.457.445.247 0 .445-.197.457-.445M24 12.945V11.55c-.001-2.212-1.794-4.005-4.006-4.005-.856 0-1.658.27-2.327.736C17.27 4.836 14.51 2 11.036 2c-.723 0-1.431.144-2.047.414-.306.135-.386.252-.386.504v15.984c.002.276.224.499.5.499h10.889c2.212-.001 4.007-1.795 4.007-4.006v-.001l.001-.449z")
-                    .text-xs.font-medium.text-gray-900 SoundCloud
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('soundcloud')"
-                      class="bg-[#FF3300]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.soundcloud ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.soundcloud ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#FF3300]"
-                      )
-
-              //- YouTube Music Link
-              .rounded-lg.bg-white.border(
-                class="border-[#FF0000]/30 shadow-sm overflow-hidden"
-                v-if="profile.youtubeMusic && (isOwner || profile.visibility?.youtubeMusic)"
-              )
-                a(:href="formatSocialLink(profile.youtubeMusic, 'youtubeMusic')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#FF0000]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#FF0000]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M23.498 6.69a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z")
-                    .text-xs.font-medium.text-gray-900 YouTube
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('youtubeMusic')"
-                      class="bg-[#FF0000]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.youtubeMusic ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.youtubeMusic ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#FF0000]"
-                      )
-
-              //- Apple Music
-              .rounded-lg.bg-white.border(
-                class="border-[#FA2C55]/30 shadow-sm overflow-hidden"
-                v-if="profile.appleMusic && (isOwner || profile.visibility?.appleMusic)"
-              )
-                a(:href="formatSocialLink(profile.appleMusic, 'appleMusic')" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-[#FA2C55]/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-[#FA2C55]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701")
-                    .text-xs.font-medium.text-gray-900 Apple Music
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('appleMusic')"
-                      class="bg-[#FA2C55]/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.appleMusic ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.appleMusic ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-[#FA2C55]"
-                      )
-
-              //- Other Link
-              .rounded-lg.bg-white.border(
-                class="border-gray-900/30 shadow-sm overflow-hidden"
-                v-if="profile.otherLink && (isOwner || profile.visibility?.otherLink)"
-              )
-                a(:href="formatSocialLink(profile.otherLink)" target="_blank" rel="noopener noreferrer" class="block h-full")
-                  .flex.flex-col.items-center.py-3.px-2.text-center
-                    .rounded-full(class="bg-gray-900/10 p-2 mb-2")
-                      svg.w-5.h-5(class="text-gray-900" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24")
-                        path(fill="currentColor" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z")
-                    .text-xs.font-medium.text-gray-900 Other Link
-                    //- Visibility Toggle
-                    button.mt-1(
-                      v-if="isOwner"
-                      @click.stop.prevent="toggleVisibility('otherLink')"
-                      class="bg-gray-900/5 rounded-full p-1 inline-flex"
-                      :title="profile.visibility?.otherLink ? 'Hide from public' : 'Show to public'"
-                    )
-                      VaIcon(
-                        :name="profile.visibility?.otherLink ? 'visibility' : 'visibility_off'"
-                        size="14px"
-                        class="text-gray-700"
-                      )
-
-              //- Custom Links Section
-              template(v-if="profile.customLinks && profile.customLinks.length > 0")
-                template(v-for="(link, index) in profile.customLinks" :key="index")
-                  .rounded-lg.bg-white.border(
-                    class="border-gray-900/30 shadow-sm overflow-hidden"
-                    v-if="isOwner || profile.visibility?.customLinks[index] !== false"
-                  )
-                    a(:href="formatSocialLink(link.url)" target="_blank" rel="noopener noreferrer" class="block h-full")
-                      .flex.flex-col.items-center.py-3.px-2.text-center
-                        .rounded-full(class="bg-white p-2 mb-2 border border-gray-100")
-                          CustomLinkIcon(:link="link" img-class="w-5 h-5 object-contain")
-                        .text-xs.font-medium.text-gray-900 {{ link.name }}
-                        //- Visibility Toggle
-                        button.mt-1(
-                          v-if="isOwner"
-                          @click.stop.prevent="toggleCustomLinkVisibility(index)"
-                          class="bg-gray-900/5 rounded-full p-1 inline-flex"
-                          :title="getCustomLinkVisibility(index) ? 'Hide from public' : 'Show to public'"
-                        )
-                          VaIcon(
-                            :name="profile.visibility?.customLinks[index] !== false ? 'visibility' : 'visibility_off'"
-                            size="14px"
-                            class="text-gray-700"
-                          )
-
-    //- Call to Action (for non-subscribed users)
-    .mt-6(v-if="!isPremium")
-      .bg-gradient-to-br.from-emerald-50.to-teal-50.rounded-2xl.border.border-emerald-100.p-8
-        //- Remove Button for Owner
+      VaIcon(name="person_off" size="48px" class="mx-auto mb-4 text-slate-400")
+      h1.mb-2.text-2xl.font-bold.text-slate-900 {{ error }}
+      p.mb-6.text-slate-600 {{ errorHint }}
+      .flex.flex-wrap.items-center.justify-center.gap-3
+        router-link(
+          v-if="isOwnerPreviewBlocked"
+          to="/profile-setup#go-live"
+          class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+        ) Finish Go live
         button(
-          v-if="isOwner"
-          @click="showUpgradePrompt = true"
-          class="mb-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 flex items-center gap-2"
+          type="button"
+          class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          @click="router.push(user ? '/home' : '/')"
+        ) {{ user ? 'Back home' : 'BilloAI home' }}
+
+    article.contact-card(v-else-if="profile")
+      header.contact-card__hero
+        .contact-card__avatar
+          img(
+            v-if="showProfilePhoto"
+            :src="profile.photoURL"
+            alt=""
+            referrerpolicy="no-referrer"
+            @error="onProfileAvatarError"
+          )
+          span(v-else aria-hidden="true") {{ profileInitials }}
+        h1.contact-card__name {{ profile.displayName || 'Contact' }}
+        p.contact-card__role(v-if="roleLine") {{ roleLine }}
+        p.contact-card__bio(v-if="profile.bio") {{ profile.bio }}
+        p.contact-card__owner(v-if="isOwner") This is how others see your live card
+          router-link.contact-card__owner-link(to="/profile-setup") Edit profile
+
+      .contact-card__cta
+        button.contact-card__primary(
+          type="button"
+          @click="saveContact"
         )
-          VaIcon(name="delete" size="20px")
-          span Remove
-
-        //- Header
-        .text-center.mb-8
-          .inline-flex.items-center.justify-center.w-16.h-16.rounded-full.bg-emerald-500.bg-opacity-10.mb-4
-            VaIcon(
-              name="qr_code_2"
-              size="32px"
-              class="text-emerald-500"
-            )
-          h3.text-2xl.font-semibold.text-gray-900.mb-3 Create Your Own Digital Business Card
-          p.text-gray-600.max-w-md.mx-auto Join BilloAI and unlock powerful networking tools
-
-        //- Features Grid
-        .grid.gap-6.mb-8(class="sm:grid-cols-3")
-          //- Smart QR Feature
-          .bg-white.rounded-xl.p-6.border.border-gray-100.text-center(
-            class="shadow-sm hover:shadow-md transition-all duration-300"
+          VaIcon(name="person_add" size="20px")
+          span Add me to contacts
+        .contact-card__quick(v-if="hasQuickActions")
+          a.contact-card__chip(
+            v-if="profile.email"
+            :href="'mailto:' + profile.email"
           )
-            .inline-flex.items-center.justify-center.w-14.h-14.rounded-xl.bg-emerald-50.mb-4.mx-auto
-              VaIcon(name="qr_code_2" size="28px" class="text-emerald-500")
-            h4.font-semibold.text-gray-900.mb-2 Smart QR Business Cards
-            p.text-sm.text-gray-600.leading-relaxed Say goodbye to paper cards. Share your contact info instantly with a scannable QR code that never runs out
-          
-          //- Digital Profile Feature
-          .bg-white.rounded-xl.p-6.border.border-gray-100.text-center(
-            class="shadow-sm hover:shadow-md transition-all duration-300"
+            VaIcon(name="email" size="18px")
+            span Email
+          a.contact-card__chip(
+            v-if="profile.phone"
+            :href="'tel:' + profile.phone"
           )
-            .inline-flex.items-center.justify-center.w-14.h-14.rounded-xl.bg-emerald-50.mb-4.mx-auto
-              VaIcon(name="person" size="28px" class="text-emerald-500")
-            h4.font-semibold.text-gray-900.mb-2 Professional Profile
-            p.text-sm.text-gray-600.leading-relaxed Create a stunning digital presence that showcases your brand, contact info, and social links in one place
-          
-          //- Card Management Feature
-          .bg-white.rounded-xl.p-6.border.border-gray-100.text-center(
-            class="shadow-sm hover:shadow-md transition-all duration-300"
+            VaIcon(name="phone" size="18px")
+            span Call
+          a.contact-card__chip(
+            v-if="profile.linkedin"
+            :href="formatSocialLink(profile.linkedin, 'linkedin')"
+            target="_blank"
+            rel="noopener noreferrer"
           )
-            .inline-flex.items-center.justify-center.w-14.h-14.rounded-xl.bg-emerald-50.mb-4.mx-auto
-              VaIcon(name="style" size="28px" class="text-emerald-500")
-            h4.font-semibold.text-gray-900.mb-2 Organized Contacts
-            p.text-sm.text-gray-600.leading-relaxed Keep all your business connections organized digitally - no more lost cards or outdated information
+            VaIcon(name="link" size="18px")
+            span LinkedIn
 
-        //- CTA Button
-        .text-center
-          button(
-            @click="router.push('/')"
-            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-3 mx-auto shadow-lg hover:shadow-xl group"
-          )
-            VaIcon(name="rocket_launch" size="24px")
-            span.font-medium.text-lg Try BilloAI Free
-            VaIcon(name="arrow_forward" size="24px" class="transition-transform duration-300 group-hover:translate-x-1")
+      ul.contact-card__details(v-if="hasDetailRows")
+        li(v-if="profile.email")
+          span.label Email
+          a(:href="'mailto:' + profile.email") {{ profile.email }}
+        li(v-if="profile.phone")
+          span.label Phone
+          a(:href="'tel:' + profile.phone") {{ profile.phone }}
+        li(v-if="hasAddress")
+          span.label Address
+          span {{ formattedAddress }}
 
-    //- Upgrade Prompt Modal
-    VaModal(
-      v-model="showUpgradePrompt"
-      :hide-default-actions="true"
-      class="billio-modal modal-container rounded-2xl z-[100]"
-    )
-      .p-8
-        h3.text-2xl.font-bold.mb-6 Upgrade to Premium
-        p.text-gray-600.mb-4 Enjoy more features by upgrading your plan.
-        .flex.justify-end.gap-4.mt-8
-          button(
-            class="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors duration-200"
-            @click="showUpgradePrompt = false"
-          ) Cancel
-          button(
-            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-            @click="router.push('/subscription')"
-          )
-            VaIcon(name="upgrade" size="16px")
-            span(class="font-medium") Upgrade Now
+      ul.contact-card__links(v-if="visibleLinks.length")
+        li(v-for="link in visibleLinks" :key="link.key")
+          a(:href="link.href" target="_blank" rel="noopener noreferrer")
+            span {{ link.label }}
+            VaIcon(name="open_in_new" size="14px")
 
-      //- Empty State
-      .text-center.py-12(v-if="!loading && !profile")
-        VaIcon(name="qr_code" size="48px" class="text-gray-400 mx-auto mb-4")
-        h2.text-2xl.font-bold.text-gray-900.mb-2 No Business Cards Yet
-        p.text-gray-600.mb-6 This user hasn't added any business cards to their profile yet.
-        button(
-          v-if="!user"
-          class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-2 mx-auto"
-          @click="signIn"
-        )
-          VaIcon(name="rocket_launch" size="18px")
-          span(class="font-medium") Join BilloAI to Connect
-
-  //- Sticky Create Button
-  .fixed.bottom-8.right-8.z-50(v-if="!isPremium")
-    button(
-      class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
-      @click="router.push('/')"
-    )
-      VaIcon(name="add" size="20px")
-      span.font-medium Create Mine
+      footer.contact-card__foot
+        a(href="https://www.billoai.com" target="_blank" rel="noopener noreferrer") BilloAI
+        span · network → follow up
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authService } from '../../services/authService';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  limit,
-  doc,
-  getDoc,
-  updateDoc
-} from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { paymentService } from '../../services/paymentService';
-import { displayNameInitials } from '../../utils/publicProfileSlug';
+import {
+  displayNameInitials,
+  looksLikeFirebaseUid,
+  normalizePublicProfileSlug,
+  toPublicProfileDTO,
+  applyPublicProfileDocumentMeta,
+  isPublicProfileLive
+} from '../../utils/publicProfile';
 
 const route = useRoute();
 const router = useRouter();
@@ -595,13 +114,90 @@ const user = ref(null);
 const profile = ref(null);
 const loading = ref(true);
 const error = ref('');
-const showUpgradePrompt = ref(false);
+const errorHint = ref("We couldn't find this profile. It might be private or no longer available.");
+const isOwnerPreviewBlocked = ref(false);
 const profileAvatarBroken = ref(false);
+let unsubAuth = null;
 
 const profileInitials = computed(() => displayNameInitials(profile.value?.displayName));
 const showProfilePhoto = computed(
   () => !!(profile.value?.photoURL && !profileAvatarBroken.value)
 );
+
+const isOwner = computed(() => {
+  return !!(user.value?.uid && profile.value?.id && user.value.uid === profile.value.id);
+});
+
+const roleLine = computed(() => {
+  if (!profile.value) return '';
+  return [profile.value.title, profile.value.company].filter(Boolean).join(' · ');
+});
+
+const hasAddress = computed(() => {
+  const p = profile.value;
+  return !!(p?.addressLine1 || p?.city || p?.state || p?.zipCode);
+});
+
+const formattedAddress = computed(() => {
+  if (!profile.value) return '';
+  return [
+    profile.value.addressLine1,
+    profile.value.addressLine2,
+    profile.value.city,
+    profile.value.state,
+    profile.value.zipCode
+  ]
+    .filter(Boolean)
+    .join(', ');
+});
+
+const hasQuickActions = computed(() => {
+  const p = profile.value;
+  return !!(p?.email || p?.phone || p?.linkedin);
+});
+
+const hasDetailRows = computed(() => {
+  const p = profile.value;
+  return !!(p?.email || p?.phone || hasAddress.value);
+});
+
+const LINK_DEFS = [
+  { key: 'linkedin', label: 'LinkedIn', platform: 'linkedin' },
+  { key: 'twitter', label: 'X / Twitter', platform: 'twitter' },
+  { key: 'instagram', label: 'Instagram', platform: 'instagram' },
+  { key: 'facebook', label: 'Facebook', platform: 'facebook' },
+  { key: 'tiktok', label: 'TikTok', platform: 'tiktok' },
+  { key: 'github', label: 'GitHub', platform: 'github' },
+  { key: 'otherLink', label: 'Website', platform: 'other' }
+];
+
+const visibleLinks = computed(() => {
+  const p = profile.value;
+  if (!p) return [];
+  const out = [];
+  for (const def of LINK_DEFS) {
+    const raw = p[def.key];
+    if (!raw) continue;
+    // LinkedIn already in quick actions
+    if (def.key === 'linkedin') continue;
+    out.push({
+      key: def.key,
+      label: def.label,
+      href: formatSocialLink(raw, def.platform)
+    });
+  }
+  if (Array.isArray(p.customLinks)) {
+    p.customLinks.forEach((link, i) => {
+      if (!link?.url) return;
+      out.push({
+        key: `custom-${link.id || i}`,
+        label: link.title || 'Link',
+        href: formatSocialLink(link.url, 'other')
+      });
+    });
+  }
+  return out;
+});
 
 watch(
   () => [profile.value?.id, profile.value?.photoURL],
@@ -614,87 +210,9 @@ function onProfileAvatarError() {
   profileAvatarBroken.value = true;
 }
 
-// Owner = logged-in user matches profile document id (works for /profile/:uid and /profile/:slug)
-const isOwner = computed(() => {
-  return !!(user.value?.uid && profile.value?.id && user.value.uid === profile.value.id);
-});
-
-// Add toggleVisibility function
-async function toggleVisibility(field) {
-  try {
-    if (!isOwner.value) return;
-    
-    // Initialize visibility object if it doesn't exist
-    if (!profile.value.visibility) {
-      profile.value.visibility = {
-        nameTitle: true,
-        bio: true,
-        email: true,
-        phone: true,
-        address: true,
-        linkedin: true,
-        twitter: true,
-        tiktok: true,
-        instagram: true,
-        facebook: true,
-        spotify: true,
-        soundcloud: true,
-        youtubeMusic: true,
-        appleMusic: true
-      };
-    }
-    
-    // Toggle the visibility state
-    profile.value.visibility[field] = !profile.value.visibility[field];
-    
-    // Update the profile in Firestore
-    const userRef = doc(db, 'users', user.value.uid);
-    await updateDoc(userRef, {
-      visibility: profile.value.visibility
-    });
-  } catch (err) {
-    console.error('Error toggling visibility:', err);
-    error.value = 'Failed to update visibility settings';
-  }
-}
-
-// Computed properties for profile data
-const hasAddress = computed(() => {
-  return profile.value?.addressLine1 || profile.value?.city || profile.value?.state || profile.value?.zipCode;
-});
-
-const formattedAddress = computed(() => {
-  if (!profile.value) return '';
-  
-  const parts = [
-    profile.value.addressLine1,
-    profile.value.addressLine2,
-    profile.value.city,
-    profile.value.state,
-    profile.value.zipCode
-  ].filter(Boolean);
-  
-  return parts.join(', ');
-});
-
-const hasSocialLinks = computed(() => {
-  return profile.value?.linkedin || profile.value?.twitter || profile.value?.instagram || profile.value?.facebook || profile.value?.tiktok;
-});
-
-const hasMusicLinks = computed(() => {
-  return profile.value?.spotify || profile.value?.soundcloud || profile.value?.youtubeMusic || profile.value?.appleMusic;
-});
-
-// Helper function to format social media links
 function formatSocialLink(url, platform) {
   if (!url) return '#';
-  
-  // If the URL already starts with http:// or https://, return as is
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  
-  // Platform-specific formatting
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
   switch (platform) {
     case 'tiktok':
       return `https://tiktok.com/${url.startsWith('@') ? url.slice(1) : url}`;
@@ -706,115 +224,165 @@ function formatSocialLink(url, platform) {
       return `https://linkedin.com/in/${url}`;
     case 'github':
       return `https://github.com/${url}`;
-    case 'spotify':
-      return `https://open.spotify.com/artist/${url}`;
-    case 'soundcloud':
-      return `https://soundcloud.com/${url}`;
-    case 'youtubeMusic':
-      return `https://music.youtube.com/channel/${url}`;
-    case 'appleMusic':
-      return `https://music.apple.com/${url}`;
     default:
-  return `https://${url}`;
+      return `https://${url}`;
   }
 }
 
-// Load profile data
+async function loadOwnerDoc(param) {
+  const uid = user.value?.uid;
+  if (!uid) return null;
+
+  if (param === uid || looksLikeFirebaseUid(param)) {
+    if (param !== uid) return null;
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (!snap.exists()) return null;
+    return { id: snap.id, data: snap.data() };
+  }
+
+  const slug = normalizePublicProfileSlug(param.toLowerCase());
+  if (!slug) return null;
+  const own = await getDoc(doc(db, 'users', uid));
+  if (!own.exists()) return null;
+  const data = own.data();
+  if (normalizePublicProfileSlug(data.publicProfileSlug || '') === slug) {
+    return { id: own.id, data };
+  }
+  return null;
+}
+
+async function loadPublicViaApi(param) {
+  const res = await fetch(`/api/public-profile/${encodeURIComponent(param)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('api_failed');
+  return res.json();
+}
+
 async function loadProfile() {
   try {
     loading.value = true;
     error.value = '';
-    
+    errorHint.value = "We couldn't find this profile. It might be private or no longer available.";
+    isOwnerPreviewBlocked.value = false;
+    profile.value = null;
+
     const param = String(route.params.username || '').trim();
     if (!param) {
       error.value = 'Profile not found';
       return;
     }
 
-    const byId = await getDoc(doc(db, 'users', param));
-    let userDoc = byId;
-
-    if (!byId.exists()) {
-      const slug = param.toLowerCase();
-      const slugSnap = await getDocs(
-        query(collection(db, 'users'), where('publicProfileSlug', '==', slug), limit(1))
-      );
-      if (slugSnap.empty) {
-        error.value = 'Profile not found';
-        return;
+    // Owner can always open their own card (even before go-live) via Firestore
+    const owned = await loadOwnerDoc(param);
+    if (owned) {
+      const dto = toPublicProfileDTO(owned.id, owned.data);
+      if (dto) {
+        profile.value = dto;
+      } else {
+        // Not live yet — still show a private preview for the owner
+        const v = owned.data.visibility || {};
+        profile.value = {
+          id: owned.id,
+          slug: normalizePublicProfileSlug(owned.data.publicProfileSlug || ''),
+          live: false,
+          displayName: owned.data.displayName || '',
+          title: owned.data.title || '',
+          company: owned.data.company || '',
+          bio: owned.data.bio || '',
+          photoURL: owned.data.photoURL || '',
+          email: v.email !== false ? owned.data.email || user.value?.email || '' : '',
+          phone: v.phone !== false ? owned.data.phone || '' : '',
+          addressLine1: v.address !== false ? owned.data.addressLine1 || '' : '',
+          addressLine2: v.address !== false ? owned.data.addressLine2 || '' : '',
+          city: v.address !== false ? owned.data.city || '' : '',
+          state: v.address !== false ? owned.data.state || '' : '',
+          zipCode: v.address !== false ? owned.data.zipCode || '' : '',
+          linkedin: v.linkedin !== false ? owned.data.linkedin || '' : '',
+          twitter: v.twitter !== false ? owned.data.twitter || '' : '',
+          instagram: v.instagram !== false ? owned.data.instagram || '' : '',
+          facebook: v.facebook !== false ? owned.data.facebook || '' : '',
+          tiktok: v.tiktok !== false ? owned.data.tiktok || '' : '',
+          github: v.github !== false ? owned.data.github || '' : '',
+          otherLink: v.otherLink !== false ? owned.data.otherLink || '' : '',
+          customLinks: Array.isArray(owned.data.customLinks) ? owned.data.customLinks : [],
+          profileCompleted: !!owned.data.profileCompleted
+        };
+        if (!isPublicProfileLive(owned.data)) {
+          errorHint.value =
+            'Your profile is not live yet. Finish the checklist so others can open this link.';
+        }
       }
-      userDoc = slugSnap.docs[0];
+      if (profile.value.slug && param === profile.value.id) {
+        await router.replace(`/profile/${profile.value.slug}`);
+      }
+      applyPublicProfileDocumentMeta(
+        profile.value,
+        typeof window !== 'undefined' ? window.location.href : ''
+      );
+      return;
     }
 
-    profile.value = {
-      id: userDoc.id,
-      ...userDoc.data()
-    };
-
-    // Prefer readable URL when visitor used legacy /profile/{uid} link
-    if (profile.value.publicProfileSlug && param === profile.value.id) {
-      await router.replace(`/profile/${profile.value.publicProfileSlug}`);
+    // Visitors: server projection only (works with rules + no client permission errors)
+    const publicProfile = await loadPublicViaApi(param);
+    if (!publicProfile) {
+      error.value = 'Profile not found';
+      // If a logged-in user hit a dead UID link that is themself without slug path handled above
+      if (user.value?.uid && param === user.value.uid) {
+        isOwnerPreviewBlocked.value = true;
+        error.value = 'Your profile is not live';
+        errorHint.value = 'Set a public link and go live so people can open your card.';
+      }
+      return;
     }
 
-    // Ensure visibility object exists
-    if (!profile.value.visibility) {
-      profile.value.visibility = {};
+    profile.value = publicProfile;
+    if (publicProfile.slug && looksLikeFirebaseUid(param)) {
+      await router.replace(`/profile/${publicProfile.slug}`);
     }
-    
-    // Ensure customLinks visibility object exists
-    if (!profile.value.visibility.customLinks) {
-      profile.value.visibility.customLinks = {};
-    }
-    
-    console.log('Profile loaded:', profile.value);
-    console.log('Visibility settings:', profile.value.visibility);
-    
-    // Check premium status after loading profile
-    await checkPremiumStatus();
-    
+    applyPublicProfileDocumentMeta(
+      profile.value,
+      typeof window !== 'undefined' ? window.location.href : ''
+    );
   } catch (err) {
     console.error('Error loading profile:', err);
     error.value = 'Failed to load profile';
+    errorHint.value = 'Please try again in a moment.';
   } finally {
     loading.value = false;
   }
 }
 
-// Save contact as vCard
 async function saveContact() {
   try {
+    if (!profile.value) return;
     const photoUrl =
-      profile.value?.photoURL && !profileAvatarBroken.value ? profile.value.photoURL : '';
-    
-    // Create vCard content
+      profile.value.photoURL && !profileAvatarBroken.value ? profile.value.photoURL : '';
+    const name = profile.value.displayName || 'Contact';
     const vCard = [
       'BEGIN:VCARD',
       'VERSION:3.0',
-      `FN:${profile.value.displayName}`,
-      `N:${profile.value.displayName.split(' ').reverse().join(';')}`,
+      `FN:${name}`,
+      `N:${name.split(' ').reverse().join(';')}`,
       profile.value.title ? `TITLE:${profile.value.title}` : '',
       profile.value.company ? `ORG:${profile.value.company}` : '',
       profile.value.email ? `EMAIL;type=INTERNET:${profile.value.email}` : '',
-      profile.value.phone ? `TEL;type=WORK:${profile.value.phone}` : '',
+      profile.value.phone ? `TEL;type=CELL:${profile.value.phone}` : '',
       hasAddress.value ? `ADR;type=WORK:;;${formattedAddress.value}` : '',
       photoUrl ? `PHOTO;VALUE=URL:${photoUrl}` : '',
-      profile.value.linkedin ? `URL;type=LinkedIn:${formatSocialLink(profile.value.linkedin, 'linkedin')}` : '',
-      profile.value.twitter ? `URL;type=Twitter:${formatSocialLink(profile.value.twitter, 'twitter')}` : '',
-      profile.value.instagram ? `URL;type=Instagram:${formatSocialLink(profile.value.instagram, 'instagram')}` : '',
-      profile.value.facebook ? `URL;type=Facebook:${formatSocialLink(profile.value.facebook, 'facebook')}` : '',
-      profile.value.spotify ? `URL;type=Spotify:${formatSocialLink(profile.value.spotify, 'spotify')}` : '',
-      profile.value.soundcloud ? `URL;type=SoundCloud:${formatSocialLink(profile.value.soundcloud, 'soundcloud')}` : '',
-      profile.value.youtubeMusic ? `URL;type=YouTube:${formatSocialLink(profile.value.youtubeMusic, 'youtubeMusic')}` : '',
-      profile.value.appleMusic ? `URL;type=AppleMusic:${formatSocialLink(profile.value.appleMusic, 'appleMusic')}` : '',
+      profile.value.linkedin
+        ? `URL;type=LinkedIn:${formatSocialLink(profile.value.linkedin, 'linkedin')}`
+        : '',
+      profile.value.otherLink ? `URL:${formatSocialLink(profile.value.otherLink, 'other')}` : '',
       'END:VCARD'
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
-    // Create blob and download link
     const blob = new Blob([vCard], { type: 'text/vcard' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${profile.value.displayName.replace(/\s+/g, '_')}.vcf`);
+    link.setAttribute('download', `${name.replace(/\s+/g, '_')}.vcf`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -825,70 +393,15 @@ async function saveContact() {
   }
 }
 
-// Auth functions
-async function signIn() {
-  try {
-    await authService.signInWithGoogle();
-    router.push('/home');
-  } catch (err) {
-    console.error('Error signing in:', err);
-    error.value = 'Failed to sign in';
-  }
-}
-
-// Add these functions to the script section
-function getCustomLinkVisibility(index) {
-  if (!profile.value?.visibility?.customLinks) {
-    return true;
-  }
-  // Check if the index exists in the customLinks visibility object
-  // If not present or undefined, default to true
-  // If explicitly false, return false
-  return profile.value.visibility.customLinks[index] !== false;
-}
-
-function toggleCustomLinkVisibility(index) {
-  try {
-    if (!isOwner.value) return;
-    
-    // Initialize visibility object if it doesn't exist
-    if (!profile.value.visibility) {
-      profile.value.visibility = {};
-    }
-    
-    // Initialize customLinks object in visibility if it doesn't exist
-    if (!profile.value.visibility.customLinks) {
-      profile.value.visibility.customLinks = {};
-    }
-    
-    // Get current state
-    const currentState = getCustomLinkVisibility(index);
-    
-    // Toggle the visibility state - explicitly set to true or false
-    profile.value.visibility.customLinks[index] = !currentState;
-    
-    // Log for debugging
-    console.log(`Toggling visibility for link ${index}: ${currentState} -> ${!currentState}`);
-    console.log('Updated visibility object:', profile.value.visibility);
-    
-    // Update the profile in Firestore with the complete visibility object
-    const userRef = doc(db, 'users', user.value.uid);
-    updateDoc(userRef, {
-      visibility: profile.value.visibility
-    });
-  } catch (err) {
-    console.error('Error toggling custom link visibility:', err);
-    error.value = 'Failed to update visibility settings';
-  }
-}
-
-// Initialize
-onMounted(async () => {
-  authService.onAuthStateChanged((newUser) => {
+onMounted(() => {
+  unsubAuth = authService.onAuthStateChanged(async (newUser) => {
     user.value = newUser;
+    await loadProfile();
   });
+});
 
-  await loadProfile();
+onUnmounted(() => {
+  if (typeof unsubAuth === 'function') unsubAuth();
 });
 
 watch(
@@ -897,93 +410,233 @@ watch(
     loadProfile();
   }
 );
-
-// Add isPremium ref and check in script section
-const isPremium = ref(false);
-
-// Add checkPremiumStatus function
-async function checkPremiumStatus() {
-  try {
-    if (!profile.value) return;
-    
-    // Check if the profile owner has a premium plan
-    const userRef = doc(db, 'users', profile.value.id);
-    const userDoc = await getDoc(userRef);
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      isPremium.value = userData.plan === 'PRO' || userData.plan === 'BASIC';
-    } else {
-      isPremium.value = false;
-    }
-  } catch (err) {
-    console.error('Error checking premium status:', err);
-    isPremium.value = false;
-  }
-}
 </script>
 
 <style scoped>
-/* Loading spinner animation */
+.public-profile {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(16, 185, 129, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(20, 184, 166, 0.1), transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top: 3px solid #ffffff;
+  border: 3px solid rgba(15, 23, 42, 0.12);
+  border-top-color: #0f766e;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Add smooth transition for the sticky button */
-.fixed button {
-  transition: all 0.3s ease;
-}
-
-/* Save contact button animations */
-.pulse-animation {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0; }
-  50% { opacity: 0.2; }
-}
-
-/* Button hover states */
-.group:hover .pulse-animation {
-  opacity: 0.2;
-}
-
-.group:hover .shine-container {
-  opacity: 1;
-}
-
-.group:hover .shine-effect {
-  animation: shine 1.5s ease-in;
-}
-
-.group:hover .download-icon {
-  transform: translateY(1px);
-}
-
-.group:hover .transform {
-  transform: scale(1.1);
-}
-
-/* Shine effect for the button */
-@keyframes shine {
-  100% {
-    left: 125%;
+  to {
+    transform: rotate(360deg);
   }
 }
 
-/* Button scale effect on click */
-.save-contact-btn:active {
+.contact-card {
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 18px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.contact-card__hero {
+  padding: 2rem 1.5rem 1.25rem;
+  text-align: center;
+  background: linear-gradient(160deg, #0f766e 0%, #134e4a 55%, #0b3b36 100%);
+  color: #fff;
+}
+
+.contact-card__avatar {
+  margin: 0 auto 1rem;
+  display: flex;
+  height: 5.5rem;
+  width: 5.5rem;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(145deg, #115e59, #042f2e);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.contact-card__avatar img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.contact-card__name {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.contact-card__role {
+  margin: 0.4rem 0 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.contact-card__bio {
+  margin: 0.85rem auto 0;
+  max-width: 28rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.contact-card__owner {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.contact-card__owner-link {
+  margin-left: 0.35rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.contact-card__cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.25rem 0.5rem;
+}
+
+.contact-card__primary {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #059669, #0d9488);
+  padding: 0.9rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.28);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.contact-card__primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(5, 150, 105, 0.35);
+}
+
+.contact-card__primary:active {
   transform: scale(0.98);
+}
+
+.contact-card__quick {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.contact-card__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #f8fafc;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.contact-card__chip:hover {
+  background: #f1f5f9;
+}
+
+.contact-card__details {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0 1.25rem;
+}
+
+.contact-card__details li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 0.75rem 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.contact-card__details .label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.contact-card__details a {
+  color: #0f766e;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.contact-card__links {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 1.25rem 1rem;
+}
+
+.contact-card__links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 0.7rem 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.contact-card__links a:hover {
+  color: #0f766e;
+}
+
+.contact-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 0.85rem 1rem 1.1rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.contact-card__foot a {
+  font-weight: 600;
+  color: #0f766e;
+  text-decoration: none;
 }
 </style>

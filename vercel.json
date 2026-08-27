@@ -19,6 +19,17 @@
       "dest": "server.js"
     },
     {
+      "src": "/profile/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot).*"
+        }
+      ],
+      "dest": "/api/og/profile/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {

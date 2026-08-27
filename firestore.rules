@@ -17,7 +17,9 @@ service cloud.firestore {
 
     function isPublicProfile() {
       return resource.data.publicProfileSlug is string &&
-        resource.data.publicProfileSlug.size() > 0;
+        resource.data.publicProfileSlug.size() >= 3 &&
+        // Explicit false opts out; missing flag + slug = legacy live
+        resource.data.get('publicProfileLive', true) == true;
     }
 
     function isValidUsageUpdate() {

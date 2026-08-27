@@ -35,7 +35,7 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               span.billo-home-modes__count(v-if="pendingFollowUpCount > 0") {{ pendingFollowUpCount }}
           p.billo-home-modes__hint
             template(v-if="homeMode === 'capture'") Snap a card or contact screenshot while you’re still talking.
-            template(v-else) Open a draft in Gmail or Outlook — send from your own inbox.
+            template(v-else) Contacts you’ve saved — follow up when you’re ready.
 
         // Soft verify notice (doesn't scream; still blocks capture actions)
         .billo-verify-soft.mb-6#billo-verify(v-if="user && !user.emailVerified")
@@ -315,6 +315,31 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
           // Business Cards Section
           div
             .billo-panel-premium.billo-motion.p-4(class="sm:p-6")
+              // Pending vs followed-up tabs
+              .mb-5.flex.flex-wrap.items-center.gap-2
+                button(
+                  type="button"
+                  role="tab"
+                  :aria-selected="followUpTab === 'pending'"
+                  class="rounded-lg border px-3 py-2 text-sm font-semibold transition-colors"
+                  :class="followUpTab === 'pending' ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
+                  @click="followUpTab = 'pending'"
+                )
+                  | To follow up
+                  span.ml-2.rounded-full.bg-emerald-100.px-2.py-1.text-xs.font-bold.text-emerald-800 {{ pendingCardCount }}
+                button(
+                  type="button"
+                  role="tab"
+                  :aria-selected="followUpTab === 'done'"
+                  class="rounded-lg border px-3 py-2 text-sm font-semibold transition-colors"
+                  :class="followUpTab === 'done' ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
+                  @click="followUpTab = 'done'"
+                )
+                  | Followed up
+                  span.ml-2.rounded-full.px-2.py-1.text-xs.font-bold(
+                    :class="followUpTab === 'done' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'"
+                  ) {{ followedUpCardCount }}
+
               // Search Bar Section
               .mb-6.rounded-2xl.border.p-4(
                 class="border-slate-200/70 bg-slate-50/40 sm:p-5"
@@ -457,264 +482,241 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                   class="col-span-full flex flex-col items-center justify-center py-12 px-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 max-w-2xl mx-auto"
                 )
                   VaIcon(name="search_off" size="48px" class="text-gray-400 mb-4")
-                  p.text-gray-700.text-center.text-lg.font-semibold.mb-1 No follow-ups yet
-                  p.text-sm.text-gray-500.text-center(v-if="searchQuery") 
-                    | No people match your search. Try different keywords or clear the search.
-                  template(v-else)
+                  template(v-if="followUpTab === 'done'")
+                    p.text-gray-700.text-center.text-lg.font-semibold.mb-1 No followed-up contacts yet
                     p.text-sm.text-gray-500.text-center.mb-6.max-w-md
-                      | Scan someone you just met — card photo or contact screenshot — we’ll draft a warm note you can send from Gmail or Outlook before you leave.
-                    ol.text-sm.text-gray-600.text-left.max-w-md.space-y-3.mb-8.list-decimal.pl-5
-                      li
-                        span.font-medium.text-gray-800 Scan
-                        |  their card or a screenshot of their contact.
-                      li
-                        span.font-medium.text-gray-800 Review
-                        |  the details, then generate a short follow-up.
-                      li
-                        span.font-medium.text-gray-800 Send
-                        |  in one tap from Gmail or Outlook.
-                  button(
-                    v-if="searchQuery"
-                    class="mt-2 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
-                    @click="searchQuery = ''"
-                  )
-                    VaIcon(name="clear" size="20px")
-                    span.font-medium Clear Search
-                  button(
-                    v-else
-                    class="mt-2 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-                    @click="goToCapture"
-                  )
-                    VaIcon(name="photo_camera" size="20px")
-                    span.font-medium Scan your first contact
+                      | After you send a follow-up and mark it sent, that contact moves here.
+                    button(
+                      class="mt-2 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
+                      @click="followUpTab = 'pending'"
+                    )
+                      VaIcon(name="send" size="20px")
+                      span.font-medium View to follow up
+                  template(v-else)
+                    p.text-gray-700.text-center.text-lg.font-semibold.mb-1 {{ searchQuery ? 'No matches' : 'No follow-ups waiting' }}
+                    p.text-sm.text-gray-500.text-center(v-if="searchQuery")
+                      | No people match your search. Try different keywords or clear the search.
+                    template(v-else)
+                      p.text-sm.text-gray-500.text-center.mb-6.max-w-md
+                        | Scan someone you just met — card photo or contact screenshot — then write a follow-up when you’re ready.
+                      ol.text-sm.text-gray-600.text-left.max-w-md.space-y-3.mb-8.list-decimal.pl-5
+                        li
+                          span.font-medium.text-gray-800 Scan
+                          |  their card or a screenshot of their contact.
+                        li
+                          span.font-medium.text-gray-800 Add context
+                          |  when you’re ready to write (where you met, what to aim for).
+                        li
+                          span.font-medium.text-gray-800 Send
+                          |  from Gmail or Outlook in one tap.
+                    button(
+                      v-if="searchQuery"
+                      class="mt-2 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
+                      @click="searchQuery = ''"
+                    )
+                      VaIcon(name="clear" size="20px")
+                      span.font-medium Clear Search
+                    button(
+                      v-else
+                      class="mt-2 bg-emerald-500 text-white px-6 py-3 rounded-xl hover:bg-emerald-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+                      @click="goToCapture"
+                    )
+                      VaIcon(name="photo_camera" size="20px")
+                      span.font-medium Scan your first contact
                 
-                // Cards grid with pagination
+                // Compact follow-up queue
                 div(v-else)
-                  // Cards Grid
-                  .grid(
-                    class="grid-cols-1 gap-4 mt-4"
-                    class="md:grid-cols-2 md:gap-5"
-                  )
-                    article.billo-card-elevated.billo-motion.billo-contact-card.group.relative.flex.min-h-0.flex-col.overflow-hidden(
+                  .billo-follow-queue.mt-4.overflow-hidden.rounded-2xl.border.border-slate-200.bg-white.shadow-sm
+                    article.billo-queue-row.border-b.border-slate-100(
                       v-for="card in paginatedCards"
                       :key="card.id"
-                      class="transition-shadow duration-200 hover:shadow-lg"
-                      :class="{ 'billo-contact-card--styled': !!card.style?.backgroundColor }"
-                      :style="cardChromeStyle(card)"
+                      class="last:border-b-0"
+                      :class="{ 'billo-queue-row--open': expandedCardId === card.id }"
                     )
-                      .flex.min-h-0.flex-1.flex-col.px-4.pb-3.pt-4(class="sm:px-5 sm:pt-5")
-                        header.min-w-0
-                          .flex.min-w-0.flex-wrap.items-center.gap-2
-                            h3.text-lg.font-semibold.leading-snug(
-                              class="billo-type-display sm:text-xl"
-                              :style="cardNameStyle(card)"
+                      //- Collapsed row
+                      .billo-queue-row__main.flex.min-w-0.items-center.gap-3.px-3.py-3(
+                        class="sm:gap-4 sm:px-4"
+                        role="button"
+                        tabindex="0"
+                        :aria-expanded="expandedCardId === card.id ? 'true' : 'false'"
+                        @click="toggleCardExpand(card.id)"
+                        @keydown.enter.prevent="toggleCardExpand(card.id)"
+                        @keydown.space.prevent="toggleCardExpand(card.id)"
+                      )
+                        .billo-queue-row__avatar.flex.shrink-0.items-center.justify-center.rounded-xl.bg-emerald-50.text-sm.font-bold.text-emerald-800(
+                          class="h-10 w-10 sm:h-11 sm:w-11"
+                          aria-hidden="true"
+                        ) {{ displayNameInitials(card.name) }}
+
+                        .min-w-0.flex-1
+                          .flex.min-w-0.flex-wrap.items-center.gap-x-2.gap-y-1
+                            h3.font-semibold.leading-snug.text-slate-900(
+                              class="text-sm sm:text-base"
                             ) {{ card.name }}
                             span.inline-flex.items-center.rounded-md.border.font-semibold.uppercase.tracking-wide(
                               v-if="card.source === 'screenshot'"
                               class="border-sky-200 bg-sky-50 text-sky-800 px-1.5 py-0.5 text-[10px]"
-                            ) Screenshot
+                            ) Shot
                             span.inline-flex.items-center.rounded-md.border.font-semibold.uppercase.tracking-wide(
                               v-else-if="card.source === 'manual' || card.importedContact"
                               class="border-slate-200 bg-slate-50 text-slate-600 px-1.5 py-0.5 text-[10px]"
-                            ) Imported
-                          p.text-sm.leading-snug(class="mt-0.5" :style="{ color: cardSecondaryColor(card) }") {{ card.title }}
-                          p.text-xs.text-amber-700.mt-1(
+                            ) Import
+                            span.inline-flex.max-w-full.items-center.truncate.rounded-full.bg-slate-100.font-medium.text-slate-600(
+                              v-if="cardEventLabel(card)"
+                              class="px-2 py-0.5 text-[11px]"
+                            ) {{ cardEventLabel(card) }}
+                            span.inline-flex.items-center.rounded-full.bg-emerald-50.font-medium.text-emerald-800(
+                              v-else-if="followUpTab === 'pending'"
+                              class="px-2 py-0.5 text-[11px]"
+                            ) Needs event
+                          p.min-w-0.truncate.leading-snug.text-slate-500(
+                            class="mt-0.5 text-xs sm:text-sm"
+                          )
+                            template(v-if="card.title || card.company") {{ [card.title, card.company].filter(Boolean).join(' · ') }}
+                            template(v-else-if="card.emails?.[0]") {{ card.emails[0] }}
+                            template(v-else) No title yet
+                          p.font-medium.text-amber-700(
+                            class="mt-0.5 text-[11px]"
                             v-if="card.extractWarnings?.length || (card.confidence?.overall != null && card.confidence.overall < 0.55)"
-                          ) {{ card.extractWarnings?.[0] || 'Some fields may need a quick check before you send.' }}
+                          ) {{ card.extractWarnings?.[0] || 'Quick check recommended' }}
 
-                        //- One column, full width — text wraps instead of truncating
-                        .mt-4.min-w-0.border-t.pt-3(
-                          :style="{ borderColor: cardDividerColor(card) }"
+                        .flex.shrink-0.items-center(
+                          class="gap-1.5 sm:gap-2"
                         )
-                          .relative.flex.min-w-0.gap-3.border-b.py-3(
-                            v-if="card.emails?.length > 0"
-                            :style="{ borderColor: cardDividerColor(card) }"
+                          button.billo-queue-row__cta.inline-flex.h-9.items-center.justify-center.rounded-lg.bg-emerald-600.font-semibold.text-white.shadow-sm.transition-colors(
+                            type="button"
+                            class="gap-1.5 px-2.5 text-xs hover:bg-emerald-500 sm:px-3 sm:text-sm"
+                            :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
+                            @click.stop="openFollowUpOrGenerate(card)"
                           )
-                            VaIcon.shrink-0(name="email" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
-                            .min-w-0.flex-1
-                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Email
-                              .flex.min-w-0.items-start(class="gap-1")
-                                a.min-w-0.flex-1.text-sm.leading-snug(
-                                  class="break-words underline-offset-2 hover:underline"
-                                  :style="{ color: cardPrimaryColor(card) }"
-                                  :href="'mailto:' + card.emails[0]"
-                                ) {{ card.emails[0] }}
-                                button.mt-0.shrink-0.rounded.p-1(
-                                  v-if="card.emails.length > 1"
-                                  type="button"
-                                  class="hover:bg-black/5"
-                                  :style="{ color: cardSecondaryColor(card) }"
-                                  :aria-expanded="expandedContact.type === 'email' && expandedContact.cardId === card.id ? 'true' : 'false'"
-                                  aria-label="More email addresses"
-                                  @click="toggleContactDropdown('email', card.id)"
-                                )
-                                  VaIcon(name="expand_more" size="20px")
-                              div(
-                                v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id"
-                                class="relative z-20 mt-2 rounded-lg border bg-white/95 p-2 shadow-md"
-                                :style="{ borderColor: cardDividerColor(card) }"
-                              )
-                                div(v-for="(email, idx) in card.emails.slice(1)")
-                                  a.block.break-words.py-1.text-sm(
-                                    class="rounded px-1 hover:bg-black/5"
-                                    :style="{ color: cardPrimaryColor(card) }"
-                                    :href="'mailto:' + email"
-                                  ) {{ email }}
-
-                          .relative.flex.min-w-0.gap-3.border-b.py-3(
-                            v-if="card.phones?.length > 0"
-                            :style="{ borderColor: cardDividerColor(card) }"
+                            VaIcon(name="send" size="16px" class="shrink-0")
+                            span.hidden(class="min-[380px]:inline") {{ cardPrimaryCtaLabel(card) }}
+                          button.inline-flex.h-9.w-9.items-center.justify-center.rounded-lg.text-slate-400.transition-colors(
+                            type="button"
+                            class="hover:bg-slate-100 hover:text-slate-700"
+                            :aria-label="expandedCardId === card.id ? 'Collapse details' : 'Expand details'"
+                            @click.stop="toggleCardExpand(card.id)"
                           )
-                            VaIcon.shrink-0(name="phone" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
-                            .min-w-0.flex-1
-                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Phone
-                              .flex.min-w-0.items-start(class="gap-1")
-                                a.min-w-0.flex-1.text-sm.leading-snug(
-                                  class="break-words underline-offset-2 hover:underline"
-                                  :style="{ color: cardPrimaryColor(card) }"
-                                  :href="'tel:' + card.phones[0]"
-                                ) {{ card.phones[0] }}
-                                button.mt-0.shrink-0.rounded.p-1(
-                                  v-if="card.phones.length > 1"
-                                  type="button"
-                                  class="hover:bg-black/5"
-                                  :style="{ color: cardSecondaryColor(card) }"
-                                  aria-label="More phone numbers"
-                                  @click="toggleContactDropdown('phone', card.id)"
-                                )
-                                  VaIcon(name="expand_more" size="20px")
-                              div(
-                                v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id"
-                                class="relative z-20 mt-2 rounded-lg border bg-white/95 p-2 shadow-md"
-                                :style="{ borderColor: cardDividerColor(card) }"
-                              )
-                                div(v-for="(phone, idx) in card.phones.slice(1)")
-                                  a.block.break-words.py-1.text-sm(
-                                    class="rounded px-1 hover:bg-black/5"
-                                    :style="{ color: cardPrimaryColor(card) }"
-                                    :href="'tel:' + phone"
-                                  ) {{ phone }}
+                            VaIcon(
+                              :name="expandedCardId === card.id ? 'expand_less' : 'expand_more'"
+                              size="22px"
+                            )
 
-                          .relative.flex.min-w-0.gap-3.border-b.py-3(
-                            v-if="card.websites?.length > 0"
-                            :style="{ borderColor: cardDividerColor(card) }"
+                      //- Expanded details
+                      .billo-queue-row__details.border-t.border-slate-100.bg-slate-50.px-3.pb-3.pt-3(
+                        v-if="expandedCardId === card.id"
+                        class="sm:px-4"
+                      )
+                        ul.space-y-2
+                          li.flex.items-start(
+                            class="gap-2.5"
+                            v-if="card.emails?.length"
                           )
-                            VaIcon.shrink-0(name="language" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
+                            VaIcon.shrink-0(name="email" size="16px" class="mt-0.5 text-slate-400")
                             .min-w-0.flex-1
-                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Website
-                              .flex.min-w-0.items-start(class="gap-1")
-                                a.min-w-0.flex-1.text-sm.leading-snug(
-                                  class="break-words underline-offset-2 hover:underline"
-                                  :style="{ color: cardPrimaryColor(card) }"
-                                  :href="formatWebsiteUrl(card.websites[0])"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                ) {{ card.websites[0] }}
-                                button.mt-0.shrink-0.rounded.p-1(
-                                  v-if="card.websites.length > 1"
-                                  type="button"
-                                  class="hover:bg-black/5"
-                                  :style="{ color: cardSecondaryColor(card) }"
-                                  aria-label="More websites"
-                                  @click="toggleContactDropdown('website', card.id)"
-                                )
-                                  VaIcon(name="expand_more" size="20px")
-                              div(
-                                v-if="expandedContact.type === 'website' && expandedContact.cardId === card.id"
-                                class="relative z-20 mt-2 rounded-lg border bg-white/95 p-2 shadow-md"
-                                :style="{ borderColor: cardDividerColor(card) }"
-                              )
-                                div(v-for="(website, idx) in card.websites.slice(1)")
-                                  a.block.break-words.py-1.text-sm(
-                                    class="rounded px-1 hover:bg-black/5"
-                                    :style="{ color: cardPrimaryColor(card) }"
-                                    :href="formatWebsiteUrl(website)"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  ) {{ website }}
-
-                          .flex.min-w-0.gap-3.py-3(
-                            v-if="card.company && String(card.company).trim().length > 1"
+                              a.text-sm.text-slate-800.break-words(
+                                class="underline-offset-2 hover:underline"
+                                :href="'mailto:' + card.emails[0]"
+                              ) {{ card.emails[0] }}
+                              button.ml-1.text-xs.font-medium.text-emerald-700(
+                                v-if="card.emails.length > 1"
+                                type="button"
+                                @click.stop="toggleContactDropdown('email', card.id)"
+                              ) +{{ card.emails.length - 1 }}
+                              .mt-1.space-y-1(v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id")
+                                a.block.text-sm.text-slate-600.break-words(
+                                  v-for="email in card.emails.slice(1)"
+                                  :key="email"
+                                  :href="'mailto:' + email"
+                                ) {{ email }}
+                          li.flex.items-start(
+                            class="gap-2.5"
+                            v-if="card.phones?.length"
                           )
-                            VaIcon.shrink-0(name="business" size="18px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
+                            VaIcon.shrink-0(name="phone" size="16px" class="mt-0.5 text-slate-400")
                             .min-w-0.flex-1
-                              p.text-xs.font-medium(class="mb-0.5" :style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Company
-                              p.text-sm.leading-snug(class="break-words" :style="{ color: cardPrimaryColor(card) }") {{ card.company }}
+                              a.text-sm.text-slate-800(
+                                class="underline-offset-2 hover:underline"
+                                :href="'tel:' + card.phones[0]"
+                              ) {{ card.phones[0] }}
+                              button.ml-1.text-xs.font-medium.text-emerald-700(
+                                v-if="card.phones.length > 1"
+                                type="button"
+                                @click.stop="toggleContactDropdown('phone', card.id)"
+                              ) +{{ card.phones.length - 1 }}
+                              .mt-1.space-y-1(v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id")
+                                a.block.text-sm.text-slate-600(
+                                  v-for="phone in card.phones.slice(1)"
+                                  :key="phone"
+                                  :href="'tel:' + phone"
+                                ) {{ phone }}
+                          li.flex.items-start(
+                            class="gap-2.5"
+                            v-if="card.websites?.length"
+                          )
+                            VaIcon.shrink-0(name="language" size="16px" class="mt-0.5 text-slate-400")
+                            a.min-w-0.flex-1.text-sm.text-slate-800.break-words(
+                              class="underline-offset-2 hover:underline"
+                              :href="formatWebsiteUrl(card.websites[0])"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            ) {{ card.websites[0] }}
 
-                        button.mt-1.flex.w-full.items-start.gap-3.rounded-lg.border.px-3.text-left.transition-colors(
+                        button.mt-3.flex.w-full.items-center.gap-2.rounded-xl.border.border-slate-200.bg-white.px-3.py-2.text-left.transition-colors(
                           type="button"
-                          class="bg-black/5 py-2.5 hover:bg-black/10"
-                          :style="{ borderColor: cardDividerColor(card) }"
-                          @click="openMoveToEventModal(card)"
+                          class="hover:border-slate-300 hover:bg-slate-50"
+                          @click.stop="openMoveToEventModal(card)"
                         )
-                          VaIcon.shrink-0(name="event" size="20px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
+                          VaIcon.shrink-0(name="event" size="18px" class="text-slate-400")
                           .min-w-0.flex-1
-                            p.text-xs.font-medium(:style="{ color: cardSecondaryColor(card), opacity: 0.85 }") Event
-                            p.text-sm.font-medium.leading-snug(
-                              class="break-words"
-                              :style="{ color: cardPrimaryColor(card) }"
-                            ) {{ getEventName(card.eventId) || getMeetingTypeLabel(card.meetingType) || 'Tap to choose an event' }}
-                          VaIcon.shrink-0(name="chevron_right" size="22px" class="mt-0.5" :style="{ color: cardSecondaryColor(card) }")
+                            p.font-medium.uppercase.tracking-wide.text-slate-400(class="text-[11px]") Event
+                            p.text-sm.font-medium.text-slate-800.truncate {{ cardEventLabel(card) || 'Tap to choose an event' }}
+                          VaIcon.shrink-0(name="chevron_right" size="18px" class="text-slate-400")
 
-                        .mt-2.rounded-lg.border.px-3(
-                          class="border-emerald-100 bg-emerald-50/50 py-2.5"
+                        .mt-2.rounded-xl.border.border-emerald-100.bg-emerald-50.px-3.py-2(
                           v-if="card.followUpIntent"
                         )
-                          p.text-xs.font-medium.text-emerald-800/80 Follow-up aim
-                          p.text-sm.leading-snug.text-slate-800(class="mt-0.5 break-words") {{ getFollowUpIntentLabel(card.followUpIntent) }}
+                          p.font-medium.uppercase.tracking-wide(class="text-[11px] text-emerald-800/80") Follow-up aim
+                          p.text-sm.text-slate-800(class="mt-0.5") {{ getFollowUpIntentLabel(card.followUpIntent) }}
 
-                        .mt-2.rounded-lg.border.px-3(
-                          class="border-amber-100 bg-amber-50/60 py-2.5"
+                        .mt-2.rounded-xl.border.border-amber-100.bg-amber-50.px-3.py-2(
                           v-if="card.metNote"
                         )
-                          p.text-xs.font-medium.text-amber-800/80 What you talked about
-                          p.text-sm.leading-snug.text-slate-800(class="mt-0.5 break-words") {{ card.metNote }}
-                        button.mt-2.flex.w-full.items-center.gap-2.rounded-lg.border.border-dashed.px-3.py-2.text-left.text-sm.transition-colors(
+                          p.font-medium.uppercase.tracking-wide(class="text-[11px] text-amber-800/80") What you talked about
+                          p.text-sm.text-slate-800.break-words(class="mt-0.5") {{ card.metNote }}
+                        button.mt-2.flex.w-full.items-center.gap-2.rounded-xl.border.border-dashed.border-slate-300.bg-white.px-3.py-2.text-left.text-sm.text-slate-500.transition-colors(
                           v-else
                           type="button"
-                          class="hover:bg-black/5"
-                          :style="{ borderColor: cardDividerColor(card), color: cardSecondaryColor(card) }"
+                          class="hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700"
                           @click.stop="openEditCardModal(card)"
                         )
-                          VaIcon(name="chat" size="18px" class="shrink-0")
-                          span Add what you talked about (for a better follow-up)
+                          VaIcon(name="chat" size="16px" class="shrink-0")
+                          span Add what you talked about
 
-                        //- Primary action first, then one clear row for the rest
-                        footer.mt-4.space-y-2.border-t.pt-3(
-                          :style="{ borderColor: cardDividerColor(card) }"
-                        )
-                          button.flex.h-11.w-full.items-center.justify-center.gap-2.rounded-lg.bg-emerald-600.text-sm.font-semibold.text-white.shadow-sm.transition-colors(
+                        .mt-3.flex.flex-wrap.items-center.gap-2
+                          button.inline-flex.h-9.items-center.rounded-lg.border.border-slate-200.bg-white.px-3.text-sm.font-medium.text-slate-700.transition-colors(
                             type="button"
-                            class="hover:bg-emerald-500 active:bg-emerald-700"
-                            @click.stop="openFollowUpOrGenerate(card)"
-                            :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
+                            class="gap-1.5 hover:bg-slate-50"
+                            @click.stop="saveContact(card)"
                           )
-                            VaIcon(name="send" size="20px" class="shrink-0")
-                            span {{ generatingDraft === card.id ? 'Writing follow-up…' : (cardDrafts[card.id]?.length ? 'Send follow-up' : 'Write follow-up') }}
-                          .flex.min-w-0.gap-2
-                            button.flex.h-10.min-w-0.flex-1.items-center.justify-center.gap-2.rounded-lg.border.text-sm.font-medium.transition-colors(
-                              class="border-white/70 bg-white/90 text-slate-800 hover:bg-white"
-                              type="button"
-                              @click="saveContact(card)"
-                            )
-                              VaIcon(name="person_add" size="18px" class="shrink-0 text-slate-600")
-                              span.truncate Save contact
-                            button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.transition-colors(
-                              class="border-white/70 bg-white/90 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
-                              type="button"
-                              title="Edit this card"
-                              aria-label="Edit card"
-                              @click.stop="openEditCardModal(card)"
-                            )
-                              VaIcon(name="edit" size="20px")
-                            button.flex.h-10.w-10.shrink-0.items-center.justify-center.rounded-lg.border.transition-colors(
-                              class="border-white/70 bg-white/90 text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-                              type="button"
-                              title="Delete this card"
-                              aria-label="Delete card"
-                              @click.stop="confirmDeleteCard(card)"
-                            )
-                              VaIcon(name="delete" size="20px")
+                            VaIcon(name="person_add" size="16px" class="text-slate-500")
+                            span Save contact
+                          button.inline-flex.h-9.w-9.items-center.justify-center.rounded-lg.border.border-slate-200.bg-white.text-slate-600.transition-colors(
+                            type="button"
+                            title="Edit"
+                            aria-label="Edit card"
+                            class="hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+                            @click.stop="openEditCardModal(card)"
+                          )
+                            VaIcon(name="edit" size="18px")
+                          button.inline-flex.h-9.w-9.items-center.justify-center.rounded-lg.border.border-slate-200.bg-white.text-slate-600.transition-colors(
+                            type="button"
+                            title="Delete"
+                            aria-label="Delete card"
+                            class="hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                            @click.stop="confirmDeleteCard(card)"
+                          )
+                            VaIcon(name="delete" size="18px")
 
         // Stats Grid
         .mt-8.grid.gap-4(class="grid-cols-1 sm:grid-cols-3")
@@ -1214,9 +1216,11 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
       #billo-qr-share.billo-panel-premium.billo-motion.mt-12.p-5(v-if="showAdvancedShare" class="sm:p-8")
         .mb-8.text-center
           h2.text-xl.font-bold.tracking-tight(class="text-slate-900 sm:text-2xl") Share Your Info
-          p.mt-2.text-sm(class="text-slate-600 sm:text-base") Let others easily connect with you by scanning your QR code
+          p.mt-2.text-sm(class="text-slate-600 sm:text-base")
+            template(v-if="profileIsLive") Let others connect by scanning your live profile QR
+            template(v-else) Finish Go live so your QR opens a real public contact card
         
-        .flex.flex-col.items-center.gap-8
+        .flex.flex-col.items-center.gap-8(v-if="profileIsLive")
           // QR Code Display
           #qr-code-container.relative.rounded-2xl.border.bg-white.p-5.shadow-md(
             class="border-slate-200/80 sm:p-6"
@@ -1273,6 +1277,15 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                 class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none"
                 v-if="!copiedLink"
               ) Copy profile link to clipboard
+
+        .flex.flex-col.items-center.gap-4.text-center(v-else)
+          p.text-sm.text-slate-600.max-w-md Set a public link, keep one contact method visible, then go live. Until then we won’t share a broken QR.
+          router-link(
+            to="/profile-setup#go-live"
+            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+          )
+            VaIcon(name="rocket_launch" size="18px")
+            span Go live
 
       // Plan Limit Modal
       PlanLimitModal(
@@ -1526,7 +1539,7 @@ import QrcodeVue from 'qrcode.vue';
 import PlanLimitModal from '../../components/PlanLimitModal.vue';
 // Import formatDate from dateUtils
 import { formatDate } from '../../utils/dateUtils';
-import { buildProfileShareUrl, displayNameInitials } from '../../utils/publicProfileSlug';
+import { buildLiveProfileShareUrl, displayNameInitials, isPublicProfileLive } from '../../utils/publicProfile';
 import { buildFollowUpMessage, openFollowUpCompose } from '../../utils/followUpSend';
 import { compressImageForScan } from '../../utils/compressImageForScan';
 import {
@@ -1543,6 +1556,7 @@ const router = useRouter();
 const route = useRoute();
 const user = ref(null);
 const homeMode = ref('capture');
+const followUpTab = ref('pending'); // 'pending' | 'done'
 const firstRunCoachDismissed = ref(false);
 const showProfileEnrichNudge = ref(false);
 const shareUnlocked = ref(false);
@@ -1596,6 +1610,7 @@ const showDeleteModal = ref(false);
 const selectedCardForDelete = ref(null);
 const deletingCard = ref(false);
 const expandedContact = ref({ type: null, cardId: null });
+const expandedCardId = ref(null);
 const copiedLink = ref(false);
 const showPlanLimitModal = ref(false);
 const planLimitMessage = ref('');
@@ -1608,14 +1623,18 @@ const copiedDrafts = ref({});
 const eventNameError = ref('');
 const searchQuery = ref('');
 const firestoreProfileSlug = ref('');
+const firestoreProfileLive = ref(false);
 
 async function refreshFirestoreProfileSlug() {
   firestoreProfileSlug.value = '';
+  firestoreProfileLive.value = false;
   try {
     const p = await authService.getUserProfile();
     firestoreProfileSlug.value = (p && p.publicProfileSlug) || '';
+    firestoreProfileLive.value = isPublicProfileLive(p || {});
   } catch {
     firestoreProfileSlug.value = '';
+    firestoreProfileLive.value = false;
   }
 }
 
@@ -1655,7 +1674,7 @@ const showContactPreview = ref(false);
 let eventCreationCallback = null;
 
 // Pagination
-const cardsPerPage = 8;
+const cardsPerPage = 12;
 const currentPage = ref(1);
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredCards.value.length / cardsPerPage)));
 const paginatedCards = computed(() => {
@@ -1664,11 +1683,7 @@ const paginatedCards = computed(() => {
   return filteredCards.value.slice(startIndex, endIndex);
 });
 
-// Update page when filters change
-watch([searchQuery, selectedEventFilter], () => {
-  currentPage.value = 1;
-});
-
+// Update page when filters change — also watched with followUpTab near filteredCards
 function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
@@ -1858,19 +1873,21 @@ const firstRunHasSent = computed(() => {
     (list) => Array.isArray(list) && list.some((d) => d?.status === 'sent' || d?.sentAt)
   );
 });
-const pendingFollowUpCount = computed(() => {
-  let n = 0;
-  for (const list of Object.values(cardDrafts.value || {})) {
-    if (!Array.isArray(list)) continue;
-    n += list.filter((d) => d?.status !== 'sent' && !d?.sentAt).length;
-  }
-  // Contacts with no drafts yet still count as “to send”
-  const draftedIds = new Set(Object.keys(cardDrafts.value || {}));
-  for (const card of businessCards.value || []) {
-    if (!draftedIds.has(card.id)) n += 1;
-  }
-  return n;
-});
+
+function cardHasFollowedUp(card) {
+  if (!card?.id) return false;
+  const drafts = cardDrafts.value[card.id];
+  if (!Array.isArray(drafts) || drafts.length === 0) return false;
+  return drafts.some((d) => d?.status === 'sent' || d?.sentAt);
+}
+
+const pendingCardCount = computed(
+  () => (businessCards.value || []).filter((c) => !cardHasFollowedUp(c)).length
+);
+const followedUpCardCount = computed(
+  () => (businessCards.value || []).filter((c) => cardHasFollowedUp(c)).length
+);
+const pendingFollowUpCount = computed(() => pendingCardCount.value);
 const showCaptureSurface = computed(
   () =>
     homeMode.value === 'capture' ||
@@ -2137,16 +2154,7 @@ async function uploadFiles(files, eventId = null, metNote = '', options = {}) {
       });
       unlockShareFeatures();
       homeMode.value = 'followups';
-
-      // Auto-draft first contact to keep the meet → draft → send loop tight
-      processingStatus.value = 'Drafting your follow-up...';
-      for (const card of result.success) {
-        try {
-          await generateEmailDraft(card);
-        } catch (draftErr) {
-          console.warn('Auto-draft skipped:', draftErr);
-        }
-      }
+      followUpTab.value = 'pending';
     }
     
     // Set success message
@@ -2820,6 +2828,27 @@ function confirmDeleteCard(card) {
   showDeleteModal.value = true;
 }
 
+function toggleCardExpand(cardId) {
+  if (!cardId) return;
+  expandedCardId.value = expandedCardId.value === cardId ? null : cardId;
+  if (expandedCardId.value !== cardId) {
+    expandedContact.value = { type: null, cardId: null };
+  }
+}
+
+function cardEventLabel(card) {
+  if (!card) return '';
+  return getEventName(card.eventId) || getMeetingTypeLabel(card.meetingType) || '';
+}
+
+function cardPrimaryCtaLabel(card) {
+  if (!card) return 'Write';
+  if (generatingDraft.value === card.id) return 'Writing…';
+  if (followUpTab.value === 'done') return 'View';
+  if (cardDrafts.value[card.id]?.length) return 'Send';
+  return 'Write';
+}
+
 async function deleteCard() {
   const card = selectedCardForDelete.value;
   if (!card?.id) return;
@@ -2902,12 +2931,21 @@ const sortedBusinessCards = computed(() => {
 
 const profileUrl = computed(() => {
   if (!user.value?.uid) return '';
-  return buildProfileShareUrl(user.value.uid, firestoreProfileSlug.value);
+  return buildLiveProfileShareUrl(user.value.uid, {
+    publicProfileSlug: firestoreProfileSlug.value,
+    publicProfileLive: firestoreProfileLive.value
+  });
 });
+
+const profileIsLive = computed(() => !!profileUrl.value);
 
 // Copy profile URL to clipboard
 async function copyProfileUrl() {
   try {
+    if (!profileUrl.value) {
+      router.push('/profile-setup#go-live');
+      return;
+    }
     await navigator.clipboard.writeText(profileUrl.value);
     copiedLink.value = true;
     setTimeout(() => {
@@ -3092,7 +3130,7 @@ async function downloadBusinessCard() {
     }
     
     // Website/portfolio (if available)
-    const cardShareUrl = profileUrl.value || `${window.location.origin}/profile/username`;
+    const cardShareUrl = profileUrl.value || '';
     ctx.fillStyle = '#0f766e'; // teal-700
     ctx.fillRect(textX - 24, contactY + (2 * lineHeight) - 14, 18, 14);
     ctx.fillStyle = '#475569'; // slate-600
@@ -3325,9 +3363,16 @@ async function addToAppleWallet() {
   }
 }
 
-// Filter cards by search and real event only (meetingType is not an event)
+// Filter cards by search, real event, and follow-up tab
 const filteredCards = computed(() => {
-  let filtered = businessCards.value;
+  let filtered = businessCards.value || [];
+
+  // Pending vs already followed up
+  if (followUpTab.value === 'done') {
+    filtered = filtered.filter((card) => cardHasFollowedUp(card));
+  } else {
+    filtered = filtered.filter((card) => !cardHasFollowedUp(card));
+  }
   
   // Apply event filter — only Firestore eventId, never meetingType labels
   if (selectedEventFilter.value === 'all') {
@@ -3357,8 +3402,9 @@ const filteredCards = computed(() => {
 });
 
 // Add watchers to reset pagination when filters change
-watch([searchQuery, selectedEventFilter], () => {
+watch([searchQuery, selectedEventFilter, followUpTab], () => {
   currentPage.value = 1;
+  expandedCardId.value = null;
 });
 
 // Add these refs after other refs
@@ -3424,6 +3470,10 @@ async function importVcfFiles(files, eventId = null) {
     
     // Reload cards after import
     await loadCards();
+    if (results.length > 0) {
+      homeMode.value = 'followups';
+      followUpTab.value = 'pending';
+    }
     
     // Auto-hide success message and reset states after 5 seconds
     setTimeout(() => {
@@ -3642,7 +3692,39 @@ main {
   animation: gradient 15s ease infinite;
 }
 
-/* Add these styles to the existing <style> section */
+/* Follow-up queue rows */
+.page-home .billo-follow-queue {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.page-home .billo-queue-row__main {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.page-home .billo-queue-row__main:hover {
+  background-color: rgb(248 250 252);
+}
+
+.page-home .billo-queue-row--open .billo-queue-row__main {
+  background-color: rgb(248 250 252);
+}
+
+.page-home .billo-queue-row__details {
+  animation: billo-queue-expand 0.18s ease-out;
+}
+
+@keyframes billo-queue-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .page-home .billo-contact-card {
   transition: box-shadow 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
 }

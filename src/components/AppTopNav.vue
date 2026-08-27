@@ -31,8 +31,8 @@
               <span>Contacts</span>
             </router-link>
             <a
-              v-if="shareUnlocked"
-              :href="profileUrl"
+              v-if="shareUnlocked && liveProfileUrl"
+              :href="liveProfileUrl"
               class="nav-home-link"
               target="_blank"
               rel="noopener noreferrer"
@@ -40,8 +40,16 @@
               <VaIcon name="open_in_new" size="16px" class="text-slate-500" />
               <span>Live profile</span>
             </a>
+            <router-link
+              v-else-if="shareUnlocked"
+              to="/profile-setup#go-live"
+              class="nav-home-link"
+            >
+              <VaIcon name="rocket_launch" size="16px" class="text-slate-500" />
+              <span>Go live</span>
+            </router-link>
             <button
-              v-if="shareUnlocked"
+              v-if="shareUnlocked && liveProfileUrl"
               type="button"
               class="nav-home-link"
               title="Scroll to QR code"
@@ -115,8 +123,8 @@
               >
                 <div class="py-1">
                   <a
-                    v-if="shareUnlocked"
-                    :href="profileUrl"
+                    v-if="shareUnlocked && liveProfileUrl"
+                    :href="liveProfileUrl"
                     class="nav-home-menu-item"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -125,6 +133,15 @@
                     <VaIcon name="open_in_new" size="18px" />
                     <span>Live profile</span>
                   </a>
+                  <router-link
+                    v-else-if="shareUnlocked"
+                    to="/profile-setup#go-live"
+                    class="nav-home-menu-item"
+                    @click="showUserMenu = false"
+                  >
+                    <VaIcon name="rocket_launch" size="18px" />
+                    <span>Go live</span>
+                  </router-link>
                   <router-link to="/profile-setup" class="nav-home-menu-item" @click="showUserMenu = false">
                     <VaIcon name="tune" size="18px" />
                     <span>Profile &amp; settings</span>
@@ -187,7 +204,7 @@
           <span>Contacts</span>
         </router-link>
         <button
-          v-if="user && shareUnlocked"
+          v-if="user && shareUnlocked && liveProfileUrl"
           type="button"
           class="nav-home-drawer-link w-full text-left"
           @click="showMobileMenu = false; goToQrSection()"
@@ -197,8 +214,8 @@
         </button>
         <p v-if="shareUnlocked" class="mt-3 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Your page</p>
         <a
-          v-if="user && shareUnlocked"
-          :href="profileUrl"
+          v-if="user && shareUnlocked && liveProfileUrl"
+          :href="liveProfileUrl"
           class="nav-home-drawer-link"
           target="_blank"
           rel="noopener noreferrer"
@@ -207,6 +224,15 @@
           <VaIcon name="open_in_new" size="20px" />
           <span>Live profile</span>
         </a>
+        <router-link
+          v-else-if="user && shareUnlocked"
+          to="/profile-setup#go-live"
+          class="nav-home-drawer-link"
+          @click="showMobileMenu = false"
+        >
+          <VaIcon name="rocket_launch" size="20px" />
+          <span>Go live</span>
+        </router-link>
         <router-link v-if="user" to="/profile-setup" class="nav-home-drawer-link" @click="showMobileMenu = false">
           <VaIcon name="tune" size="20px" />
           <span>Profile &amp; settings</span>
@@ -240,13 +266,14 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authService } from '../services/authService';
 import { paymentService } from '../services/paymentService';
-import { buildProfileShareUrl, displayNameInitials } from '../utils/publicProfileSlug';
+import { buildLiveProfileShareUrl, displayNameInitials, isPublicProfileLive } from '../utils/publicProfile';
 
 const route = useRoute();
 const router = useRouter();
 
 const user = ref(null);
 const firestoreProfileSlug = ref('');
+const firestoreProfileLive = ref(false);
 const showMobileMenu = ref(false);
 const showUserMenu = ref(false);
 const navAvatarImgFailed = ref(false);
@@ -268,9 +295,12 @@ function refreshShareUnlock() {
   }
 }
 
-const profileUrl = computed(() => {
+const liveProfileUrl = computed(() => {
   if (!user.value?.uid) return '';
-  return buildProfileShareUrl(user.value.uid, firestoreProfileSlug.value);
+  return buildLiveProfileShareUrl(user.value.uid, {
+    publicProfileSlug: firestoreProfileSlug.value,
+    publicProfileLive: firestoreProfileLive.value
+  });
 });
 
 const isPaidPlan = computed(() => subscriptionPlan.value && subscriptionPlan.value !== 'FREE');
@@ -283,11 +313,14 @@ const subscriptionPlanLabel = computed(() => {
 
 async function refreshFirestoreProfileSlug() {
   firestoreProfileSlug.value = '';
+  firestoreProfileLive.value = false;
   try {
     const p = await authService.getUserProfile();
     firestoreProfileSlug.value = (p && p.publicProfileSlug) || '';
+    firestoreProfileLive.value = isPublicProfileLive(p || {});
   } catch {
     firestoreProfileSlug.value = '';
+    firestoreProfileLive.value = false;
   }
 }
 
@@ -318,6 +351,7 @@ onMounted(() => {
       await refreshSubscriptionPlan();
     } else {
       firestoreProfileSlug.value = '';
+      firestoreProfileLive.value = false;
       subscriptionPlan.value = 'FREE';
     }
   });
@@ -360,11 +394,15 @@ function toggleUserMenu() {
 function goToQrSection() {
   showUserMenu.value = false;
   showMobileMenu.value = false;
-  if (route.path === '/home') {
-    document.querySelector('#billo-qr-share')?.scrollIntoView({ behavior: 'smooth' });
-  } else {
-    router.push({ path: '/home', hash: '#billo-qr-share' });
+  if (!liveProfileUrl.value) {
+    router.push('/profile-setup#go-live');
+    return;
   }
+  if (route.path === '/home') {
+    document.getElementById('billo-qr-share')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  router.push({ path: '/home', hash: '#billo-qr-share' });
 }
 
 async function onSignOut() {

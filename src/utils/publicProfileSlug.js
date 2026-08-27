@@ -41,15 +41,16 @@ export function normalizePublicProfileSlug(input) {
   return s;
 }
 
-/** Public path segment: `/profile/{slug}` or `/profile/{uid}` when unset. */
+/** Public path: vanity slug only when provided — never advertise bare UID as “live”. */
 export function buildProfilePublicPath(uid, slugRaw) {
-  if (!uid) return '/profile';
   const slug = normalizePublicProfileSlug(slugRaw || '');
   if (slug) return `/profile/${slug}`;
-  return `/profile/${uid}`;
+  // Legacy fallback for owners previewing before go-live (not for public share)
+  if (uid) return `/profile/${uid}`;
+  return '/profile';
 }
 
-/** Full site URL for sharing (uses window when available). */
+/** Full site URL for sharing (uses window when available). Prefer buildLiveProfileShareUrl. */
 export function buildProfileShareUrl(uid, slugRaw) {
   const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
   return `${origin}${buildProfilePublicPath(uid, slugRaw)}`;

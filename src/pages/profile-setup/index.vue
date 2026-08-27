@@ -112,8 +112,8 @@ main.billo-app-bg.mx-auto.max-w-2xl.p-6.font-sans(v-else class="sm:p-8")
         p.text-xs.text-slate-600.mt-1 Your email is tied to your account and cannot be changed.
 
       //- Optional vanity URL (stored as publicProfileSlug on user doc)
-      .space-y-2(v-show="profileStep === 1")
-        label.block.text-sm.font-medium.text-slate-700 Public profile link (optional)
+      .space-y-2(v-show="profileStep === 1" id="go-live")
+        label.block.text-sm.font-medium.text-slate-700 Public profile link
         p.text-xs.text-slate-600.leading-relaxed
           span.font-mono.text-slate-800 {{ profileLinkPreviewOrigin }}
           span.text-slate-500 /profile/
@@ -128,7 +128,45 @@ main.billo-app-bg.mx-auto.max-w-2xl.p-6.font-sans(v-else class="sm:p-8")
           placeholder="e.g. blaise-muhune"
           maxlength="40"
         )
-        p.text-xs.text-slate-500 3–32 characters: lowercase letters, numbers, and hyphens only. Leave blank to keep your long ID link (both always work).
+        p.text-xs.text-slate-500 3–32 characters: lowercase letters, numbers, and hyphens. Required to go live.
+
+      //- Go Live checklist
+      .space-y-3.rounded-2xl.border.border-slate-200.bg-slate-50.p-4(v-show="profileStep === 1")
+        .flex.items-start.justify-between.gap-3
+          div
+            p.text-sm.font-semibold.text-slate-900 Live profile
+            p.text-xs.text-slate-600.mt-1 What people see when they scan your QR or open your link.
+          button(
+            type="button"
+            class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+            :class="formData.publicProfileLive ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-white text-slate-600'"
+            :disabled="!canGoLiveNow && !formData.publicProfileLive"
+            @click="toggleGoLive"
+          ) {{ formData.publicProfileLive ? 'Live' : 'Go live' }}
+        ul.space-y-2
+          li.flex.items-start.gap-2.text-sm(
+            v-for="item in goLiveChecklist"
+            :key="item.id"
+            :class="item.done ? 'text-emerald-800' : 'text-slate-600'"
+          )
+            VaIcon.shrink-0(:name="item.done ? 'check_circle' : 'radio_button_unchecked'" size="18px" class="mt-0.5")
+            span
+              | {{ item.label }}
+              span.text-xs.text-slate-400(v-if="!item.required")  (optional)
+        p.text-xs.text-amber-700(v-if="formData.publicProfileLive && !canGoLiveNow") Complete the required items above before saving, or turn Live off.
+        p.text-xs.text-slate-500(v-else-if="!formData.publicProfileLive") Your link stays private until you go live.
+        .flex.flex-wrap.items-center.gap-2(v-if="liveProfileUrl")
+          a.text-sm.font-medium.text-emerald-700(
+            class="underline-offset-2 hover:underline"
+            :href="liveProfileUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          ) Open live profile
+          button(
+            type="button"
+            class="text-sm font-medium text-slate-700"
+            @click="copyProfileUrl"
+          ) {{ copiedLink ? 'Copied' : 'Copy link' }}
 
       // Company
       .space-y-2(v-show="profileStep === 1")
@@ -817,10 +855,13 @@ import { authService } from '../../services/authService';
 import { authJsonHeaders } from '../../utils/apiAuth.js';
 import { parseJsonResponse } from '../../utils/parseFetchJson.js';
 import {
-  buildProfileShareUrl,
+  buildLiveProfileShareUrl,
   normalizePublicProfileSlug,
-  displayNameInitials
-} from '../../utils/publicProfileSlug';
+  displayNameInitials,
+  getGoLiveChecklist,
+  canGoLive,
+  isPublicProfileLive
+} from '../../utils/publicProfile';
 import { uploadImageToAzure } from '../../services/azureUploadService';
 import { businessCardService } from '../../services/businessCardService';
 import { paymentService } from '../../services/paymentService';
@@ -919,6 +960,8 @@ const formData = ref({
   appleMusic: '',
   otherLink: '',
   publicProfileSlug: '',
+  publicProfileLive: false,
+  photoURL: '',
   customLinks: [],
   visibility: {
     nameTitle: true,
@@ -961,8 +1004,40 @@ const profileLinkSuffixPreview = computed(() => {
   if (!user.value?.uid) return '…';
   const n = normalizePublicProfileSlug(formData.value.publicProfileSlug || '');
   if (n) return n;
-  return user.value.uid;
+  return 'your-link';
 });
+
+const goLiveChecklist = computed(() =>
+  getGoLiveChecklist({
+    ...formData.value,
+    photoURL: profileImage.value || formData.value.photoURL || user.value?.photoURL || ''
+  })
+);
+const canGoLiveNow = computed(() =>
+  canGoLive({
+    ...formData.value,
+    photoURL: profileImage.value || formData.value.photoURL || user.value?.photoURL || ''
+  })
+);
+const liveProfileUrl = computed(() =>
+  buildLiveProfileShareUrl(user.value?.uid, {
+    publicProfileSlug: formData.value.publicProfileSlug,
+    publicProfileLive: formData.value.publicProfileLive
+  })
+);
+
+function toggleGoLive() {
+  if (formData.value.publicProfileLive) {
+    formData.value.publicProfileLive = false;
+    return;
+  }
+  if (!canGoLiveNow.value) {
+    error.value = 'Finish the Go live checklist first (name, public link, and one visible contact method).';
+    return;
+  }
+  formData.value.publicProfileLive = true;
+  error.value = '';
+}
 
 function getCompanyFromEmail(email) {
   if (!email) return '';
@@ -1192,7 +1267,6 @@ onMounted(async () => {
       userProfile?.productEmailsOptOut || userProfile?.emailUnsubscribed
     );
 
-    // Initialize formData with default values
     formData.value = {
       displayName: '',
       title: '',
@@ -1217,6 +1291,7 @@ onMounted(async () => {
       appleMusic: '',
       otherLink: '',
       publicProfileSlug: '',
+      publicProfileLive: false,
       customLinks: [],
       visibility: {
         nameTitle: true,
@@ -1242,12 +1317,17 @@ onMounted(async () => {
     };
 
     if (isEditing.value && userProfile) {
-      // Merge existing profile data with default values
+      const existingSlug = normalizePublicProfileSlug(userProfile.publicProfileSlug || '');
       formData.value = {
         ...formData.value,
         ...userProfile,
         email: currentUser.email,
         displayName: currentUser.displayName || userProfile.displayName || getNameFromEmail(currentUser.email),
+        publicProfileSlug: existingSlug || userProfile.publicProfileSlug || '',
+        publicProfileLive: isPublicProfileLive({
+          ...userProfile,
+          publicProfileSlug: existingSlug || userProfile.publicProfileSlug || ''
+        }),
         customLinks: userProfile.customLinks || [],
         visibility: {
           ...formData.value.visibility,
@@ -1267,6 +1347,10 @@ onMounted(async () => {
     error.value = 'Error loading profile data';
   } finally {
     loading.value = false;
+    await nextTick();
+    if (typeof window !== 'undefined' && window.location.hash === '#go-live') {
+      document.getElementById('go-live')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 });
 
@@ -1350,6 +1434,19 @@ async function saveProfile() {
       photoURL = await uploadImageToAzure(imageFile.value, 'profile-images');
     }
 
+    const livePayload = {
+      ...formData.value,
+      publicProfileSlug: slugNorm,
+      photoURL: photoURL || formData.value.photoURL || ''
+    };
+    let wantLive = formData.value.publicProfileLive === true;
+    if (wantLive && !canGoLive(livePayload)) {
+      error.value =
+        'Finish the Go live checklist (name, public link, and one visible contact method) before going live.';
+      return;
+    }
+    if (!slugNorm) wantLive = false;
+
     // Update user profile in Firebase Auth
     await authService.updateProfile({
       displayName: formData.value.displayName.trim(),
@@ -1359,6 +1456,7 @@ async function saveProfile() {
     // Prepare profile data for Firestore, ensuring no undefined values
     const profileData = {
       displayName: formData.value.displayName.trim(),
+      email: (user.value.email || formData.value.email || '').trim(),
       company: formData.value.company?.trim() || '',
       title: formData.value.title?.trim() || '',
       phone: formData.value.phone?.trim() || '',
@@ -1385,6 +1483,7 @@ async function saveProfile() {
       updatedAt: new Date(),
       github: formData.value.github?.trim() || '',
       visibility: formData.value.visibility,
+      publicProfileLive: wantLive,
       ...(slugNorm
         ? { publicProfileSlug: slugNorm }
         : { publicProfileSlug: deleteField() })
@@ -1403,15 +1502,17 @@ async function saveProfile() {
   }
 }
 
-const profileUrl = computed(() => {
-  if (!user.value?.uid) return '';
-  return buildProfileShareUrl(user.value.uid, formData.value.publicProfileSlug);
-});
+const profileUrl = computed(() => liveProfileUrl.value);
 
 // Copy profile URL to clipboard
 async function copyProfileUrl() {
   try {
-    await navigator.clipboard.writeText(profileUrl.value);
+    const url = liveProfileUrl.value;
+    if (!url) {
+      error.value = 'Go live first to get a shareable profile link.';
+      return;
+    }
+    await navigator.clipboard.writeText(url);
     copiedLink.value = true;
     setTimeout(() => {
       copiedLink.value = false;
