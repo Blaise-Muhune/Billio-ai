@@ -524,35 +524,53 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                       VaIcon(name="photo_camera" size="20px")
                       span.font-medium Scan your first contact
                 
-                // Compact follow-up queue
+                // Contact tiles → detail sheet
                 div(v-else)
-                  .billo-follow-queue.mt-4.overflow-hidden.rounded-2xl.border.border-slate-200.bg-white.shadow-sm
-                    article.billo-queue-row.border-b.border-slate-100(
+                  .mt-4.grid.gap-3(
+                    class="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4"
+                  )
+                    article.billo-person-tile.group.relative.cursor-pointer.overflow-hidden.rounded-2xl.border.border-slate-200.bg-white.text-left.shadow-sm.transition-all(
                       v-for="card in paginatedCards"
                       :key="card.id"
-                      class="last:border-b-0"
-                      :class="{ 'billo-queue-row--open': expandedCardId === card.id }"
+                      class="hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+                      role="button"
+                      tabindex="0"
+                      :aria-label="'Open ' + (card.name || 'contact')"
+                      @click="openContactSheet(card)"
+                      @keydown.enter.prevent="openContactSheet(card)"
+                      @keydown.space.prevent="openContactSheet(card)"
                     )
-                      //- Collapsed row
-                      .billo-queue-row__main.flex.min-w-0.items-center.gap-3.px-3.py-3(
-                        class="sm:gap-4 sm:px-4"
-                        role="button"
-                        tabindex="0"
-                        :aria-expanded="expandedCardId === card.id ? 'true' : 'false'"
-                        @click="toggleCardExpand(card.id)"
-                        @keydown.enter.prevent="toggleCardExpand(card.id)"
-                        @keydown.space.prevent="toggleCardExpand(card.id)"
+                      .absolute.inset-y-0.left-0.w-1(
+                        :class="cardDrafts[card.id]?.length ? 'bg-emerald-500' : 'bg-slate-200'"
+                        aria-hidden="true"
                       )
-                        .billo-queue-row__avatar.flex.shrink-0.items-center.justify-center.rounded-xl.bg-emerald-50.text-sm.font-bold.text-emerald-800(
-                          class="h-10 w-10 sm:h-11 sm:w-11"
+                      .flex.items-start.gap-3.p-4(class="pl-5")
+                        .flex.h-12.w-12.shrink-0.items-center.justify-center.rounded-2xl.bg-emerald-50.text-base.font-bold.text-emerald-800(
                           aria-hidden="true"
                         ) {{ displayNameInitials(card.name) }}
-
                         .min-w-0.flex-1
-                          .flex.min-w-0.flex-wrap.items-center.gap-x-2.gap-y-1
-                            h3.font-semibold.leading-snug.text-slate-900(
-                              class="text-sm sm:text-base"
-                            ) {{ card.name }}
+                          .flex.min-w-0.items-start.justify-between.gap-2
+                            h3.truncate.text-base.font-semibold.leading-snug.text-slate-900 {{ card.name || 'Unnamed' }}
+                            VaIcon.shrink-0(
+                              name="chevron_right"
+                              size="20px"
+                              class="mt-0.5 text-slate-300 transition-colors group-hover:text-emerald-600"
+                            )
+                          p.truncate.text-sm.text-slate-500(class="mt-0.5")
+                            template(v-if="card.title || card.company") {{ [card.title, card.company].filter(Boolean).join(' · ') }}
+                            template(v-else-if="card.emails?.[0]") {{ card.emails[0] }}
+                            template(v-else) Tap to add details
+                          .mt-2.flex.min-w-0.flex-wrap.items-center(
+                            class="gap-1.5"
+                          )
+                            span.inline-flex.items-center.rounded-full.bg-slate-100.px-2.font-medium.text-slate-600(
+                              v-if="cardEventLabel(card)"
+                              class="py-0.5 text-[11px]"
+                            ) {{ cardEventLabel(card) }}
+                            span.inline-flex.items-center.rounded-full.bg-emerald-50.px-2.font-medium.text-emerald-800(
+                              v-else-if="followUpTab === 'pending'"
+                              class="py-0.5 text-[11px]"
+                            ) Needs event
                             span.inline-flex.items-center.rounded-md.border.font-semibold.uppercase.tracking-wide(
                               v-if="card.source === 'screenshot'"
                               class="border-sky-200 bg-sky-50 text-sky-800 px-1.5 py-0.5 text-[10px]"
@@ -561,162 +579,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                               v-else-if="card.source === 'manual' || card.importedContact"
                               class="border-slate-200 bg-slate-50 text-slate-600 px-1.5 py-0.5 text-[10px]"
                             ) Import
-                            span.inline-flex.max-w-full.items-center.truncate.rounded-full.bg-slate-100.font-medium.text-slate-600(
-                              v-if="cardEventLabel(card)"
-                              class="px-2 py-0.5 text-[11px]"
-                            ) {{ cardEventLabel(card) }}
-                            span.inline-flex.items-center.rounded-full.bg-emerald-50.font-medium.text-emerald-800(
-                              v-else-if="followUpTab === 'pending'"
-                              class="px-2 py-0.5 text-[11px]"
-                            ) Needs event
-                          p.min-w-0.truncate.leading-snug.text-slate-500(
-                            class="mt-0.5 text-xs sm:text-sm"
-                          )
-                            template(v-if="card.title || card.company") {{ [card.title, card.company].filter(Boolean).join(' · ') }}
-                            template(v-else-if="card.emails?.[0]") {{ card.emails[0] }}
-                            template(v-else) No title yet
-                          p.font-medium.text-amber-700(
-                            class="mt-0.5 text-[11px]"
+                          p.mt-1.font-medium.text-amber-700(
+                            class="text-[11px]"
                             v-if="card.extractWarnings?.length || (card.confidence?.overall != null && card.confidence.overall < 0.55)"
                           ) {{ card.extractWarnings?.[0] || 'Quick check recommended' }}
-
-                        .flex.shrink-0.items-center(
-                          class="gap-1.5 sm:gap-2"
-                        )
-                          button.billo-queue-row__cta.inline-flex.h-9.items-center.justify-center.rounded-lg.bg-emerald-600.font-semibold.text-white.shadow-sm.transition-colors(
-                            type="button"
-                            class="gap-1.5 px-2.5 text-xs hover:bg-emerald-500 sm:px-3 sm:text-sm"
-                            :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
-                            @click.stop="openFollowUpOrGenerate(card)"
-                          )
-                            VaIcon(name="send" size="16px" class="shrink-0")
-                            span.hidden(class="min-[380px]:inline") {{ cardPrimaryCtaLabel(card) }}
-                          button.inline-flex.h-9.w-9.items-center.justify-center.rounded-lg.text-slate-400.transition-colors(
-                            type="button"
-                            class="hover:bg-slate-100 hover:text-slate-700"
-                            :aria-label="expandedCardId === card.id ? 'Collapse details' : 'Expand details'"
-                            @click.stop="toggleCardExpand(card.id)"
-                          )
-                            VaIcon(
-                              :name="expandedCardId === card.id ? 'expand_less' : 'expand_more'"
-                              size="22px"
-                            )
-
-                      //- Expanded details
-                      .billo-queue-row__details.border-t.border-slate-100.bg-slate-50.px-3.pb-3.pt-3(
-                        v-if="expandedCardId === card.id"
-                        class="sm:px-4"
-                      )
-                        ul.space-y-2
-                          li.flex.items-start(
-                            class="gap-2.5"
-                            v-if="card.emails?.length"
-                          )
-                            VaIcon.shrink-0(name="email" size="16px" class="mt-0.5 text-slate-400")
-                            .min-w-0.flex-1
-                              a.text-sm.text-slate-800.break-words(
-                                class="underline-offset-2 hover:underline"
-                                :href="'mailto:' + card.emails[0]"
-                              ) {{ card.emails[0] }}
-                              button.ml-1.text-xs.font-medium.text-emerald-700(
-                                v-if="card.emails.length > 1"
-                                type="button"
-                                @click.stop="toggleContactDropdown('email', card.id)"
-                              ) +{{ card.emails.length - 1 }}
-                              .mt-1.space-y-1(v-if="expandedContact.type === 'email' && expandedContact.cardId === card.id")
-                                a.block.text-sm.text-slate-600.break-words(
-                                  v-for="email in card.emails.slice(1)"
-                                  :key="email"
-                                  :href="'mailto:' + email"
-                                ) {{ email }}
-                          li.flex.items-start(
-                            class="gap-2.5"
-                            v-if="card.phones?.length"
-                          )
-                            VaIcon.shrink-0(name="phone" size="16px" class="mt-0.5 text-slate-400")
-                            .min-w-0.flex-1
-                              a.text-sm.text-slate-800(
-                                class="underline-offset-2 hover:underline"
-                                :href="'tel:' + card.phones[0]"
-                              ) {{ card.phones[0] }}
-                              button.ml-1.text-xs.font-medium.text-emerald-700(
-                                v-if="card.phones.length > 1"
-                                type="button"
-                                @click.stop="toggleContactDropdown('phone', card.id)"
-                              ) +{{ card.phones.length - 1 }}
-                              .mt-1.space-y-1(v-if="expandedContact.type === 'phone' && expandedContact.cardId === card.id")
-                                a.block.text-sm.text-slate-600(
-                                  v-for="phone in card.phones.slice(1)"
-                                  :key="phone"
-                                  :href="'tel:' + phone"
-                                ) {{ phone }}
-                          li.flex.items-start(
-                            class="gap-2.5"
-                            v-if="card.websites?.length"
-                          )
-                            VaIcon.shrink-0(name="language" size="16px" class="mt-0.5 text-slate-400")
-                            a.min-w-0.flex-1.text-sm.text-slate-800.break-words(
-                              class="underline-offset-2 hover:underline"
-                              :href="formatWebsiteUrl(card.websites[0])"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            ) {{ card.websites[0] }}
-
-                        button.mt-3.flex.w-full.items-center.gap-2.rounded-xl.border.border-slate-200.bg-white.px-3.py-2.text-left.transition-colors(
-                          type="button"
-                          class="hover:border-slate-300 hover:bg-slate-50"
-                          @click.stop="openMoveToEventModal(card)"
-                        )
-                          VaIcon.shrink-0(name="event" size="18px" class="text-slate-400")
-                          .min-w-0.flex-1
-                            p.font-medium.uppercase.tracking-wide.text-slate-400(class="text-[11px]") Event
-                            p.text-sm.font-medium.text-slate-800.truncate {{ cardEventLabel(card) || 'Tap to choose an event' }}
-                          VaIcon.shrink-0(name="chevron_right" size="18px" class="text-slate-400")
-
-                        .mt-2.rounded-xl.border.border-emerald-100.bg-emerald-50.px-3.py-2(
-                          v-if="card.followUpIntent"
-                        )
-                          p.font-medium.uppercase.tracking-wide(class="text-[11px] text-emerald-800/80") Follow-up aim
-                          p.text-sm.text-slate-800(class="mt-0.5") {{ getFollowUpIntentLabel(card.followUpIntent) }}
-
-                        .mt-2.rounded-xl.border.border-amber-100.bg-amber-50.px-3.py-2(
-                          v-if="card.metNote"
-                        )
-                          p.font-medium.uppercase.tracking-wide(class="text-[11px] text-amber-800/80") What you talked about
-                          p.text-sm.text-slate-800.break-words(class="mt-0.5") {{ card.metNote }}
-                        button.mt-2.flex.w-full.items-center.gap-2.rounded-xl.border.border-dashed.border-slate-300.bg-white.px-3.py-2.text-left.text-sm.text-slate-500.transition-colors(
-                          v-else
-                          type="button"
-                          class="hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700"
-                          @click.stop="openEditCardModal(card)"
-                        )
-                          VaIcon(name="chat" size="16px" class="shrink-0")
-                          span Add what you talked about
-
-                        .mt-3.flex.flex-wrap.items-center.gap-2
-                          button.inline-flex.h-9.items-center.rounded-lg.border.border-slate-200.bg-white.px-3.text-sm.font-medium.text-slate-700.transition-colors(
-                            type="button"
-                            class="gap-1.5 hover:bg-slate-50"
-                            @click.stop="saveContact(card)"
-                          )
-                            VaIcon(name="person_add" size="16px" class="text-slate-500")
-                            span Save contact
-                          button.inline-flex.h-9.w-9.items-center.justify-center.rounded-lg.border.border-slate-200.bg-white.text-slate-600.transition-colors(
-                            type="button"
-                            title="Edit"
-                            aria-label="Edit card"
-                            class="hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
-                            @click.stop="openEditCardModal(card)"
-                          )
-                            VaIcon(name="edit" size="18px")
-                          button.inline-flex.h-9.w-9.items-center.justify-center.rounded-lg.border.border-slate-200.bg-white.text-slate-600.transition-colors(
-                            type="button"
-                            title="Delete"
-                            aria-label="Delete card"
-                            class="hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-                            @click.stop="confirmDeleteCard(card)"
-                          )
-                            VaIcon(name="delete" size="18px")
 
         // Stats Grid
         .mt-8.grid.gap-4(class="grid-cols-1 sm:grid-cols-3")
@@ -734,6 +600,152 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
 
     // Modals section
     template(v-if="user")
+      // Contact detail sheet
+      VaModal(
+        v-model="showContactSheet"
+        :hide-default-actions="true"
+        class="billio-modal modal-container rounded-2xl z-[100]"
+      )
+        .p-5(class="sm:p-6" v-if="contactSheetCard")
+          .flex.items-start.justify-between.gap-3.mb-5
+            .flex.min-w-0.items-center.gap-3
+              .flex.h-14.w-14.shrink-0.items-center.justify-center.rounded-2xl.bg-emerald-50.text-lg.font-bold.text-emerald-800(
+                aria-hidden="true"
+              ) {{ displayNameInitials(contactSheetCard.name) }}
+              .min-w-0
+                h3.text-xl.font-semibold.leading-snug.text-slate-900.truncate {{ contactSheetCard.name || 'Contact' }}
+                p.text-sm.text-slate-500.truncate(v-if="contactSheetCard.title || contactSheetCard.company")
+                  | {{ [contactSheetCard.title, contactSheetCard.company].filter(Boolean).join(' · ') }}
+            button.rounded-lg.p-2.text-slate-400.transition-colors(
+              type="button"
+              class="hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Close"
+              @click="closeContactSheet"
+            )
+              VaIcon(name="close" size="22px")
+
+          ul.space-y-3
+            li.flex.items-start(
+              class="gap-2.5"
+              v-if="contactSheetCard.emails?.length"
+            )
+              VaIcon.shrink-0(name="email" size="18px" class="mt-0.5 text-slate-400")
+              .min-w-0.flex-1
+                a.text-sm.text-slate-800.break-words(
+                  class="underline-offset-2 hover:underline"
+                  :href="'mailto:' + contactSheetCard.emails[0]"
+                ) {{ contactSheetCard.emails[0] }}
+                button.ml-1.text-xs.font-medium.text-emerald-700(
+                  v-if="contactSheetCard.emails.length > 1"
+                  type="button"
+                  @click="toggleContactDropdown('email', contactSheetCard.id)"
+                ) +{{ contactSheetCard.emails.length - 1 }}
+                .mt-1.space-y-1(v-if="expandedContact.type === 'email' && expandedContact.cardId === contactSheetCard.id")
+                  a.block.text-sm.text-slate-600.break-words(
+                    v-for="email in contactSheetCard.emails.slice(1)"
+                    :key="email"
+                    :href="'mailto:' + email"
+                  ) {{ email }}
+            li.flex.items-start(
+              class="gap-2.5"
+              v-if="contactSheetCard.phones?.length"
+            )
+              VaIcon.shrink-0(name="phone" size="18px" class="mt-0.5 text-slate-400")
+              .min-w-0.flex-1
+                a.text-sm.text-slate-800(
+                  class="underline-offset-2 hover:underline"
+                  :href="'tel:' + contactSheetCard.phones[0]"
+                ) {{ contactSheetCard.phones[0] }}
+                button.ml-1.text-xs.font-medium.text-emerald-700(
+                  v-if="contactSheetCard.phones.length > 1"
+                  type="button"
+                  @click="toggleContactDropdown('phone', contactSheetCard.id)"
+                ) +{{ contactSheetCard.phones.length - 1 }}
+                .mt-1.space-y-1(v-if="expandedContact.type === 'phone' && expandedContact.cardId === contactSheetCard.id")
+                  a.block.text-sm.text-slate-600(
+                    v-for="phone in contactSheetCard.phones.slice(1)"
+                    :key="phone"
+                    :href="'tel:' + phone"
+                  ) {{ phone }}
+            li.flex.items-start(
+              class="gap-2.5"
+              v-if="contactSheetCard.websites?.length"
+            )
+              VaIcon.shrink-0(name="language" size="18px" class="mt-0.5 text-slate-400")
+              a.min-w-0.flex-1.text-sm.text-slate-800.break-words(
+                class="underline-offset-2 hover:underline"
+                :href="formatWebsiteUrl(contactSheetCard.websites[0])"
+                target="_blank"
+                rel="noopener noreferrer"
+              ) {{ contactSheetCard.websites[0] }}
+
+          button.mt-4.flex.w-full.items-center.gap-2.rounded-xl.border.border-slate-200.bg-slate-50.px-3.text-left.transition-colors(
+            type="button"
+            class="py-2.5 hover:border-slate-300 hover:bg-white"
+            @click="openMoveToEventModal(contactSheetCard)"
+          )
+            VaIcon.shrink-0(name="event" size="18px" class="text-slate-400")
+            .min-w-0.flex-1
+              p.font-medium.uppercase.tracking-wide.text-slate-400(class="text-[11px]") Event
+              p.text-sm.font-medium.text-slate-800.truncate {{ cardEventLabel(contactSheetCard) || 'Tap to choose an event' }}
+            VaIcon.shrink-0(name="chevron_right" size="18px" class="text-slate-400")
+
+          .mt-3.rounded-xl.border.border-emerald-100.bg-emerald-50.px-3(
+            class="py-2.5"
+            v-if="contactSheetCard.followUpIntent"
+          )
+            p.font-medium.uppercase.tracking-wide(class="text-[11px] text-emerald-800/80") Follow-up aim
+            p.text-sm.text-slate-800(class="mt-0.5") {{ getFollowUpIntentLabel(contactSheetCard.followUpIntent) }}
+
+          .mt-3.rounded-xl.border.border-amber-100.bg-amber-50.px-3(
+            class="py-2.5"
+            v-if="contactSheetCard.metNote"
+          )
+            p.font-medium.uppercase.tracking-wide(class="text-[11px] text-amber-800/80") What you talked about
+            p.text-sm.text-slate-800.break-words(class="mt-0.5") {{ contactSheetCard.metNote }}
+          button.mt-3.flex.w-full.items-center.gap-2.rounded-xl.border.border-dashed.border-slate-300.bg-white.px-3.text-left.text-sm.text-slate-500.transition-colors(
+            v-else
+            type="button"
+            class="py-2.5 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700"
+            @click="openEditFromSheet"
+          )
+            VaIcon(name="chat" size="16px" class="shrink-0")
+            span Add what you talked about
+
+          button.mt-5.flex.h-12.w-full.items-center.justify-center.rounded-xl.bg-emerald-600.text-sm.font-semibold.text-white.shadow-sm.transition-colors(
+            type="button"
+            class="gap-2 hover:bg-emerald-500"
+            :disabled="generatingDraft === contactSheetCard.id || loadingDrafts[contactSheetCard.id]"
+            @click="openFollowUpFromSheet"
+          )
+            VaIcon(name="send" size="18px" class="shrink-0")
+            span {{ cardPrimaryCtaLabel(contactSheetCard) }}
+
+          .mt-3.flex.flex-wrap.items-center.gap-2
+            button.inline-flex.h-10.items-center.rounded-lg.border.border-slate-200.bg-white.px-3.text-sm.font-medium.text-slate-700.transition-colors(
+              type="button"
+              class="gap-1.5 hover:bg-slate-50"
+              @click="saveContact(contactSheetCard)"
+            )
+              VaIcon(name="person_add" size="16px" class="text-slate-500")
+              span Save contact
+            button.inline-flex.h-10.w-10.items-center.justify-center.rounded-lg.border.border-slate-200.bg-white.text-slate-600.transition-colors(
+              type="button"
+              title="Edit"
+              aria-label="Edit card"
+              class="hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+              @click="openEditFromSheet"
+            )
+              VaIcon(name="edit" size="18px")
+            button.inline-flex.h-10.w-10.items-center.justify-center.rounded-lg.border.border-slate-200.bg-white.text-slate-600.transition-colors(
+              type="button"
+              title="Delete"
+              aria-label="Delete card"
+              class="hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              @click="confirmDeleteFromSheet"
+            )
+              VaIcon(name="delete" size="18px")
+
       // Message Drafts List Modal
       VaModal(
         v-model="showDraftsListModal"
@@ -1610,7 +1622,7 @@ const showDeleteModal = ref(false);
 const selectedCardForDelete = ref(null);
 const deletingCard = ref(false);
 const expandedContact = ref({ type: null, cardId: null });
-const expandedCardId = ref(null);
+const contactSheetCardId = ref(null);
 const copiedLink = ref(false);
 const showPlanLimitModal = ref(false);
 const planLimitMessage = ref('');
@@ -1681,6 +1693,21 @@ const paginatedCards = computed(() => {
   const startIndex = (currentPage.value - 1) * cardsPerPage;
   const endIndex = startIndex + cardsPerPage;
   return filteredCards.value.slice(startIndex, endIndex);
+});
+
+const showContactSheet = computed({
+  get: () => !!contactSheetCardId.value,
+  set: (open) => {
+    if (!open) {
+      contactSheetCardId.value = null;
+      expandedContact.value = { type: null, cardId: null };
+    }
+  }
+});
+
+const contactSheetCard = computed(() => {
+  if (!contactSheetCardId.value) return null;
+  return businessCards.value.find((c) => c.id === contactSheetCardId.value) || null;
 });
 
 // Update page when filters change — also watched with followUpTab near filteredCards
@@ -2828,12 +2855,35 @@ function confirmDeleteCard(card) {
   showDeleteModal.value = true;
 }
 
-function toggleCardExpand(cardId) {
-  if (!cardId) return;
-  expandedCardId.value = expandedCardId.value === cardId ? null : cardId;
-  if (expandedCardId.value !== cardId) {
-    expandedContact.value = { type: null, cardId: null };
-  }
+function openContactSheet(card) {
+  if (!card?.id) return;
+  contactSheetCardId.value = card.id;
+  expandedContact.value = { type: null, cardId: null };
+}
+
+function closeContactSheet() {
+  contactSheetCardId.value = null;
+  expandedContact.value = { type: null, cardId: null };
+}
+
+function openEditFromSheet() {
+  const card = contactSheetCard.value;
+  if (!card) return;
+  closeContactSheet();
+  openEditCardModal(card);
+}
+
+function confirmDeleteFromSheet() {
+  const card = contactSheetCard.value;
+  if (!card) return;
+  confirmDeleteCard(card);
+}
+
+async function openFollowUpFromSheet() {
+  const card = contactSheetCard.value;
+  if (!card) return;
+  closeContactSheet();
+  await openFollowUpOrGenerate(card);
 }
 
 function cardEventLabel(card) {
@@ -2842,11 +2892,11 @@ function cardEventLabel(card) {
 }
 
 function cardPrimaryCtaLabel(card) {
-  if (!card) return 'Write';
-  if (generatingDraft.value === card.id) return 'Writing…';
-  if (followUpTab.value === 'done') return 'View';
-  if (cardDrafts.value[card.id]?.length) return 'Send';
-  return 'Write';
+  if (!card) return 'Write follow-up';
+  if (generatingDraft.value === card.id) return 'Writing follow-up…';
+  if (followUpTab.value === 'done') return 'View follow-up';
+  if (cardDrafts.value[card.id]?.length) return 'Send follow-up';
+  return 'Write follow-up';
 }
 
 async function deleteCard() {
@@ -2863,6 +2913,9 @@ async function deleteCard() {
     const index = businessCards.value.findIndex((c) => c.id === card.id);
     if (index !== -1) {
       businessCards.value.splice(index, 1);
+    }
+    if (contactSheetCardId.value === card.id) {
+      closeContactSheet();
     }
     if (cardDrafts.value[card.id]) {
       delete cardDrafts.value[card.id];
@@ -3404,7 +3457,7 @@ const filteredCards = computed(() => {
 // Add watchers to reset pagination when filters change
 watch([searchQuery, selectedEventFilter, followUpTab], () => {
   currentPage.value = 1;
-  expandedCardId.value = null;
+  contactSheetCardId.value = null;
 });
 
 // Add these refs after other refs
@@ -3692,37 +3745,16 @@ main {
   animation: gradient 15s ease infinite;
 }
 
-/* Follow-up queue rows */
-.page-home .billo-follow-queue {
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+/* Contact tiles + detail sheet */
+.page-home .billo-person-tile {
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.page-home .billo-queue-row__main {
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.page-home .billo-queue-row__main:hover {
-  background-color: rgb(248 250 252);
-}
-
-.page-home .billo-queue-row--open .billo-queue-row__main {
-  background-color: rgb(248 250 252);
-}
-
-.page-home .billo-queue-row__details {
-  animation: billo-queue-expand 0.18s ease-out;
-}
-
-@keyframes billo-queue-expand {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.page-home .billo-person-tile:active {
+  transform: scale(0.99);
 }
 
 .page-home .billo-contact-card {
