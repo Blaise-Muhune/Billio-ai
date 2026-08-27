@@ -74,7 +74,14 @@ export async function runScanExtract(imageDataUrl) {
   return { extracted, promptVersion: PROMPT_VERSION, model: OPENAI_CHAT_MODEL };
 }
 
-export async function runFollowUpDraft({ sender, recipient, eventContext, metNote }) {
+export async function runFollowUpDraft({
+  sender,
+  recipient,
+  eventContext,
+  metNote,
+  followUpIntent,
+  subjectHint
+}) {
   const response = await getClient().chat.completions.create({
     model: OPENAI_CHAT_MODEL,
     messages: [
@@ -85,7 +92,9 @@ export async function runFollowUpDraft({ sender, recipient, eventContext, metNot
           sender,
           recipient,
           eventContext,
-          metNote: metNote || ''
+          metNote: metNote || '',
+          followUpIntent: followUpIntent || '',
+          subjectHint: subjectHint || ''
         })
       }
     ],

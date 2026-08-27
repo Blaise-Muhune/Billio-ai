@@ -1468,11 +1468,19 @@ expressApp.post('/api/ai/scan-extract', async (req, res) => {
 expressApp.post('/api/ai/follow-up-draft', async (req, res) => {
   try {
     await requireFirebaseUser(req);
-    const { sender, recipient, eventContext, metNote } = req.body || {};
+    const { sender, recipient, eventContext, metNote, followUpIntent, subjectHint } =
+      req.body || {};
     if (!recipient || typeof recipient !== 'object') {
       return res.status(400).json({ error: 'recipient is required' });
     }
-    const result = await runFollowUpDraft({ sender, recipient, eventContext, metNote });
+    const result = await runFollowUpDraft({
+      sender,
+      recipient,
+      eventContext,
+      metNote,
+      followUpIntent,
+      subjectHint
+    });
     res.json(result);
   } catch (error) {
     console.error('follow-up-draft failed:', error);

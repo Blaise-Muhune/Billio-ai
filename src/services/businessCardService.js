@@ -13,6 +13,7 @@ import { PROMPT_VERSION } from '../prompts/index.js';
 import { authJsonHeaders } from '../utils/apiAuth.js';
 import { parseJsonResponse } from '../utils/parseFetchJson.js';
 import { trackFunnel } from '../utils/analytics.js';
+import { getMeetingTypeEventContext, getFollowUpIntentPrompt, getFollowUpIntentSubjectHint } from '../constants/followUpContext.js';
 
 async function apiAiScanExtract(imageDataUrl) {
   const headers = await authJsonHeaders();
@@ -258,7 +259,7 @@ export const businessCardService = {
         };
       }
 
-      // Get event details if card has an eventId
+      // Get event details if card has an eventId; else use meetingType default label
       let eventContext = 'Recent in-person meeting';
       if (card.eventId) {
         const eventRef = doc(db, 'events', card.eventId);
@@ -270,6 +271,8 @@ export const businessCardService = {
           if (eventData.location) bits.push(`location: ${eventData.location}`);
           eventContext = bits.join(' · ');
         }
+      } else if (card.meetingType) {
+        eventContext = getMeetingTypeEventContext(card.meetingType) || eventContext;
       }
 
       const senderProfile = {
@@ -287,7 +290,9 @@ export const businessCardService = {
           title: card.title
         },
         eventContext,
-        metNote: card.metNote || ''
+        metNote: card.metNote || '',
+        followUpIntent: getFollowUpIntentPrompt(card.followUpIntent) || '',
+        subjectHint: getFollowUpIntentSubjectHint(card.followUpIntent) || ''
       });
       trackFunnel('draft_generated', { hasEmail: Boolean(recipientEmail) });
 
@@ -697,6 +702,9 @@ export const businessCardService = {
         websites: cardData.websites,
         eventId: cardData.eventId || null,
         metNote: cardData.metNote != null ? String(cardData.metNote).trim() : '',
+        meetingType: cardData.meetingType != null ? String(cardData.meetingType).trim() : '',
+        followUpIntent:
+          cardData.followUpIntent != null ? String(cardData.followUpIntent).trim() : '',
         updatedAt: serverTimestamp()
       };
 

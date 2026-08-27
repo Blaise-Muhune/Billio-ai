@@ -173,9 +173,9 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                     v-model="selectedPreviewEvent"
                   )
                     option(value="") -- Select Event (Optional) --
-                    option(value="null") No Event
+                    option(value="null") No event tagged
                     option(
-                      v-for="event in events"
+                      v-for="event in realEvents"
                       :key="event.id"
                       :value="event.id"
                     ) {{ event.name }} ({{ formatDate(event.date) }})
@@ -255,9 +255,9 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                     v-model="selectedPreviewEvent"
                   )
                     option(value="") -- Select Event (Optional) --
-                    option(value="null") No Event
+                    option(value="null") No event tagged
                     option(
-                      v-for="event in events"
+                      v-for="event in realEvents"
                       :key="event.id"
                       :value="event.id"
                     ) {{ event.name }} ({{ formatDate(event.date) }})
@@ -339,10 +339,10 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                       :disabled="!user"
                       @change="handleEventChange"
                     )
-                      option(value="all") All Events
-                      option(value="null") No Event
+                      option(value="all") All contacts
+                      option(value="null") No event tagged
                       option(
-                        v-for="event in events"
+                        v-for="event in realEvents"
                         :key="event.id"
                         :value="event.id"
                       ) {{ event.name }}
@@ -637,8 +637,15 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                             p.text-xs.font-medium.text-slate-500 Event
                             p.text-sm.font-medium.leading-snug(
                               class="break-words text-slate-900"
-                            ) {{ getEventName(card.eventId) || 'Tap to choose an event' }}
+                            ) {{ getEventName(card.eventId) || getMeetingTypeLabel(card.meetingType) || 'Tap to choose an event' }}
                           VaIcon.shrink-0.text-slate-400(name="chevron_right" size="22px" class="mt-0.5")
+
+                        .mt-2.rounded-lg.border.px-3(
+                          class="border-emerald-100 bg-emerald-50/50 py-2.5"
+                          v-if="card.followUpIntent"
+                        )
+                          p.text-xs.font-medium.text-emerald-800/80 Follow-up aim
+                          p.text-sm.leading-snug.text-slate-800(class="mt-0.5 break-words") {{ getFollowUpIntentLabel(card.followUpIntent) }}
 
                         .mt-2.rounded-lg.border.px-3(
                           class="border-amber-100 bg-amber-50/60 py-2.5"
@@ -662,11 +669,11 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                           button.flex.h-11.w-full.items-center.justify-center.gap-2.rounded-lg.bg-emerald-600.text-sm.font-semibold.text-white.shadow-sm.transition-colors(
                             type="button"
                             class="hover:bg-emerald-500 active:bg-emerald-700"
-                            @click.stop="confirmGenerateEmail(card)"
+                            @click.stop="openFollowUpOrGenerate(card)"
                             :disabled="generatingDraft === card.id || loadingDrafts[card.id]"
                           )
                             VaIcon(name="send" size="20px" class="shrink-0")
-                            span {{ generatingDraft === card.id ? 'Writing follow-up…' : 'Send follow-up' }}
+                            span {{ generatingDraft === card.id ? 'Writing follow-up…' : (cardDrafts[card.id]?.length ? 'Send follow-up' : 'Write follow-up') }}
                           .flex.min-w-0.gap-2
                             button.flex.h-10.min-w-0.flex-1.items-center.justify-center.gap-2.rounded-lg.border.text-sm.font-medium.text-slate-800.transition-colors(
                               class="border-slate-200 bg-white hover:bg-slate-50"
@@ -805,8 +812,14 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
           p.text-sm.text-slate-500.mb-4(v-if="selectedDraft?.subject")
             span.font-medium.text-slate-700 Subject:
             |  {{ selectedDraft.subject }}
-          .bg-gray-50.p-6.rounded-xl.mb-6
+          .bg-gray-50.p-6.rounded-xl.mb-2
             pre.whitespace-pre-wrap.text-base.leading-relaxed {{ emailDraft }}{{ selectedDraft?.signature ? '\n\n' + selectedDraft.signature : '' }}
+          .mb-6(v-if="previousDraftSnapshot")
+            button(
+              type="button"
+              class="text-sm font-medium text-emerald-700 hover:text-emerald-800 underline-offset-2 hover:underline"
+              @click="usePreviousDraft"
+            ) Use previous version
           p.text-xs.text-amber-700.mb-4(
             v-if="!selectedCardForDrafts?.emails?.length"
           ) Add an email on this contact before you can open Gmail/Outlook. Edit the card, then come back.
@@ -850,6 +863,21 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
                 @click="showEmailModal = false"
               ) Close
               button(
+                class="bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-emerald-300 flex items-center gap-2 disabled:opacity-50"
+                @click="rewriteFollowUp"
+                :disabled="generatingDraft === selectedCardForDrafts?.id"
+              )
+                .loading-spinner.w-3.h-3.border-2(v-if="generatingDraft === selectedCardForDrafts?.id")
+                VaIcon(v-else name="refresh" size="16px")
+                span {{ generatingDraft === selectedCardForDrafts?.id ? 'Rewriting…' : 'Rewrite' }}
+              button(
+                class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2 disabled:opacity-50"
+                @click="editFollowUpContext"
+                :disabled="generatingDraft === selectedCardForDrafts?.id"
+              )
+                VaIcon(name="tune" size="16px")
+                span Edit context
+              button(
                 class="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium text-sm shadow-sm hover:border-gray-300 flex items-center gap-2"
                 @click="copyEmailDraft"
               )
@@ -870,6 +898,101 @@ main.page-home(class="min-h-screen w-full bg-gradient-to-br from-slate-50 via-wh
               )
                 VaIcon(name="sms" size="16px")
                 span SMS
+
+      // Pre-write context sheet (where + intent + optional note)
+      VaModal(
+        v-model="showContextSheetModal"
+        :hide-default-actions="true"
+        class="billio-modal modal-container rounded-2xl z-[110]"
+      )
+        .p-6(class="sm:p-8")
+          h3.text-2xl.font-bold.mb-1 Quick context
+          p.text-sm.text-slate-500.mb-5 Two taps make a better follow-up. Everything is optional.
+          p.text-sm.font-medium.text-slate-800.mb-1 {{ selectedCardForGeneration?.name }}
+          p.text-xs.text-slate-500.mb-5(v-if="selectedCardForGeneration?.company") {{ selectedCardForGeneration.company }}
+
+          .mb-5
+            p.text-sm.font-semibold.text-slate-800.mb-2 Where did you meet?
+            .flex.flex-wrap.gap-2.mb-2(v-if="recentEventsForSheet.length")
+              button(
+                v-for="event in recentEventsForSheet"
+                :key="event.id"
+                type="button"
+                class="rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+                :class="contextSheet.eventId === event.id ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'"
+                @click="selectContextEvent(event.id)"
+              ) {{ event.name }}
+            .flex.flex-wrap.gap-2.mb-2
+              button(
+                v-for="type in meetingTypes"
+                :key="type.id"
+                type="button"
+                class="rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+                :class="contextSheet.meetingType === type.id && !contextSheet.eventId && !contextSheet.namingNewEvent ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'"
+                @click="selectContextMeetingType(type.id)"
+              ) {{ type.label }}
+            button(
+              type="button"
+              class="rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition-colors"
+              :class="contextSheet.namingNewEvent ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 text-slate-600 hover:border-emerald-300'"
+              @click="startNamingNewEvent"
+            ) + Name a new event
+            input.mt-2.w-full.rounded-xl.border.border-slate-200.px-4.text-base.focus:outline-none.focus:ring-2.focus:ring-emerald-500(
+              v-if="contextSheet.namingNewEvent"
+              v-model="contextSheet.newEventName"
+              type="text"
+              maxlength="80"
+              placeholder="e.g. SaaStr 2026"
+              class="py-2.5"
+            )
+
+          .mb-5
+            p.text-sm.font-semibold.text-slate-800.mb-2 What’s this follow-up for?
+            .flex.flex-wrap.gap-2
+              button(
+                v-for="intent in followUpIntents"
+                :key="intent.id"
+                type="button"
+                class="rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+                :class="contextSheet.followUpIntent === intent.id ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'"
+                @click="contextSheet.followUpIntent = intent.id; clearContextSheetNudge()"
+              ) {{ intent.label }}
+
+          .mb-2
+            label.block.text-sm.font-semibold.text-slate-800.mb-2 Anything you talked about? (optional)
+            textarea(
+              v-model="contextSheet.metNote"
+              rows="2"
+              maxlength="280"
+              placeholder="e.g. Booth chat about pricing for their sales team"
+              class="w-full rounded-xl border border-slate-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            )
+
+          p.text-sm.text-amber-700.mt-3(
+            v-if="contextSheetSoftNudge"
+          ) {{ contextSheetSoftNudge }}
+          p.text-sm.text-red-600.mt-3(v-if="draftGenError") {{ draftGenError }}
+          .flex.flex-wrap.justify-end.gap-3.mt-6
+            button(
+              type="button"
+              class="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50"
+              @click="showContextSheetModal = false; draftGenError = ''; contextSheetSoftNudge = ''"
+              :disabled="!!generatingDraft"
+            ) Cancel
+            button(
+              type="button"
+              class="bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+              @click="submitContextSheet(false)"
+              :disabled="!!generatingDraft"
+            ) Skip & write
+            button(
+              type="button"
+              class="bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-500 disabled:opacity-50 flex items-center gap-2"
+              @click="submitContextSheet(true)"
+              :disabled="!!generatingDraft"
+            )
+              .loading-spinner.w-3.h-3.border-2.border-white(v-if="generatingDraft")
+              span {{ generatingDraft ? 'Writing…' : (contextSheetAllowEmpty ? 'Write anyway' : 'Write follow-up') }}
 
       // Confirmation Modal
       VaModal(
@@ -1389,6 +1512,15 @@ import { formatDate } from '../../utils/dateUtils';
 import { buildProfileShareUrl, displayNameInitials } from '../../utils/publicProfileSlug';
 import { buildFollowUpMessage, openFollowUpCompose } from '../../utils/followUpSend';
 import { compressImageForScan } from '../../utils/compressImageForScan';
+import {
+  MEETING_TYPES,
+  FOLLOW_UP_INTENTS,
+  getMeetingTypeLabel,
+  getFollowUpIntentLabel,
+  cardHasDraftContext,
+  loadFollowUpContextPrefs,
+  saveFollowUpContextPrefs
+} from '../../constants/followUpContext';
 
 const router = useRouter();
 const route = useRoute();
@@ -1417,6 +1549,20 @@ const loadingDrafts = ref({});
 const expandedDrafts = ref({});
 const showConfirmModal = ref(false);
 const selectedCardForGeneration = ref(null);
+const showContextSheetModal = ref(false);
+const contextSheetSoftNudge = ref('');
+const contextSheetAllowEmpty = ref(false);
+const previousDraftSnapshot = ref(null);
+const contextSheet = ref({
+  eventId: '',
+  meetingType: '',
+  namingNewEvent: false,
+  newEventName: '',
+  followUpIntent: '',
+  metNote: ''
+});
+const meetingTypes = MEETING_TYPES;
+const followUpIntents = FOLLOW_UP_INTENTS;
 const events = ref([]);
 const selectedEvent = ref('');
 const showCreateEventModal = ref(false);
@@ -1472,7 +1618,9 @@ const editCardData = ref({
   phones: [],
   websites: [],
   eventId: null,
-  metNote: ''
+  metNote: '',
+  meetingType: '',
+  followUpIntent: ''
 });
 const saving = ref(false);
 
@@ -1535,7 +1683,9 @@ function openEditCardModal(card) {
     phones: [...(card.phones || [])],
     websites: [...(card.websites || [])],
     eventId: card.eventId,
-    metNote: card.metNote || ''
+    metNote: card.metNote || '',
+    meetingType: card.meetingType || '',
+    followUpIntent: card.followUpIntent || ''
   };
   showEditCardModal.value = true;
 }
@@ -1576,7 +1726,9 @@ async function saveCardChanges() {
       phones: editCardData.value.phones.filter(phone => phone.trim()),
       websites: editCardData.value.websites.filter(website => website.trim()),
       eventId: editCardData.value.eventId || null,
-      metNote: (editCardData.value.metNote || '').trim()
+      metNote: (editCardData.value.metNote || '').trim(),
+      meetingType: (editCardData.value.meetingType || '').trim(),
+      followUpIntent: (editCardData.value.followUpIntent || '').trim()
     };
 
     await businessCardService.updateCard(updatedCard);
@@ -1716,6 +1868,9 @@ const showFollowUpsSurface = computed(
     !uploading.value &&
     !(showContactPreview.value && selectedContactFiles.value.length > 0)
 );
+/** Real Firestore events only — never meetingType labels. */
+const realEvents = computed(() => (events.value || []).filter((e) => e?.id && e?.name));
+const recentEventsForSheet = computed(() => (realEvents.value || []).slice(0, 6));
 const showAdvancedShare = computed(() => shareUnlocked.value || firstRunHasSent.value);
 const showFirstRunCoach = computed(() => {
   if (!user.value?.emailVerified) return false;
@@ -1821,13 +1976,18 @@ async function previewSelectedFiles(files) {
   homeMode.value = 'capture';
   scanSourceMode.value = 'auto';
 
-  // Default event from current filter when scanning at a booth
+  // Default event: active filter, else last used real event
   if (
     selectedEventFilter.value &&
     selectedEventFilter.value !== 'all' &&
     selectedEventFilter.value !== 'null'
   ) {
     selectedPreviewEvent.value = selectedEventFilter.value;
+  } else {
+    const prefs = loadFollowUpContextPrefs();
+    if (prefs.eventId && (events.value || []).some((e) => e.id === prefs.eventId)) {
+      selectedPreviewEvent.value = prefs.eventId;
+    }
   }
   
   for (let i = 0; i < files.length; i++) {
@@ -1851,6 +2011,20 @@ function previewSelectedContactFiles(files) {
   // Clear existing selection
   selectedContactFiles.value = [];
   contactFilesInfo.value = [];
+  homeMode.value = 'capture';
+
+  if (
+    selectedEventFilter.value &&
+    selectedEventFilter.value !== 'all' &&
+    selectedEventFilter.value !== 'null'
+  ) {
+    selectedPreviewEvent.value = selectedEventFilter.value;
+  } else {
+    const prefs = loadFollowUpContextPrefs();
+    if (prefs.eventId && (events.value || []).some((e) => e.id === prefs.eventId)) {
+      selectedPreviewEvent.value = prefs.eventId;
+    }
+  }
   
   // Process VCF files
   for (let i = 0; i < files.length; i++) {
@@ -1986,39 +2160,7 @@ async function uploadFile(file) {
 }
 
 async function generateEmailDraft(card) {
-  try {
-    generatingDraft.value = card.id;
-    error.value = '';
-    draftGenError.value = '';
-    
-    const draft = await businessCardService.generateEmailDraft(card);
-    if(import.meta.env.VITE_APP_ENV === 'development') {
-      console.log('Generated draft:', draft);
-    }
-    
-    // Reload drafts for this card
-    await loadDrafts(card.id);
-    
-    // Set the selected card and draft
-    selectedCardForDrafts.value = card;
-    selectedDraft.value = draft;
-    
-    // Show the new draft and close the confirmation modal
-    emailDraft.value = draft.content;
-    showEmailModal.value = true;
-    showConfirmModal.value = false;
-  } catch (err) {
-    console.error('Error generating draft:', err);
-    if (err.type === 'PLAN_LIMIT') {
-      showPlanLimitError(err.message);
-    } else {
-      const msg = err?.message || 'Error generating email draft';
-      draftGenError.value = msg;
-      error.value = msg;
-    }
-  } finally {
-    generatingDraft.value = null;
-  }
+  await runDraftGeneration(card);
 }
 
 async function loadDrafts(cardId) {
@@ -2058,6 +2200,7 @@ function copyDraft(content, draftId) {
 }
 
 function showDraftDetails(draft) {
+  previousDraftSnapshot.value = null;
   selectedDraft.value = draft;
   emailDraft.value = draft.content;
   // Ensure we have the correct card selected when viewing from drafts list
@@ -2081,42 +2224,290 @@ function confirmGenerateEmail(card) {
   showConfirmModal.value = true;
 }
 
-async function proceedWithGeneration() {
-  if (selectedCardForGeneration.value) {
-    try {
-      generatingDraft.value = selectedCardForGeneration.value.id;
-      error.value = '';
-      draftGenError.value = '';
-      
-      const draft = await businessCardService.generateEmailDraft(selectedCardForGeneration.value);
-      if(import.meta.env.VITE_APP_ENV === 'development') {
-        console.log('Generated draft:', draft);
-      }
-      
-      // Reload drafts for this card
-      await loadDrafts(selectedCardForGeneration.value.id);
-      
-      // Set the selected card and draft
-      selectedCardForDrafts.value = selectedCardForGeneration.value;
-      selectedDraft.value = draft;
-      
-      // Show the new draft and close the confirmation modal
-      emailDraft.value = draft.content;
-      showEmailModal.value = true;
-      showConfirmModal.value = false;
-    } catch (err) {
-      console.error('Error generating draft:', err);
-      if (err.type === 'PLAN_LIMIT') {
-        showPlanLimitError(err.message);
-        showConfirmModal.value = false;
-      } else {
-        const msg = err?.message || 'Error generating email draft';
-        draftGenError.value = msg;
-        error.value = msg;
-      }
-    } finally {
-      generatingDraft.value = null;
+/** Primary CTA: open latest draft if one exists, otherwise start a new write. */
+async function openFollowUpOrGenerate(card) {
+  if (!card?.id) return;
+  draftGenError.value = '';
+  selectedCardForGeneration.value = card;
+
+  try {
+    if (!Array.isArray(cardDrafts.value[card.id])) {
+      await loadDrafts(card.id);
     }
+    const drafts = cardDrafts.value[card.id] || [];
+    if (drafts.length > 0) {
+      selectedCardForDrafts.value = card;
+      showDraftDetails(drafts[0]);
+      return;
+    }
+    await beginDraftGeneration(card);
+  } catch (err) {
+    console.error('Error opening follow-up:', err);
+    draftGenError.value = err?.message || 'Could not open follow-up';
+    error.value = draftGenError.value;
+  }
+}
+
+function patchLocalCard(cardId, patch) {
+  const idx = businessCards.value.findIndex((c) => c.id === cardId);
+  if (idx !== -1) {
+    businessCards.value[idx] = { ...businessCards.value[idx], ...patch };
+  }
+  if (selectedCardForGeneration.value?.id === cardId) {
+    selectedCardForGeneration.value = { ...selectedCardForGeneration.value, ...patch };
+  }
+  if (selectedCardForDrafts.value?.id === cardId) {
+    selectedCardForDrafts.value = { ...selectedCardForDrafts.value, ...patch };
+  }
+  return idx !== -1
+    ? businessCards.value[idx]
+    : { ...(selectedCardForGeneration.value || {}), id: cardId, ...patch };
+}
+
+function resolvePreferredEventId(cardEventId = '') {
+  if (cardEventId && realEvents.value.some((e) => e.id === cardEventId)) {
+    return cardEventId;
+  }
+  const filterId = selectedEventFilter.value;
+  if (filterId && filterId !== 'all' && filterId !== 'null') {
+    if (realEvents.value.some((e) => e.id === filterId)) return filterId;
+  }
+  if (selectedPreviewEvent.value && selectedPreviewEvent.value !== 'null') {
+    if (realEvents.value.some((e) => e.id === selectedPreviewEvent.value)) {
+      return selectedPreviewEvent.value;
+    }
+  }
+  const prefs = loadFollowUpContextPrefs();
+  if (prefs.eventId && realEvents.value.some((e) => e.id === prefs.eventId)) {
+    return prefs.eventId;
+  }
+  return '';
+}
+
+function openContextSheet(card) {
+  const prefs = loadFollowUpContextPrefs();
+  const preferredEventId = resolvePreferredEventId(card.eventId || '');
+  const meetingType =
+    preferredEventId
+      ? ''
+      : card.meetingType || prefs.meetingType || '';
+
+  contextSheet.value = {
+    eventId: preferredEventId,
+    meetingType,
+    namingNewEvent: false,
+    newEventName: '',
+    followUpIntent: card.followUpIntent || prefs.followUpIntent || '',
+    metNote: card.metNote || ''
+  };
+  contextSheetSoftNudge.value = '';
+  contextSheetAllowEmpty.value = false;
+  draftGenError.value = '';
+  showContextSheetModal.value = true;
+}
+
+function clearContextSheetNudge() {
+  contextSheetSoftNudge.value = '';
+  contextSheetAllowEmpty.value = false;
+}
+
+function selectContextEvent(eventId) {
+  contextSheet.value.eventId = eventId;
+  contextSheet.value.meetingType = '';
+  contextSheet.value.namingNewEvent = false;
+  contextSheet.value.newEventName = '';
+  clearContextSheetNudge();
+}
+
+function selectContextMeetingType(typeId) {
+  contextSheet.value.meetingType = typeId;
+  contextSheet.value.eventId = '';
+  contextSheet.value.namingNewEvent = false;
+  contextSheet.value.newEventName = '';
+  clearContextSheetNudge();
+}
+
+function startNamingNewEvent() {
+  contextSheet.value.namingNewEvent = true;
+  contextSheet.value.eventId = '';
+  contextSheet.value.meetingType = '';
+  clearContextSheetNudge();
+}
+
+/** Ask for place + intent when missing, then generate. */
+async function beginDraftGeneration(card, { forceSheet = false, keepPrevious = false } = {}) {
+  if (!card?.id) return;
+  if (!keepPrevious) previousDraftSnapshot.value = null;
+  selectedCardForGeneration.value = card;
+  draftGenError.value = '';
+  if (forceSheet || !cardHasDraftContext(card)) {
+    openContextSheet(card);
+    return;
+  }
+  await runDraftGeneration(card);
+}
+
+function snapshotDraft(draft, contentOverride = '') {
+  if (!draft) return null;
+  return {
+    id: draft.id,
+    subject: draft.subject || '',
+    content: contentOverride || draft.content || '',
+    signature: draft.signature || '',
+    status: draft.status || 'draft'
+  };
+}
+
+async function rewriteFollowUp() {
+  const card = selectedCardForDrafts.value || selectedCardForGeneration.value;
+  if (!card?.id) return;
+  previousDraftSnapshot.value = snapshotDraft(selectedDraft.value, emailDraft.value);
+  await beginDraftGeneration(card, { keepPrevious: true });
+}
+
+function usePreviousDraft() {
+  if (!previousDraftSnapshot.value) return;
+  const current = snapshotDraft(selectedDraft.value, emailDraft.value);
+  const prev = previousDraftSnapshot.value;
+  const drafts = cardDrafts.value[selectedCardForDrafts.value?.id] || [];
+  const found = drafts.find((d) => d.id === prev.id);
+  selectedDraft.value = found || { ...prev };
+  emailDraft.value = prev.content || '';
+  previousDraftSnapshot.value = current;
+}
+
+async function editFollowUpContext() {
+  const card = selectedCardForDrafts.value || selectedCardForGeneration.value;
+  if (!card?.id) return;
+  selectedCardForGeneration.value = card;
+  openContextSheet(card);
+}
+
+function contextSheetHasPlaceOrIntent() {
+  const sheet = contextSheet.value;
+  if (sheet.namingNewEvent && (sheet.newEventName || '').trim()) return true;
+  if (sheet.eventId) return true;
+  if (sheet.meetingType) return true;
+  if (sheet.followUpIntent) return true;
+  return false;
+}
+
+async function submitContextSheet(saveSelections) {
+  const card = selectedCardForGeneration.value;
+  if (!card?.id) return;
+
+  try {
+    draftGenError.value = '';
+    let nextCard = { ...card };
+
+    if (saveSelections) {
+      if (!contextSheetHasPlaceOrIntent() && !contextSheetAllowEmpty.value) {
+        contextSheetSoftNudge.value =
+          'Add where you met for a sharper draft — or tap Write anyway.';
+        contextSheetAllowEmpty.value = true;
+        return;
+      }
+
+      const sheet = contextSheet.value;
+      let eventId = sheet.eventId || null;
+      let meetingType = sheet.meetingType || '';
+
+      if (sheet.namingNewEvent) {
+        const name = (sheet.newEventName || '').trim();
+        if (!name) {
+          draftGenError.value = 'Enter an event name, or pick a meeting type instead.';
+          return;
+        }
+        const created = await businessCardService.createEvent({
+          name,
+          date: new Date().toISOString().slice(0, 10),
+          location: ''
+        });
+        events.value.unshift(created);
+        eventId = created.id;
+        meetingType = '';
+      }
+
+      const patch = {
+        eventId,
+        meetingType: eventId ? '' : meetingType,
+        followUpIntent: sheet.followUpIntent || '',
+        metNote: (sheet.metNote || '').trim(),
+        emails: card.emails || [],
+        phones: card.phones || [],
+        websites: card.websites || [],
+        name: card.name,
+        title: card.title,
+        company: card.company
+      };
+
+      await businessCardService.updateCard({ ...card, ...patch });
+      nextCard = patchLocalCard(card.id, {
+        eventId: patch.eventId,
+        meetingType: patch.meetingType,
+        followUpIntent: patch.followUpIntent,
+        metNote: patch.metNote
+      });
+
+      saveFollowUpContextPrefs({
+        eventId: patch.eventId || '',
+        meetingType: patch.meetingType || '',
+        followUpIntent: patch.followUpIntent || ''
+      });
+    }
+
+    showContextSheetModal.value = false;
+    contextSheetSoftNudge.value = '';
+    await runDraftGeneration(nextCard);
+  } catch (err) {
+    console.error('Error saving follow-up context:', err);
+    if (err.type === 'PLAN_LIMIT') {
+      showPlanLimitError(err.message);
+      showContextSheetModal.value = false;
+    } else {
+      draftGenError.value = err?.message || 'Could not save context';
+    }
+  }
+}
+
+async function proceedWithGeneration() {
+  if (!selectedCardForGeneration.value) return;
+  await beginDraftGeneration(selectedCardForGeneration.value);
+}
+
+async function runDraftGeneration(card) {
+  if (!card?.id) return;
+  try {
+    generatingDraft.value = card.id;
+    error.value = '';
+    draftGenError.value = '';
+
+    const draft = await businessCardService.generateEmailDraft(card);
+    if (import.meta.env.VITE_APP_ENV === 'development') {
+      console.log('Generated draft:', draft);
+    }
+
+    await loadDrafts(card.id);
+
+    selectedCardForDrafts.value = card;
+    selectedDraft.value = draft;
+    emailDraft.value = draft.content;
+    showEmailModal.value = true;
+    showConfirmModal.value = false;
+    showContextSheetModal.value = false;
+  } catch (err) {
+    console.error('Error generating draft:', err);
+    if (err.type === 'PLAN_LIMIT') {
+      showPlanLimitError(err.message);
+      showConfirmModal.value = false;
+      showContextSheetModal.value = false;
+    } else {
+      const msg = err?.message || 'Error generating email draft';
+      draftGenError.value = msg;
+      error.value = msg;
+    }
+  } finally {
+    generatingDraft.value = null;
   }
 }
 
@@ -2215,8 +2606,9 @@ async function createEvent() {
 }
 
 function getEventName(eventId) {
+  if (!eventId) return '';
   const event = events.value.find(e => e.id === eventId);
-  return event ? event.name : 'unspecified Event';
+  return event ? event.name : '';
 }
 
 function openMoveToEventModal(card) {
@@ -2876,19 +3268,17 @@ async function addToAppleWallet() {
   }
 }
 
-// Filter cards by search and event
+// Filter cards by search and real event only (meetingType is not an event)
 const filteredCards = computed(() => {
   let filtered = businessCards.value;
   
-  // Apply event filter
+  // Apply event filter — only Firestore eventId, never meetingType labels
   if (selectedEventFilter.value === 'all') {
-    // Show all cards (no event filtering)
     filtered = filtered;
   } else if (selectedEventFilter.value && selectedEventFilter.value !== 'null') {
-    // Filter by specific event
     filtered = filtered.filter(card => card.eventId === selectedEventFilter.value);
   } else if (selectedEventFilter.value === 'null') {
-    // Filter cards with no event
+    // Cards with no real event (meetingType-only still appears here)
     filtered = filtered.filter(card => !card.eventId);
   }
   
@@ -2900,7 +3290,9 @@ const filteredCards = computed(() => {
       (card.company && card.company.toLowerCase().includes(query)) ||
       (card.title && card.title.toLowerCase().includes(query)) ||
       (card.emails && card.emails.some(email => email.toLowerCase().includes(query))) ||
-      (card.phones && card.phones.some(phone => phone.includes(query)))
+      (card.phones && card.phones.some(phone => phone.includes(query))) ||
+      (getMeetingTypeLabel(card.meetingType) || '').toLowerCase().includes(query) ||
+      (getEventName(card.eventId) || '').toLowerCase().includes(query)
     );
   }
   

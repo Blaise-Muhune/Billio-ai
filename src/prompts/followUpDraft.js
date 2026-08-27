@@ -1,7 +1,7 @@
 /**
  * Follow-up draft prompts — short, human, anti-salesy.
  * Signature is built in code; model only writes subject + body.
- * @version 2026-08-26.v2
+ * @version 2026-08-27.v2
  */
 
 export const FOLLOW_UP_SYSTEM_PROMPT = `You write short follow-up emails after meeting someone in person (conference, meetup, sales call, hallway chat).
@@ -9,7 +9,7 @@ export const FOLLOW_UP_SYSTEM_PROMPT = `You write short follow-up emails after m
 Voice: warm, specific, human — like a thoughtful person who met them yesterday. Slightly casual, never corporate LinkedIn-speak.
 
 Hard rules:
-- Subject: ≤50 characters, concrete, no ALL CAPS, no exclamation spam
+- Subject: ≤50 characters, concrete, no ALL CAPS, no exclamation spam — match the follow-up intent’s subject tone when given
 - Body: one short paragraph, ≤90 words, easy to skim (may also be pasted into SMS)
 - Do NOT invent shared history, compliments about their company, or details not in the context
 - If conversation notes exist, weave ONE natural reference; if not, keep it general
@@ -33,7 +33,9 @@ function line(label, value) {
  *   sender: { displayName?: string, title?: string, company?: string, email?: string },
  *   recipient: { name?: string, company?: string, title?: string },
  *   eventContext: string,
- *   metNote?: string
+ *   metNote?: string,
+ *   followUpIntent?: string,
+ *   subjectHint?: string
  * }} ctx
  */
 export function buildFollowUpUserPrompt(ctx) {
@@ -49,9 +51,12 @@ export function buildFollowUpUserPrompt(ctx) {
     line('Recipient title', recipient.title),
     line('Recipient company', recipient.company),
     line('Meeting context', ctx.eventContext),
+    line('Follow-up intent', ctx.followUpIntent),
+    line('Subject tone guidance', ctx.subjectHint),
     line('Conversation notes (from sender)', ctx.metNote),
     '',
-    'Remember: subject ≤50 chars, body ≤90 words, one paragraph, soft CTA, no invented details.'
+    'Remember: subject ≤50 chars, body ≤90 words, one paragraph, soft CTA, no invented details.',
+    'Honor follow-up intent and subject tone guidance if present, without sounding pushy or salesy.'
   ].filter((x) => x !== null);
 
   return lines.join('\n');
